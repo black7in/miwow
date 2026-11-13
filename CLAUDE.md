@@ -199,7 +199,7 @@ Datos clave de la API Glue:
        (`UnitNameOwn = 1`, `UnitName*Pet/Guardian/TotemName = 0`). Comprobado: el vehiculo conducido NO cuenta como
        mascota para el cliente (sale como PNJ) y cambiar `UNITNAME_TITLE_*` desde Lua no tiene efecto: se edita
        `client/src/Interface/FrameXML/GlobalStrings.lua` (`UNITNAME_TITLE_CHARM/MINION` y `UNITNAME_SUMMON_TITLE3`
-       = "": subtitulo "Esbirro de X" quitado, probado).
+       = "%s": el subtitulo de un vehiculo sin nombre muestra solo el nombre del conductor, entre < > (lo pone el motor); probado y aceptado por ahora. Mejora posible: entrada de vehiculo por jugador con su nombre (fragil, descartada de momento)).
        Al conducir, el cliente muestra sobre el vehiculo el nombre de la CRIATURA y nunca el del conductor (probado),
        y el nombre es por entrada (no por jugador). Decision: **vehiculos propios de EventWow sin nombre**, rango de
        entradas reservado **9500000-9599999**, copias de vehiculos existentes sin script/heroico/clic/locale
