@@ -1,7 +1,9 @@
 <#
 .SYNOPSIS
   Genera la carpeta del parche (formato "carpeta como MPQ") a partir de client\src.
-  Anade los DBC con filas propias de EventWow (Build-Dbc.ps1: lee la BD world, que debe estar arrancada).
+  Anade los DBC con filas propias de EventWow (Build-Dbc.ps1: lee la BD world, que debe estar arrancada) y los
+  mapas propios (tools\mapgen desde Maps\maps.json: World\Maps del cliente + .map del servidor en ServerDataDir;
+  necesita Python con numpy, lanzador "py"). Las mmaps se generan aparte: mmaps_generator <id> (docs\mapas.md).
   El resultado se copia manualmente a Data\ del cliente.
 
 .EXAMPLE
@@ -12,7 +14,9 @@
 param(
     [string]$Name = "patch-4.MPQ",
     [string]$Locale = "esES",
-    [switch]$SkipDbc
+    [switch]$SkipDbc,
+    [switch]$SkipMaps,
+    [string]$ServerDataDir = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -33,6 +37,16 @@ if (-not $SkipDbc)
 else
 {
     Write-Warning "Sin DBC (-SkipDbc): los objetos/hechizos propios no tendran sus datos en el cliente"
+}
+
+if (-not $SkipMaps)
+{
+    if (-not $ServerDataDir) { $ServerDataDir = Join-Path $root "server\bin\RelWithDebInfo\data" }
+    $mapArgs = @((Join-Path $PSScriptRoot "mapgen\mapgen.py"), "--client", $out)
+    if (Test-Path $ServerDataDir) { $mapArgs += @("--server", $ServerDataDir) }
+    else { Write-Warning "No existe $ServerDataDir (parametro -ServerDataDir): solo se generan los mapas del cliente" }
+    & py -I -B @mapArgs
+    if ($LASTEXITCODE -ne 0) { throw "mapgen fallo (codigo $LASTEXITCODE)" }
 }
 
 $files = Get-ChildItem -Path $out -Recurse -File

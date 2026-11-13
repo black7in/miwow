@@ -32,11 +32,16 @@ EventWow/
     despliegue.md             checklist de infraestructura por entorno
     core-changes.md           registro de cambios al core + procedimiento de rebase
     protocolo.md              protocolo cliente<->servidor (addon messages): transporte, fragmentacion, mensajes
+    mapas.md                  mapas propios desde Warcraft 3: flujo, conversion, rango de IDs 750-799
+  Maps/
+    maps.json                 lista de mapas propios (id, carpeta, mapa de WC3 fuente, escala)
+    Warcraft/                 mapas de Warcraft 3 (fuente, los hace el usuario en el World Editor 1.26)
   tools/
     Merge-Interface.ps1       consolida Interface de los MPQ extraidos respetando el orden de carga
-    Build-Patch.ps1           copia client/src -> client/patches/patch-4.MPQ (+ DBC con Build-Dbc.ps1)
+    Build-Patch.ps1           copia client/src -> client/patches/patch-4.MPQ (+ DBC con Build-Dbc.ps1 + mapas con mapgen)
     Build-Dbc.ps1             DBC del cliente = client/DBCs/DBC<locale> + filas EventWow de las tablas *_dbc de la BD world
     Diff-Config.ps1           audita worldserver.conf vs .dist (cambios hechos a mano)
+    mapgen/                   Python (py + numpy): WC3 -> ADT/WDT del cliente + .map del servidor (docs/mapas.md)
 ```
 
 ## Reglas de trabajo
@@ -269,6 +274,19 @@ Datos clave de la API Glue:
   - Observacion pendiente: reinicios de instancia del core. Mazmorras 5 normal no tienen reinicio programado
     (seguro). Bandas (semanal) / heroicos (diario) si: una partida en esos mapas se cortaria a la hora del reinicio.
     Opcion propuesta: que `Validate()` rechace mapas con `MapDifficulty.resetTime` != 0. Sin decidir.
+- Mapas propios desde Warcraft 3 (probado por el usuario 2026-11-13: el mapa 750 sale como su mapa de WC3; ver `docs/mapas.md`). Decision del usuario: los mapas los
+  disena el (y un amigo) en el World Editor de WC3 1.26 (no usa Noggit) y se convierten. Diseno PROPIO: no se
+  replican mapas de terceros (p. ej. X Hero Siege); el usuario y su amigo hacen uno inspirado en el genero.
+  - `tools/mapgen` (mpq.py, wc3.py, wowfiles.py, mapgen.py, inspect_adt.py): terreno (alturas, acantilados = muros,
+    rampas aproximadas), texturas, agua, borde = muro, puntos de inicio y regiones -> coordenadas. Integrado en
+    `Build-Patch` (escribe tambien el `.map` en `server\bin\RelWithDebInfo\data\maps`). Falta: decoracion (doo),
+    vmaps, sombras, zona.
+  - IDs de mapa 750-799 (`Build-Dbc` exporta `map_dbc` en ese rango). Mapa de prueba 750 `EventWowTest` (SQL `_10`,
+    aplicado a mano en la BD de desarrollo para generar Map.dbc; el updater lo reaplica, es idempotente).
+  - Juego `test_map` (EventWowGameTest.cpp, 1-5 jugadores, 5 min) en el mapa 750.
+  - Pendiente del usuario: compilar con `TOOLS_BUILD` y `mmaps_generator 750` (sin mmaps funciona salvo PNJ).
+  - Siguiente: el mapa del minijuego que esta terminando el amigo del usuario (diseno propio; las criaturas de WC3
+    se ignoran, salvo puntos de inicio). Despues: conversion de decoracion (doo), regiones/rampas con un mapa real.
 - Subir ambos repos a un remoto privado.
 
 ## Hoja de ruta
@@ -358,4 +376,4 @@ Despues: grupos/emparejamiento multijugador, minijuegos reales, lobby definitivo
 
 ### Decisiones abiertas
 - Login: cuenta+contrasena (actual) vs launcher/solo nombre.
-- Lobby definitivo (mapa propio) - de momento Isla de los GM.
+- Lobby definitivo (mapa propio, se podria hacer con tools/mapgen) - de momento Isla de los GM.

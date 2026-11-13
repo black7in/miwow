@@ -10,6 +10,8 @@
 
     client\DBCs\DBC<Locale>\<Archivo>.dbc  +  filas de <archivo>_dbc  ->  <OutDir>\<Archivo>.dbc
 
+  Rangos propios por tabla ($ExtraRanges): Map.dbc usa IDs 750-799 (el cliente y el core dimensionan tablas por el
+  ID mas alto de mapa y TC9Sidecar.h limita a 800; ver docs/mapas.md).
   Solo exporta nuestro rango: el resto de filas de las tablas *_dbc son correcciones del servidor de AzerothCore
   (p. ej. hechizos de servidor en spell_dbc) que no deben llegar al cliente.
   Columnas de la tabla = campos del DBC, en orden: enteros -> int32, float -> float, texto -> cadena.
@@ -28,6 +30,17 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# Tablas con un rango de IDs propio ademas de MinId+ (condicion SQL sobre la primera columna)
+$ExtraRanges = @{ "map_dbc" = "BETWEEN 750 AND 799" }
+
+function Get-IdFilter([string]$table, [string]$id)
+{
+    $filter = "``$id`` >= $MinId"
+    if ($ExtraRanges.ContainsKey($table)) { $filter = "($filter OR ``$id`` $($ExtraRanges[$table]))" }
+    return $filter
+}
+
 $root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $dbcDir = Join-Path $root "client\DBCs\DBC$Locale"
 if (-not $WorldServerConf) { $WorldServerConf = Join-Path $root "server\bin\RelWithDebInfo\configs\worldserver.conf" }
@@ -95,7 +108,7 @@ $counts = @()
 foreach ($table in $tables.Keys)
 {
     $id = $tables[$table][0].Name
-    $counts += "SELECT '$table', COUNT(*) FROM ``$table`` WHERE ``$id`` >= $MinId"
+    $counts += "SELECT '$table', COUNT(*) FROM ``$table`` WHERE $(Get-IdFilter $table $id)"
 }
 $used = @()
 foreach ($r in (Get-Rows (Invoke-MySqlXml ($counts -join " UNION ALL "))))
@@ -145,7 +158,7 @@ foreach ($table in $used)
     $strings.Write($bytes, 20 + $recordCount * $recordSize, $stringSize)
     $stringOffsets = @{ "" = 0 }
 
-    $rows = Get-Rows (Invoke-MySqlXml "SELECT * FROM ``$table`` WHERE ``$($columns[0].Name)`` >= $MinId ORDER BY 1")
+    $rows = Get-Rows (Invoke-MySqlXml "SELECT * FROM ``$table`` WHERE $(Get-IdFilter $table $columns[0].Name) ORDER BY 1")
     $added = 0; $replaced = 0
     foreach ($row in $rows)
     {

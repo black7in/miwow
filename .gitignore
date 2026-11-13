@@ -22,3 +22,7 @@ Thumbs.db
 desktop.ini
 *.tmp
 *.log
+
+# Temporales de tools/mapgen
+/tools/mapgen/_work/
+__pycache__/

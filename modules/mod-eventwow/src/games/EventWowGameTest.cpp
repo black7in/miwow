@@ -97,8 +97,22 @@ void AddSC_eventwow_game_test()
     shop.Inventory = true;
     shop.Factory = []() { return std::make_unique<EventWowGameTestShop>(); };
 
+    // Primer mapa propio (750, convertido de Maps/Warcraft/test.w3m con tools/mapgen): inicio = punto de inicio del
+    // jugador 1 del mapa de WC3 (lo imprime mapgen). 5 minutos para recorrerlo.
+    EventWowGameInfo map = game;
+    map.Id = "test_map";
+    map.Name = "Prueba de mapa";
+    map.Description = "Primer mapa propio convertido desde Warcraft 3: recorrelo durante 5 minutos.";
+    map.Icon = "Interface\\Icons\\INV_Misc_Map_01";
+    map.MaxPlayers = 5;
+    map.MaxPartySize = 5;
+    map.MapId = 750;
+    map.Start.Relocate(-208.67f, -286.67f, 1.0f, 3.14f);
+    map.Factory = []() { return std::make_unique<EventWowGameTest>(300s); };
+
     sEventWowGames.Register(std::move(game));
     sEventWowGames.Register(std::move(group));
+    sEventWowGames.Register(std::move(map));
     sEventWowGames.Register(std::move(vehicle));
     sEventWowGames.Register(std::move(shop));
 }

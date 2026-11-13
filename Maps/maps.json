@@ -1,0 +1,11 @@
+{
+  "maps": [
+    {
+      "id": 750,
+      "directory": "EventWowTest",
+      "source": "Warcraft/test.w3m",
+      "yardsPerTile": 4.0,
+      "cliffYards": 8.0
+    }
+  ]
+}
