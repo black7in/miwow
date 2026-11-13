@@ -4,6 +4,7 @@
 #include "ObjectMgr.h"
 #include "Player.h"
 #include "ScriptMgr.h"
+#include <algorithm>
 #include <cmath>
 
 EventWowConfig& EventWowConfig::Instance()
@@ -24,6 +25,10 @@ void EventWowConfig::Load()
         sConfigMgr->GetOption<float>("EventWow.Lobby.Y", 16257.0f),
         sConfigMgr->GetOption<float>("EventWow.Lobby.Z", 13.2022f),
         sConfigMgr->GetOption<float>("EventWow.Lobby.O", 1.65007f));
+
+    QueueFillWait = Seconds(sConfigMgr->GetOption<uint32>("EventWow.Queue.FillWait", 15));
+    MatchLoadTimeout = Seconds(std::max<uint32>(5, sConfigMgr->GetOption<uint32>("EventWow.Match.LoadTimeout", 30)));
+    MatchReturnDelay = Seconds(sConfigMgr->GetOption<uint32>("EventWow.Match.ReturnDelay", 8));
 
     LOG_INFO("module.eventwow", "EventWow: {} (raza {}, clase {}, lobby mapa {} [{}, {}, {}])",
         Enabled ? "activado" : "desactivado", CharacterRace, CharacterClass,

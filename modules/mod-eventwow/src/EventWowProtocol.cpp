@@ -55,12 +55,6 @@ namespace
     std::mutex ConnectedLock;
     GuidUnorderedSet Connected;
 
-    bool IsConnected(ObjectGuid guid)
-    {
-        std::lock_guard<std::mutex> lock(ConnectedLock);
-        return Connected.count(guid) != 0;
-    }
-
     // HELLO <version>
     void HandleHello(Player* player, EventWowProtocol::Args const& args)
     {
@@ -126,7 +120,7 @@ namespace
             return;
         }
 
-        if (!IsConnected(player->GetGUID()))
+        if (!EventWowProtocol::IsConnected(player->GetGUID()))
         {
             LOG_DEBUG("module.eventwow", "EventWow: '{}' de {} antes de HELLO, ignorado", op, player->GetName());
             return;
@@ -204,6 +198,12 @@ void EventWowProtocol::RegisterConnectListener(PlayerListener listener)
 void EventWowProtocol::RegisterDisconnectListener(PlayerListener listener)
 {
     GetDisconnectListeners().push_back(std::move(listener));
+}
+
+bool EventWowProtocol::IsConnected(ObjectGuid guid)
+{
+    std::lock_guard<std::mutex> lock(ConnectedLock);
+    return Connected.count(guid) != 0;
 }
 
 std::size_t EventWowProtocol::GetConnectedCount()

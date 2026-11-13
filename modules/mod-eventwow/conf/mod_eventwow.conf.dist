@@ -47,6 +47,29 @@ EventWow.Lobby.Y = 16257
 EventWow.Lobby.Z = 13.2022
 EventWow.Lobby.O = 1.65007
 
+#
+#    EventWow.Queue.FillWait
+#        Description: Segundos que espera la cola de un minijuego multijugador, con MinPlayers ya
+#                     reunidos, intentando llegar a MaxPlayers antes de crear la partida.
+#        Default:     15
+
+EventWow.Queue.FillWait = 15
+
+#
+#    EventWow.Match.LoadTimeout
+#        Description: Segundos para que todos los jugadores de una partida lleguen a la instancia.
+#                     Los que no llegan quedan fuera y la partida empieza con el resto.
+#        Default:     30
+
+EventWow.Match.LoadTimeout = 30
+
+#
+#    EventWow.Match.ReturnDelay
+#        Description: Segundos con el resultado en pantalla antes de volver al lobby.
+#        Default:     8
+
+EventWow.Match.ReturnDelay = 8
+
 ###################################################################################################
 # OVERRIDES DEL CORE (pisan worldserver.conf)
 ###################################################################################################
@@ -90,3 +113,10 @@ SkipCinematics = 2
 #                Ya es 1 por defecto; se fija aqui para que nadie lo desactive en worldserver.conf.
 
 AddonChannel = 1
+
+#
+#    Instance.UnloadDelay
+#        Motivo: cada partida crea su propia instancia y nadie vuelve a ella; al quedar vacia se
+#                descarga en 1 minuto en vez de 30 (memoria con muchas partidas).
+
+Instance.UnloadDelay = 60000

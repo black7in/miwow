@@ -14,6 +14,7 @@ Repositorio del core: `azerothcore-wotlk/` (fork local, luego remoto privado).
 |---|---|---|---|
 | 2026-11-12 | `2948c203f` (chore(DB): import pending files) | `2948c203f` | Inicio: sin cambios al core |
 | 2026-11-13 | `2948c203f` | `4fc546e73` | Hook OnPlayerOverrideLoginLocation compilado y probado (lobby) |
+| 2026-11-13 | `2948c203f` | `71970693a` | Hooks de instancia (partidas) - PENDIENTE de compilar y probar |
 
 > Actualizar esta tabla cada vez que se haga rebase sobre un upstream nuevo.
 
@@ -44,3 +45,4 @@ git checkout eventwow && git rebase master    # resolver conflictos commit a com
 | Commit | Tipo | Archivos | Motivo | Usado por (modulo) | Upstreamable |
 |---|---|---|---|---|---|
 | `4fc546e73` | Hook nuevo `PlayerScript::OnPlayerOverrideLoginLocation(Player*, WorldLocation&) -> bool` | `ScriptDefines/PlayerScript.h/.cpp`, `ScriptMgr.h`, `Entities/Player/PlayerStorage.cpp` (`Player::LoadFromDB`, tras `_LoadEntryPointData`) | Elegir donde aparece el jugador al hacer login ANTES de que el core valide la posicion guardada. Si un script lo sobrescribe, se descartan transporte, ruta de taxi e instance id. Sin el, un jugador desconectado dentro de una instancia reaparece en la entrada de la mazmorra/homebind | `EventWowLobby.cpp` (todo login -> lobby) | Si (generico) |
+| `71970693a` | Hooks nuevos `PlayerScript::OnPlayerOverrideInstanceDestination(Player*, uint32 mapId, Difficulty, uint32& instanceId) -> bool` y `PlayerScript::OnPlayerOverrideInstanceEnter(Player*, InstanceMap*, bool loginCheck, bool& allow) -> bool` | `ScriptDefines/PlayerScript.h/.cpp`, `ScriptMgr.h`, `Instances/InstanceSaveMgr.cpp` (`PlayerGetDestinationInstanceId`, al principio), `Maps/Map.cpp` (`InstanceMap::CannotEnter`, tras la comprobacion de "ya en el mapa") | Cada partida es una instancia propia de un mapa de mazmorra elegida por el modulo: el primero manda a los jugadores a esa instancia sin grupos ni binds (el modulo crea antes el `InstanceSave`); el segundo les deja entrar sin limite de jugadores del mapa ni comprobaciones de grupo/bind, y deniega la entrada a otros. Se teleporta con `TELE_TO_GM_MODE` para saltar `MapMgr::PlayerCannotEnter` (banda sin grupo, requisitos, instancias por hora) | `EventWowMatchMgr.cpp` | Si (generico) |

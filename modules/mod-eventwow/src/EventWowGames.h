@@ -2,9 +2,16 @@
 #define MOD_EVENTWOW_GAMES_H
 
 #include "Define.h"
+#include "Position.h"
+#include <functional>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
+
+class EventWowMatch;
+
+using EventWowMatchFactory = std::function<std::unique_ptr<EventWowMatch>()>;
 
 // Catalogo de minijuegos que el panel del cliente muestra (el cliente no conoce ninguno de antemano).
 struct EventWowGameInfo
@@ -15,6 +22,15 @@ struct EventWowGameInfo
     std::string Icon;        // ruta de textura del cliente
     uint8 MinPlayers = 1;
     uint8 MaxPlayers = 1;
+
+    // Partida: mapa de mazmorra/banda (con instance_template) donde se crea una instancia por partida,
+    // punto de aparicion y factoria de la clase del minijuego (EventWowMatch.h).
+    // Sin factoria el juego aparece en el panel pero no se puede buscar partida (maqueta).
+    uint32 MapId = 0;
+    Position Start;
+    EventWowMatchFactory Factory;
+
+    bool IsPlayable() const { return Factory != nullptr; }
 };
 
 class EventWowGames
@@ -25,6 +41,9 @@ public:
     void Register(EventWowGameInfo info);
     EventWowGameInfo const* GetGame(std::string_view id) const;
     std::vector<EventWowGameInfo> const& GetAll() const { return _games; }
+
+    // Al arrancar: desactiva (quita la factoria) los juegos cuyo mapa no sirve para partidas
+    void Validate();
 
 private:
     std::vector<EventWowGameInfo> _games;

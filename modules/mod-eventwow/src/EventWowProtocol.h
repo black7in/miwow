@@ -2,6 +2,7 @@
 #define MOD_EVENTWOW_PROTOCOL_H
 
 #include "Define.h"
+#include "ObjectGuid.h"
 #include <functional>
 #include <string>
 #include <string_view>
@@ -26,7 +27,7 @@ class Player;
 namespace EventWowProtocol
 {
     constexpr std::string_view Prefix = "EWOW";
-    constexpr uint32 Version = 1;
+    constexpr uint32 Version = 2;
 
     // Campos del mensaje sin el opcode. Apuntan al mensaje recibido: solo validos durante la llamada.
     using Args = std::vector<std::string_view>;
@@ -42,6 +43,8 @@ namespace EventWowProtocol
     // Al hacer logout un jugador conectado (ya no cuenta en GetConnectedCount)
     void RegisterDisconnectListener(PlayerListener listener);
 
+    // Completo HELLO (y no ha hecho logout)
+    bool IsConnected(ObjectGuid guid);
     std::size_t GetConnectedCount();
     void ForEachConnected(std::function<void(Player* player)> const& func);
 }

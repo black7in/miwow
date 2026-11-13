@@ -149,4 +149,5 @@ LocalizationPost.xml
 EventWowProtocol.lua
 EventWowChat.lua
 EventWowPanel.lua
+EventWowMatch.lua
 EventWow.lua

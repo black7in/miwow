@@ -10,7 +10,9 @@
 --  - Los atajos de teclado que abren ventanas (hechizos, talentos, bolsas, mapa...) o usan acciones
 --    no hacen nada.
 --  - Menu de Esc sin "Macros". "Desconectar" vuelve al login (lo gestiona GlueXML/CharacterSelect.lua).
--- Mas adelante el servidor cambiara de modo (minijuego) por el protocolo de addon messages.
+-- Modo partida (MATCH_STATE del servidor, EventWowMatch.lua): sin portada ni panel, el mundo visible
+-- y solo los marcos de EVENTWOW_MATCH_VISIBLE_FRAMES; las ventanas y acciones siguen bloqueadas.
+-- De momento sin chat en partida.
 
 EVENTWOW_UI_CONFIG = {
 	-- Mismo fondo que las pantallas de Glue (GlueXML/CharacterSelect.lua EVENTWOW_CONFIG)
@@ -43,7 +45,15 @@ EVENTWOW_LOBBY_HIDDEN_FRAMES = {
 	"CastingBarFrame",
 };
 
--- Funciones globales (llamadas desde Bindings.xml / micro menu) que no hacen nada en el lobby
+-- De los anteriores, los que se ven durante una partida (las barras de accion llegaran con el "disfraz")
+EVENTWOW_MATCH_VISIBLE_FRAMES = {
+	PlayerFrame = true,
+	TargetFrame = true,
+	BuffFrame = true,
+	CastingBarFrame = true,
+};
+
+-- Funciones globales (llamadas desde Bindings.xml / micro menu) que no hacen nada en el lobby ni en partida
 EVENTWOW_LOBBY_BLOCKED_FUNCTIONS = {
 	-- Ventanas
 	"ToggleBackpack",
@@ -80,7 +90,8 @@ EVENTWOW_LOBBY_BLOCKED_PANELS = {
 };
 
 EventWow_UI = {
-	lobby = false,
+	-- "lobby" | "match" (nil antes de inicializar)
+	mode = nil,
 	savedParents = {},
 };
 
@@ -143,7 +154,7 @@ local function EventWow_WrapBlockedFunctions()
 		local original = _G[name];
 		if ( original ) then
 			_G[name] = function(...)
-				if ( EventWow_UI.lobby ) then
+				if ( EventWow_UI.mode ) then
 					return;
 				end
 				return original(...);
@@ -155,7 +166,7 @@ local function EventWow_WrapBlockedFunctions()
 		local frame = _G[name];
 		if ( frame ) then
 			frame:HookScript("OnShow", function(self)
-				if ( EventWow_UI.lobby ) then
+				if ( EventWow_UI.mode ) then
 					self:Hide();
 				end
 			end);
@@ -171,28 +182,30 @@ local function EventWow_SetupGameMenu()
 	GameMenuFrame:SetHeight(GameMenuFrame:GetHeight() - GameMenuButtonMacros:GetHeight() - 1);
 end
 
-function EventWow_SetLobbyMode(enabled)
-	enabled = enabled and true or false;
-	if ( EventWow_UI.lobby == enabled ) then
+-- mode: "lobby" (portada + panel) o "match" (mundo visible + HUD de EventWowMatch.lua)
+function EventWow_SetMode(mode)
+	if ( EventWow_UI.mode == mode ) then
 		return;
 	end
-	EventWow_UI.lobby = enabled;
+	EventWow_UI.mode = mode;
+	local lobby = mode == "lobby";
 
 	for _, name in ipairs(EVENTWOW_LOBBY_HIDDEN_FRAMES) do
-		if ( enabled ) then
-			EventWow_HideFrame(name);
-		else
+		if ( not lobby and EVENTWOW_MATCH_VISIBLE_FRAMES[name] ) then
 			EventWow_RestoreFrame(name);
+		else
+			EventWow_HideFrame(name);
 		end
 	end
 
-	if ( enabled ) then
-		for _, name in ipairs(EVENTWOW_LOBBY_BLOCKED_PANELS) do
-			if ( _G[name] ) then
-				_G[name]:Hide();
-			end
+	for _, name in ipairs(EVENTWOW_LOBBY_BLOCKED_PANELS) do
+		if ( _G[name] ) then
+			_G[name]:Hide();
 		end
-		CloseAllBags();
+	end
+	CloseAllBags();
+
+	if ( lobby ) then
 		EventWowWorldCover:Show();
 		EventWowPanel:Show();
 	else
@@ -201,9 +214,14 @@ function EventWow_SetLobbyMode(enabled)
 	end
 end
 
+-- Compatibilidad
+function EventWow_SetLobbyMode(enabled)
+	EventWow_SetMode(enabled and "lobby" or "match");
+end
+
 EventWow_CreateWorldCover();
 EventWow_WrapBlockedFunctions();
 EventWow_SetupGameMenu();
 
--- De momento siempre en el lobby (no hay minijuegos todavia)
-EventWow_SetLobbyMode(true);
+-- Se empieza en el lobby; el servidor cambia de modo con MATCH_STATE (EventWowMatch.lua)
+EventWow_SetMode("lobby");

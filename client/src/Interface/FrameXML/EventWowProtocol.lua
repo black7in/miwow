@@ -8,7 +8,7 @@
 
 EVENTWOW_PROTOCOL = {
 	PREFIX = "EWOW",
-	VERSION = 1,
+	VERSION = 2,
 	-- 255 (limite del core) - "EWOW\t" - flag, con margen
 	MAX_CHUNK = 240,
 	DEBUG = true,
@@ -24,6 +24,10 @@ EVENTWOW_ERROR_TEXTS = {
 	CHAT_TOO_LONG = "Mensaje demasiado largo (máximo %s caracteres).",
 	QUEUE_UNKNOWN_GAME = "Ese minijuego no existe.",
 	QUEUE_NOT_IN_LOBBY = "Solo puedes buscar partida desde el lobby.",
+	QUEUE_GAME_UNAVAILABLE = "Este minijuego todavía no está disponible.",
+	QUEUE_IN_MATCH = "Ya estás en una partida.",
+	MATCH_CREATE_FAILED = "No se pudo crear la partida. Inténtalo de nuevo.",
+	MATCH_TELEPORT_FAILED = "No se pudo entrar en la partida.",
 };
 
 EventWow_Protocol = {
@@ -33,7 +37,7 @@ EventWow_Protocol = {
 	helloSent = false,
 	connected = false,
 	isGM = false,
-	-- Catalogo recibido (GAMES): { id, icon, minPlayers, maxPlayers, name, description }
+	-- Catalogo recibido (GAMES): { id, icon, minPlayers, maxPlayers, name, description, playable }
 	games = {},
 };
 
@@ -168,12 +172,12 @@ EventWow_RegisterHandler("ERROR", function(fields)
 	UIErrorsFrame:AddMessage(text, 1, 0.2, 0.2, 1.0);
 end);
 
--- GAMES <n> (<id> <icono> <min> <max> <nombre> <descripcion>) x n
+-- GAMES <n> (<id> <icono> <min> <max> <nombre> <descripcion> <jugable 0/1>) x n
 EventWow_RegisterHandler("GAMES", function(fields)
 	local count = tonumber(fields[1]) or 0;
 	local games = {};
 	for i = 1, count do
-		local base = 1 + (i - 1) * 6;
+		local base = 1 + (i - 1) * 7;
 		tinsert(games, {
 			id = fields[base + 1],
 			icon = fields[base + 2],
@@ -181,6 +185,7 @@ EventWow_RegisterHandler("GAMES", function(fields)
 			maxPlayers = tonumber(fields[base + 4]),
 			name = fields[base + 5],
 			description = fields[base + 6],
+			playable = fields[base + 7] == "1",
 		});
 	end
 	EventWow_Protocol.games = games;

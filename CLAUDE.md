@@ -143,6 +143,20 @@ Datos clave de la API Glue:
     security > SEC_PLAYER, log `module.eventwow.chat`); `EventWowQueue.cpp` (QUEUE/LEAVE PROVISIONAL: solo estado);
     juegos de maqueta `race`/`invasion` en `EventWowGames.cpp` (quitar con el framework).
   - Siguiente idea: amigos (pestanas en la zona del chat), chat compacto en partida.
+- Corte vertical pasos 6-7 (escrito 2026-11-13, PENDIENTE de compilar/probar; CMake: archivos nuevos y `games/`):
+  - Core (commit `71970693a`): hooks `OnPlayerOverrideInstanceDestination` / `OnPlayerOverrideInstanceEnter`.
+  - Servidor: `EventWowMatchMgr.*` (sustituye a `EventWowQueue.cpp`: cola por juego, emparejamiento con
+    Max o Min + `EventWow.Queue.FillWait`, una instancia por partida con `InstanceSave` propio, teleport con
+    `TELE_TO_GM_MODE`, bind temporal quitado al salir, logout/abandono/salir de la instancia -> fuera),
+    `EventWowMatch.*` (framework: Loading -> Countdown -> Running -> Ended; `OnStart/OnUpdate/OnTimerExpired/
+    OnPlayerArrived/OnPlayerLeft`, `SetTimer/SetHud/SetResult/End`), `EventWowLobby.h` (visibilidad, estado
+    base, `ReturnToLobby`), `games/EventWowGameTest.cpp` (juego `test`: Sima Ignea 389, aguantar 30 s).
+    `EventWowGameInfo` + `MapId/Start/Factory` (sin factoria = maqueta); `Validate()` al arrancar.
+    Config: `EventWow.Queue.FillWait`, `EventWow.Match.LoadTimeout/ReturnDelay`; override `Instance.UnloadDelay = 60000`.
+  - Cliente: protocolo v2 (`GAMES` + jugable, `MATCH_STATE/HUD/END`, `ABANDON`); `EventWowMatch.lua` (HUD,
+    cuenta atras, resultado, Abandonar); `EventWow_SetMode("lobby"|"match")` (en partida: mundo + PlayerFrame/
+    TargetFrame/BuffFrame/CastingBar; ventanas y acciones siguen bloqueadas; sin chat).
+  - Pendiente: muerte dentro de la partida (liberar espiritu saca de ella), chat en partida, "disfraz".
 - Subir ambos repos a un remoto privado.
 
 ## Hoja de ruta

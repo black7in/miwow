@@ -1,7 +1,42 @@
+#include "EventWowLobby.h"
 #include "EventWowConfig.h"
 #include "Player.h"
 #include "ScriptMgr.h"
 #include "WorldSession.h"
+
+bool EventWowLobby::IsInLobby(Player const* player)
+{
+    return player->GetMapId() == sEventWowConfig.Lobby.GetMapId();
+}
+
+// Visible solo para GMs (nivel >= moderador) mientras esta en el lobby
+void EventWowLobby::SetVisibility(Player* player, bool inLobby)
+{
+    if (player->GetSession()->GetSecurity() > SEC_PLAYER)
+        return;
+
+    player->SetServerSideVisibility(SERVERSIDE_VISIBILITY_GM, inLobby ? SEC_MODERATOR : SEC_PLAYER);
+}
+
+void EventWowLobby::RestoreBaseState(Player* player)
+{
+    if (!player->IsAlive())
+    {
+        player->ResurrectPlayer(1.0f);
+        player->SpawnCorpseBones();
+    }
+
+    player->CombatStop(true);
+    player->RemoveAllAuras();
+    player->SetFullHealth();
+}
+
+bool EventWowLobby::ReturnToLobby(Player* player)
+{
+    RestoreBaseState(player);
+    SetVisibility(player, true);
+    return player->TeleportTo(sEventWowConfig.Lobby);
+}
 
 // Lobby: "limbo" invisible donde el personaje queda aparcado mientras el jugador usa el panel.
 //  - Cada login carga directamente en el lobby (hook del core OnPlayerOverrideLoginLocation),
@@ -28,14 +63,13 @@ public:
         return true;
     }
 
-    // Antes de entrar al mapa: ya invisible para el resto del lobby.
-    // Las cuentas GM se dejan como estan (LoadFromDB ya aplico su modo GM / invisibilidad).
+    // Antes de entrar al mapa: ya invisible para el resto del lobby
     void OnPlayerLoadFromDB(Player* player) override
     {
-        if (!sEventWowConfig.Enabled || player->GetSession()->GetSecurity() > SEC_PLAYER)
+        if (!sEventWowConfig.Enabled)
             return;
 
-        SetLobbyVisibility(player, true);
+        EventWowLobby::SetVisibility(player, true);
     }
 
     void OnPlayerFirstLogin(Player* player) override
@@ -53,12 +87,6 @@ public:
 
         // El progreso no existe en EventWow: sin experiencia
         player->SetPlayerFlag(PLAYER_FLAGS_NO_XP_GAIN);
-    }
-
-    // Visible solo para GMs (nivel >= moderador) mientras esta en el lobby
-    static void SetLobbyVisibility(Player* player, bool inLobby)
-    {
-        player->SetServerSideVisibility(SERVERSIDE_VISIBILITY_GM, inLobby ? SEC_MODERATOR : SEC_PLAYER);
     }
 
     // Equipo, mochila y bolsas (destruir una bolsa destruye su contenido)

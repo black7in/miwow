@@ -8,7 +8,7 @@
 --  +----------------------+------------------------------------+
 --  | CHAT GLOBAL (EventWowChat.lua)                            |
 --  +-----------------------------------------------------------+
--- Visible solo en modo lobby (EventWow_SetLobbyMode, EventWow.lua).
+-- Visible solo en modo lobby (EventWow_SetMode, EventWow.lua).
 -- Ocupa toda la pantalla (UIParent) en cualquier resolucion: el reparto interior es proporcional
 -- (EventWowPanel_Layout) y el numero de filas de la lista depende del alto disponible.
 
@@ -42,6 +42,8 @@ EVENTWOW_STR_PANEL_PLAYERS = "%d-%d jugadores";
 EVENTWOW_STR_PANEL_SEARCH = "Buscar partida";
 EVENTWOW_STR_PANEL_QUEUED = "Buscando partida: %s  |cffffffff%s|r";
 EVENTWOW_STR_PANEL_CANCEL = "Cancelar";
+EVENTWOW_STR_PANEL_UNAVAILABLE = "Próximamente";
+EVENTWOW_STR_PANEL_ENTERING = "Partida encontrada: %s. Entrando...";
 
 EventWow_Panel = {
 	selectedId = nil,
@@ -130,15 +132,20 @@ function EventWowPanel_UpdateDetail()
 		end
 	end
 
-	-- Una sola cola: si estas en cola se ve su estado (aunque mires otro juego)
-	if ( EventWow_Panel.queue ) then
+	-- Una sola cola: si estas en cola (o entrando en una partida) se ve su estado (aunque mires otro juego)
+	if ( EventWow_Panel.queue or EventWowMatch_IsLoading() ) then
 		EventWowPanelSearchButton:Hide();
 		EventWowPanelQueue:Show();
 		EventWowPanel_UpdateQueueText();
 	else
 		EventWowPanelQueue:Hide();
 		EventWowPanelSearchButton:Show();
-		if ( hasGame and EventWow_Protocol.connected ) then
+		if ( hasGame and not game.playable ) then
+			EventWowPanelSearchButton:SetText(EVENTWOW_STR_PANEL_UNAVAILABLE);
+		else
+			EventWowPanelSearchButton:SetText(EVENTWOW_STR_PANEL_SEARCH);
+		end
+		if ( hasGame and game.playable and EventWow_Protocol.connected ) then
 			EventWowPanelSearchButton:Enable();
 		else
 			EventWowPanelSearchButton:Disable();
@@ -147,6 +154,14 @@ function EventWowPanel_UpdateDetail()
 end
 
 function EventWowPanel_UpdateQueueText()
+	if ( EventWowMatch_IsLoading() ) then
+		local game = EventWow_FindGame(EventWow_Match.gameId);
+		EventWowPanelQueueText:SetText(format(EVENTWOW_STR_PANEL_ENTERING, game and game.name or tostring(EventWow_Match.gameId)));
+		EventWowPanelQueueCancel:Hide();
+		return;
+	end
+	EventWowPanelQueueCancel:Show();
+
 	local queue = EventWow_Panel.queue;
 	if ( not queue ) then
 		return;

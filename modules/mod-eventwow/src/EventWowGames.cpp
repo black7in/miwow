@@ -1,7 +1,10 @@
 #include "EventWowGames.h"
+#include "DBCStores.h"
 #include "EventWowConfig.h"
 #include "EventWowProtocol.h"
 #include "Log.h"
+#include "MapMgr.h"
+#include "ObjectMgr.h"
 #include "Player.h"
 #include "ScriptMgr.h"
 #include <algorithm>
@@ -29,9 +32,37 @@ EventWowGameInfo const* EventWowGames::GetGame(std::string_view id) const
     return itr != _games.end() ? &*itr : nullptr;
 }
 
+void EventWowGames::Validate()
+{
+    for (EventWowGameInfo& game : _games)
+    {
+        if (!game.IsPlayable())
+            continue;
+
+        MapEntry const* entry = sMapStore.LookupEntry(game.MapId);
+        char const* error = nullptr;
+        if (!entry || !entry->IsDungeon())
+            error = "el mapa no es de mazmorra/banda";
+        else if (!sObjectMgr->GetInstanceTemplate(game.MapId))
+            error = "el mapa no tiene instance_template";
+        else if (!GetMapDifficultyData(game.MapId, REGULAR_DIFFICULTY))
+            error = "el mapa no tiene dificultad normal";
+        else if (!MapMgr::IsValidMapCoord(game.MapId, game.Start))
+            error = "punto de aparicion invalido";
+        else if (game.MinPlayers < 1 || game.MinPlayers > game.MaxPlayers)
+            error = "MinPlayers/MaxPlayers invalidos";
+
+        if (error)
+        {
+            LOG_ERROR("module.eventwow", "EventWow: minijuego '{}' (mapa {}) desactivado: {}", game.Id, game.MapId, error);
+            game.Factory = nullptr;
+        }
+    }
+}
+
 namespace
 {
-    // GAMES <n> (<id> <icono> <min> <max> <nombre> <descripcion>) x n
+    // GAMES <n> (<id> <icono> <min> <max> <nombre> <descripcion> <jugable 0/1>) x n
     void SendGameList(Player* player)
     {
         auto const& games = sEventWowGames.GetAll();
@@ -40,7 +71,7 @@ namespace
         message.Add(static_cast<uint32>(games.size()));
         for (EventWowGameInfo const& game : games)
             message.Add(game.Id).Add(game.Icon).Add(game.MinPlayers).Add(game.MaxPlayers)
-                .Add(game.Name).Add(game.Description);
+                .Add(game.Name).Add(game.Description).Add(game.IsPlayable() ? 1 : 0);
 
         message.Send(player);
     }
@@ -64,6 +95,7 @@ public:
         if (!sEventWowConfig.Enabled)
             return;
 
+        sEventWowGames.Validate();
         LOG_INFO("module.eventwow", "EventWow: {} minijuego(s) registrado(s), protocolo v{}",
             sEventWowGames.GetAll().size(), EventWowProtocol::Version);
     }
@@ -74,21 +106,13 @@ void AddSC_eventwow_games()
     EventWowProtocol::RegisterHandler("LIST", HandleList);
     EventWowProtocol::RegisterConnectListener(SendGameList);
 
-    // Provisional (corte vertical): los registrara el framework de minijuegos (paso 7).
-    // "race" e "invasion" solo existen para maquetar el panel con varios juegos.
-    sEventWowGames.Register({
-        "test",
-        "Prueba",
-        "Minijuego de prueba en solitario.",
-        "Interface\\Icons\\INV_Misc_QuestionMark",
-        1,
-        1
-    });
+    // Maquetas para el panel con varios juegos (sin factoria: no se puede buscar partida).
+    // Los juegos reales se registran en games/ (AddSC_eventwow_game_*), antes que estos.
     sEventWowGames.Register({
         "race",
         "Carrera",
         "Llega el primero a la meta esquivando los obstáculos del recorrido. (Maqueta: todavía no existe.)",
-        "Interface\\Icons\\Ability_Rogue_Sprint",
+        "Interface\Icons\Ability_Rogue_Sprint",
         2,
         10
     });
@@ -96,7 +120,7 @@ void AddSC_eventwow_games()
         "invasion",
         "Invasión",
         "Resistid juntos oleada tras oleada de enemigos hasta derrotar al jefe final. (Maqueta: todavía no existe.)",
-        "Interface\\Icons\\Spell_Shadow_SummonFelGuard",
+        "Interface\Icons\Spell_Shadow_SummonFelGuard",
         5,
         20
     });
