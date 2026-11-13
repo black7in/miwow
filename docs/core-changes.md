@@ -13,6 +13,7 @@ Repositorio del core: `azerothcore-wotlk/` (fork local, luego remoto privado).
 | Fecha | upstream/master | eventwow | Notas |
 |---|---|---|---|
 | 2026-11-12 | `2948c203f` (chore(DB): import pending files) | `2948c203f` | Inicio: sin cambios al core |
+| 2026-11-13 | `2948c203f` | `4fc546e73` | Hook OnPlayerOverrideLoginLocation compilado y probado (lobby) |
 
 > Actualizar esta tabla cada vez que se haga rebase sobre un upstream nuevo.
 
@@ -42,4 +43,4 @@ git checkout eventwow && git rebase master    # resolver conflictos commit a com
 
 | Commit | Tipo | Archivos | Motivo | Usado por (modulo) | Upstreamable |
 |---|---|---|---|---|---|
-| - | - | - | (sin cambios todavia) | - | - |
+| `4fc546e73` | Hook nuevo `PlayerScript::OnPlayerOverrideLoginLocation(Player*, WorldLocation&) -> bool` | `ScriptDefines/PlayerScript.h/.cpp`, `ScriptMgr.h`, `Entities/Player/PlayerStorage.cpp` (`Player::LoadFromDB`, tras `_LoadEntryPointData`) | Elegir donde aparece el jugador al hacer login ANTES de que el core valide la posicion guardada. Si un script lo sobrescribe, se descartan transporte, ruta de taxi e instance id. Sin el, un jugador desconectado dentro de una instancia reaparece en la entrada de la mazmorra/homebind | `EventWowLobby.cpp` (todo login -> lobby) | Si (generico) |

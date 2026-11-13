@@ -22,7 +22,9 @@ EventWow/
       manifest.csv            de que MPQ sale cada archivo
     src/                      archivos de cliente que modificamos/anadimos (misma ruta relativa)
     patches/patch-4.MPQ/      salida generada por Build-Patch (carpeta, no MPQ empaquetado)
-  modules/mod-eventwow/       nuestro modulo C++ (junction -> azerothcore-wotlk/modules/mod-eventwow)
+  modules/mod-eventwow/       nuestro modulo C++. azerothcore-wotlk/modules/mod-eventwow es un JUNCTION a esta carpeta
+                              (no una copia): editar solo aqui. Recrear si falta:
+                              New-Item -ItemType Junction -Path azerothcore-wotlk\modules\mod-eventwow -Target modules\mod-eventwow
     conf/mod_eventwow.conf.dist   opciones propias + OVERRIDES DEL CORE (pisan worldserver.conf)
     src/                          scripts (loader: Addmod_eventwowScripts)
     data/sql/db-{world,characters,auth}/   SQL que el updater de AC aplica al arrancar
@@ -107,20 +109,59 @@ Datos clave de la API Glue:
 - Overrides: `CharactersPerRealm/Account = 1`, `HeroicCharactersPerRealm = 0`, RaceMask 1790 (solo humano),
   ClassMask 1534 (solo guerrero), `SkipCinematics = 2`.
 
+### Hecho (corte vertical pasos 1-2, compilado y probado por el usuario 2026-11-13)
+- Core (rama `eventwow`, commit `4fc546e73`): hook `OnPlayerOverrideLoginLocation` (ver `docs/core-changes.md`).
+- `EventWowLobby.cpp`: todo login -> `EventWow.Lobby.*`; invisible en el lobby (no GMs); primer login sin objetos;
+  `PLAYER_FLAGS_NO_XP_GAIN`. `EventWowConfig`: lee `EventWow.Lobby.*` y al arrancar avisa si `playercreateinfo` no coincide.
+- SQL `data/sql/db-world/2026_11_12_00_lobby_playercreateinfo.sql`: humano guerrero nace en la Isla de los GM.
+- Pendiente del "personaje neutro": hechizos/barra/stats -> los gestionara el sistema de "disfraz" de minijuegos.
+
 ### Pendiente
-- Probar mod-eventwow en servidor (compila OK; prueba en curso por el usuario).
+- Corte vertical paso 3: limpieza UI en el mundo (FrameXML).
 - Subir ambos repos a un remoto privado.
-- Lobby: posicion (`playercreateinfo` humano guerrero) - por decidir; de momento inicio normal humano.
-- `OnPlayerCreate`: personaje vacio (sin equipo/hechizos) o con ropa basica - por decidir.
-- Decisiones abiertas: login (cuenta+contrasena vs solo nombre/launcher), C++ puro vs C++ + Eluna para minijuegos,
-  base de matchmaking/instancias (sistema de Battlegrounds vs mapas de mazmorra vs phasing).
 
 ## Hoja de ruta
-1. **Fase 0 - Servidor:** compilar AzerothCore; `CharactersPerRealm = 1`, nivel/arranque fijos, sin cinematicas;
-   modulo que fuerce raza/clase en la creacion; `playercreateinfo` -> posicion del lobby.
-2. **Fase 1 - Lobby y UI en el mundo (FrameXML):** ocultar UI no usada (bolsas, hechizos, talentos, misiones...),
-   Logout del menu -> login; zona de lobby segura.
-3. **Fase 2 - Protocolo cliente<->servidor:** addon messages; addon del panel de minijuegos.
-4. **Fase 3 - Matchmaking e instancias:** colas solo/grupo, creacion/limpieza de instancias, retorno al lobby.
-5. **Fase 4 - Framework de minijuegos:** clase base (inicio, ticks, victoria, recompensas) y normalizacion del jugador.
-6. **Fase 5 - Minijuegos concretos.**
+
+**Fase 0 (HECHA):** login -> nombre -> mundo, validado en servidor (mod-eventwow).
+
+**Siguiente: corte vertical** (acordado 2026-11-12). Antes de pulir cada fase, montar el recorrido completo
+en version minima con UN minijuego trivial en solitario, para validar lo arriesgado (protocolo, instancias, retorno):
+
+```
+Lobby -> panel -> elegir juego -> cola -> instancia -> jugar -> fin -> lobby
+```
+
+1. Personaje neutro (servidor): sin equipo/hechizos de clase/XP/misiones, stats fijas; estado base restaurable.
+2. Lobby minimo: punto fijo, zona segura sin combate (provisional).
+3. Limpieza UI en el mundo (FrameXML): ocultar barras/bolsas/hechizos/talentos/misiones; Logout -> login.
+4. Protocolo cliente<->servidor por addon messages (listar juegos, cola, salir, estado, inicio/fin).
+5. Addon del panel de minijuegos.
+6. Matchmaking + instancias (modulo): cola por juego, crear instancia, teleport, limpieza, retorno.
+7. Framework de minijuego (clase base: inicio, tick, victoria, fin) + juego de prueba.
+
+Despues: grupos/emparejamiento multijugador, minijuegos reales, lobby definitivo, launcher, remoto git.
+
+### Decisiones tomadas (2026-11-12)
+- **Lobby = "limbo" invisible**: el jugador nunca ve su personaje ni la zona, solo el panel. Es solo un punto ancla
+  de entrada/retorno definido en config (`EventWow.Lobby.MapId/X/Y/Z/O`; provisional Isla GM: 1, 16226.2, 16257, 13.2022, 1.65).
+  El modulo manda al lobby (y restaura estado base) en CADA login y al salir de un minijuego; no se usa `playercreateinfo`.
+- **Lobby en mapa NO instanciado + jugadores invisibles entre si** (visibilidad server-side `SERVERSIDE_VISIBILITY_GM`
+  = `SEC_MODERATOR`): evita el trafico de visibilidad sin instancias. Entrar a un mapa de mazmorra al hacer login
+  sin bind valido expulsa a la entrada/homebind, por eso el lobby no va instanciado. Si al medir no aguanta:
+  lobby instanciado de ~50 (requiere hook de destino de instancia + saltar validaciones de login).
+- **Primer login directo al lobby**: `playercreateinfo` (SQL del modulo) apunta al lobby; logins posteriores via hook
+  `OnPlayerOverrideLoginLocation` (nunca dos pantallas de carga).
+- **Partidas = mapas de mazmorra instanciados** con instancia elegida por el modulo (hook de destino de instancia +
+  hook de max jugadores, a crear en el paso de matchmaking). Continentes NO son instanciables: los minijuegos
+  van en mapas de mazmorra/banda/BG/arena o mapas propios.
+- **Personaje del minijuego = opcion A**: el mismo personaje "disfrazado" por el servidor (morph, hechizos, barra,
+  stats, vehiculo) y restaurado al salir. NO se cambia a otro personaje de BD (sin relog).
+- **Interfaz = nativa en FrameXML** (en `patch-4.MPQ`, anadida a `FrameXML.toc`, no addon desactivable) + protocolo
+  propio por addon messages manejado en C++ en `mod-eventwow`. Panel **generico guiado por datos del servidor**
+  (lista de juegos, textos, iconos, min/max jugadores, estado de cola): anadir/cambiar un minijuego no toca el cliente.
+  Mensajes de addon: max 255 caracteres (`ChatHandler.cpp`) -> fragmentar. ALE/Eluna + AIO descartado por ahora.
+- Minijuegos en C++ (Eluna solo si la iteracion se vuelve un problema).
+
+### Decisiones abiertas
+- Login: cuenta+contrasena (actual) vs launcher/solo nombre.
+- Lobby definitivo (mapa propio) - de momento Isla de los GM.

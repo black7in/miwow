@@ -32,6 +32,21 @@ EventWow.Enable = 1
 EventWow.Character.Race = 1
 EventWow.Character.Class = 1
 
+#
+#    EventWow.Lobby.MapId / X / Y / Z / O
+#        Description: Punto ancla del lobby ("limbo" invisible). Todo login carga aqui directamente
+#                     (incluso tras desconectarse dentro de un minijuego) y se vuelve aqui al salir de uno.
+#                     Debe ser un mapa NO instanciado y coincidir con playercreateinfo de la raza/clase
+#                     configurada (data/sql/db-world/..._lobby_playercreateinfo.sql); el modulo avisa al
+#                     arrancar si no coincide.
+#        Default:     Isla de los GM - 1, 16226.2, 16257, 13.2022, 1.65007
+
+EventWow.Lobby.MapId = 1
+EventWow.Lobby.X = 16226.2
+EventWow.Lobby.Y = 16257
+EventWow.Lobby.Z = 13.2022
+EventWow.Lobby.O = 1.65007
+
 ###################################################################################################
 # OVERRIDES DEL CORE (pisan worldserver.conf)
 ###################################################################################################
