@@ -195,6 +195,11 @@ Datos clave de la API Glue:
        mapa sin pasar por `Remove` (teleport GM), el vehiculo queda en la instancia hasta que se descarga.
      - Cliente: `VehicleMenuBar` visible en partida, `VehicleMenuBarLeaveButton` oculto, teclas 1-6 permitidas en
        vehiculo (`EVENTWOW_VEHICLE_ACTION_FUNCTIONS` en EventWow.lua).
+     - Nombres (en pruebas): solo los de jugadores. `EventWow_SetupUnitNames` (EventWow.lua) fuerza CVars
+       (`UnitNameOwn = 1`, `UnitName*Pet/Guardian/TotemName = 0`). Comprobado: el vehiculo conducido NO cuenta como
+       mascota para el cliente (sale como PNJ) y cambiar `UNITNAME_TITLE_*` desde Lua no tiene efecto: se edita
+       `client/src/Interface/FrameXML/GlobalStrings.lua` (`UNITNAME_TITLE_CHARM/MINION = ""`, "Esbirro de X").
+       Falta decidir como ocultar el nombre del vehiculo (UnitNameNPC = 0 o entradas propias sin nombre).
      - Personajes con vehiculo no deberian llevar hechizos de disfraz (las teclas 1.. chocarian con la barra propia).
   Despues: carrera con fases.
 - Corte vertical pasos 6-7 (compilado y probado por el usuario 2026-11-13):

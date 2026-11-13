@@ -341,6 +341,29 @@ local function EventWow_DisableTutorials()
 	hooksecurefunc(TutorialFrameAlertButton, "Show", TutorialFrameAlertButton.Hide);
 end
 
+-- Nombres en el mundo: los de los personajes (jugadores, incluido el propio). Sin nombres de mascotas,
+-- guardianes ni totems. El subtitulo "Esbirro de X" de los vehiculos conducidos se quita en GlobalStrings.lua
+-- (el motor lee esos textos al cargarlo: cambiarlos aqui no tiene efecto).
+-- Las CVars se guardan en Config.wtf: se fuerzan en cada carga (el jugador no tiene opciones de interfaz).
+EVENTWOW_NAME_CVARS = {
+	UnitNameOwn = "1",
+	UnitNameFriendlyPlayerName = "1",
+	UnitNameEnemyPlayerName = "1",
+	UnitNameFriendlyPetName = "0",
+	UnitNameFriendlyGuardianName = "0",
+	UnitNameFriendlyTotemName = "0",
+	UnitNameEnemyPetName = "0",
+	UnitNameEnemyGuardianName = "0",
+	UnitNameEnemyTotemName = "0",
+};
+
+local function EventWow_SetupUnitNames()
+	for cvar, value in pairs(EVENTWOW_NAME_CVARS) do
+		SetCVar(cvar, value);
+	end
+end
+
+EventWow_SetupUnitNames();
 EventWow_DisableTutorials();
 EventWow_CreateWorldCover();
 EventWow_CreateDevButton();
