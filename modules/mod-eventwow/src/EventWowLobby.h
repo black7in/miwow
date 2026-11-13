@@ -7,6 +7,9 @@ class Player;
 // (EventWowLobby.cpp). Helpers usados tambien al entrar/salir de un minijuego.
 namespace EventWowLobby
 {
+    // Distancia al punto ancla que cuenta como "en el lobby" (mismo mapa)
+    constexpr float Radius = 250.0f;
+
     bool IsInLobby(Player const* player);
 
     // En el lobby los jugadores solo son visibles para GMs (sin trafico de visibilidad entre ellos).

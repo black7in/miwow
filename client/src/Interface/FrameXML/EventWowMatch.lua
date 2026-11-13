@@ -1,6 +1,7 @@
 -- EventWow: partida en curso (HUD generico). Todo lo que muestra llega del servidor:
 --   MATCH_STATE <NONE | LOADING|WAITING|COUNTDOWN|RUNNING|ENDED> <id juego> <segundos>
 --   MATCH_HUD <texto del objetivo>
+--   MATCH_RESPAWN <segundos> (has muerto: reapareces en N; 0 = ya)
 --   MATCH_END <WIN|LOSE|NONE> <texto>
 -- y manda ABANDON para volver al lobby. Ver docs/protocolo.md.
 --
@@ -24,6 +25,7 @@ EVENTWOW_STR_MATCH_ABANDON = "Abandonar";
 EVENTWOW_STR_MATCH_BACK = "Volver al lobby";
 EVENTWOW_STR_MATCH_ABANDON_CONFIRM = "¿Abandonar la partida y volver al lobby?";
 EVENTWOW_STR_MATCH_GO = "¡YA!";
+EVENTWOW_STR_MATCH_RESPAWN = "Reapareces en %d";
 EVENTWOW_STR_MATCH_RESULT = {
 	WIN = { text = "¡VICTORIA!", color = { 0.2, 1, 0.2 } },
 	LOSE = { text = "DERROTA", color = { 1, 0.2, 0.2 } },
@@ -202,6 +204,7 @@ local function EventWow_LeaveMatch()
 	match.summary = nil;
 	StaticPopup_Hide("EVENTWOW_ABANDON_MATCH");
 	EventWowMatchHud:Hide();
+	EventWowMatchBigTextFrame:SetScript("OnUpdate", nil);
 	EventWow_HideBigText();
 	EventWow_SetMode("lobby");
 end
@@ -279,6 +282,33 @@ EventWow_RegisterHandler("MATCH_END", function(fields)
 		line = line.." "..summary;
 	end
 	DEFAULT_CHAT_FRAME:AddMessage(line, unpack(result.color));
+end);
+
+-- MATCH_RESPAWN <segundos>
+EventWow_RegisterHandler("MATCH_RESPAWN", function(fields)
+	local seconds = tonumber(fields[1]) or 0;
+	local frame = EventWowMatchBigTextFrame;
+	if ( seconds <= 0 ) then
+		frame:SetScript("OnUpdate", nil);
+		EventWow_HideBigText();
+		return;
+	end
+
+	-- La reaparicion es automatica: sin el dialogo de "Liberar espiritu"
+	StaticPopup_Hide("DEATH");
+	local endTime = GetTime() + seconds;
+	local function Refresh()
+		local left = math.max(1, math.ceil(endTime - GetTime()));
+		EventWow_ShowBigText(format(EVENTWOW_STR_MATCH_RESPAWN, left), nil, 1, 0.3, 0.3);
+	end
+	Refresh();
+	frame:SetScript("OnUpdate", function(self)
+		if ( GetTime() >= endTime ) then
+			self:SetScript("OnUpdate", nil);
+			return;
+		end
+		Refresh();
+	end);
 end);
 
 EventWow_CreateHud();

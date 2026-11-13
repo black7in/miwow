@@ -156,7 +156,11 @@ Datos clave de la API Glue:
   - Cliente: protocolo v2 (`GAMES` + jugable, `MATCH_STATE/HUD/END`, `ABANDON`); `EventWowMatch.lua` (HUD,
     cuenta atras, resultado, Abandonar); `EventWow_SetMode("lobby"|"match")` (en partida: mundo + PlayerFrame/
     TargetFrame/BuffFrame/CastingBar; ventanas y acciones siguen bloqueadas; sin chat).
-  - Pendiente: muerte dentro de la partida (liberar espiritu saca de ella), chat en partida, "disfraz".
+  - Muerte (probado por el usuario 2026-11-13): regla por defecto = reaparecer en el inicio a los 5 s (`OnPlayerDied`, `RespawnPlayer`,
+    `GetRespawnPosition`; hooks `OnPlayerJustDied` + `OnPlayerCanRepopAtGraveyard`: nunca al cementerio; caer fuera
+    del mapa -> punto de reaparicion). `IsInLobby` = mismo mapa Y a menos de 250 m del ancla (la Isla GM comparte
+    Kalimdor con Orgrimmar). Login muerto -> resucita.
+  - Pendiente: chat en partida, "disfraz".
   - Observacion pendiente: reinicios de instancia del core. Mazmorras 5 normal no tienen reinicio programado
     (seguro). Bandas (semanal) / heroicos (diario) si: una partida en esos mapas se cortaria a la hora del reinicio.
     Opcion propuesta: que `Validate()` rechace mapas con `MapDifficulty.resetTime` != 0. Sin decidir.
@@ -203,6 +207,17 @@ Despues: grupos/emparejamiento multijugador, minijuegos reales, lobby definitivo
   (lista de juegos, textos, iconos, min/max jugadores, estado de cola): anadir/cambiar un minijuego no toca el cliente.
   Mensajes de addon: max 255 caracteres (`ChatHandler.cpp`) -> fragmentar. ALE/Eluna + AIO descartado por ahora.
 - Minijuegos en C++ (Eluna solo si la iteracion se vuelve un problema).
+
+### Decisiones tomadas (2026-11-13)
+- **Muerte en partida = mecanismo en el framework, regla en cada minijuego.**
+  - Sistema (`EventWowMatch`/`EventWowMatchMgr`): morir nunca saca de la partida (cortar el cementerio exterior);
+    aviso `OnPlayerDied(player, killer)`; herramientas: resucitar en un punto / tras N s, bloquear "Liberar
+    espiritu", espectador, eliminar (LOSE); mensajes al HUD; regla por defecto si el juego no define nada
+    (reaparecer en el inicio a los ~5 s).
+  - Cada juego sobrescribe `OnPlayerDied` y elige (checkpoint, sin liberar hasta fin de oleada, eliminado...).
+  - Hooks del core que ya existen (verificar al implementar): `OnPlayerJustDied`, `OnPlayerCanRepopAtGraveyard`,
+    `OnPlayerReleasedGhost`, `CanResurrect` -> en principio sin tocar el core.
+  - Las herramientas se disenan con el primer minijuego real que necesite muertes; antes, solo la regla por defecto.
 
 ### Decisiones abiertas
 - Login: cuenta+contrasena (actual) vs launcher/solo nombre.

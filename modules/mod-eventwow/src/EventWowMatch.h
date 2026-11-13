@@ -4,6 +4,7 @@
 #include "Define.h"
 #include "Duration.h"
 #include "ObjectGuid.h"
+#include "Position.h"
 #include <functional>
 #include <string>
 #include <string_view>
@@ -56,6 +57,10 @@ public:
     void HandlePlayerArrived(Player* player);
     // Ya no esta en la partida (abandono, logout, teleport fuera); el gestor se encarga de moverlo
     void HandlePlayerLeft(ObjectGuid guid);
+    // Murio dentro de la instancia (hook OnPlayerJustDied: puede llegar desde el hilo del mapa)
+    void HandlePlayerDied(Player* player);
+    // Donde reaparece un jugador (tambien si cae fuera del mapa)
+    void TeleportToRespawn(Player* player);
     // Ended y cumplido el tiempo de resultado (o sin jugadores): el gestor la cierra
     bool IsReadyToClose() const;
     // MATCH_STATE actual (tambien al reconectar con /reload)
@@ -71,6 +76,13 @@ protected:
     virtual void OnTimerExpired() { End(); }
     virtual void OnPlayerLeft(ObjectGuid /*guid*/) { }
     virtual Seconds GetCountdown() const { return 3s; }
+    // Muerte: morir nunca saca de la partida (no hay cementerio exterior). Por defecto reaparece en
+    // GetRespawnPosition() a los 5 s; cada juego decide su regla (checkpoint, eliminado, esperar...).
+    virtual void OnPlayerDied(Player* player) { RespawnPlayer(player, 5s); }
+    virtual Position const& GetRespawnPosition(Player* player) const;
+
+    // Resucita (vida completa) y lleva a GetRespawnPosition() tras delay (0s = ya). El HUD muestra la cuenta atras.
+    void RespawnPlayer(Player* player, Seconds delay);
 
     // Termina la partida (solo en Running). summary: texto para todos (opcional)
     void End(std::string_view summary = {});
@@ -88,6 +100,8 @@ private:
     void SetState(EventWowMatchState state, Milliseconds duration);
     // true si el temporizador del estado acaba de llegar a 0
     bool TickTimer(Milliseconds diff);
+    void UpdateRespawns(Milliseconds diff);
+    void DoRespawn(Player* player);
     void BroadcastState() const;
 
     uint32 _id = 0;
@@ -102,6 +116,8 @@ private:
     Milliseconds _stateTimer = 0ms;
     bool _timerActive = false;
     std::string _hud;
+    // Reapariciones pendientes: jugador -> tiempo restante
+    std::unordered_map<ObjectGuid, Milliseconds> _respawns;
 };
 
 #endif

@@ -74,6 +74,7 @@ void EventWowMatch::Update(Milliseconds diff)
         return;
 
     bool const expired = TickTimer(diff);
+    UpdateRespawns(diff);
     switch (_state)
     {
         case EventWowMatchState::Loading:
@@ -139,6 +140,7 @@ void EventWowMatch::HandlePlayerLeft(ObjectGuid guid)
     _players.erase(itr);
     _arrived.erase(guid);
     _results.erase(guid);
+    _respawns.erase(guid);
     OnPlayerLeft(guid);
 }
 
@@ -194,6 +196,81 @@ void EventWowMatch::End(std::string_view summary)
     });
 
     SetState(EventWowMatchState::Ended, sEventWowConfig.MatchReturnDelay);
+}
+
+// Muerte ----------------------------------------------------------------------------------------
+
+void EventWowMatch::HandlePlayerDied(Player* player)
+{
+    // Al terminar todos vuelven al lobby (y resucitan alli)
+    if (_state == EventWowMatchState::Ended)
+        return;
+
+    OnPlayerDied(player);
+}
+
+Position const& EventWowMatch::GetRespawnPosition(Player* /*player*/) const
+{
+    return _game->Start;
+}
+
+void EventWowMatch::RespawnPlayer(Player* player, Seconds delay)
+{
+    if (delay <= 0s)
+    {
+        _respawns.erase(player->GetGUID());
+        DoRespawn(player);
+        return;
+    }
+
+    _respawns[player->GetGUID()] = delay;
+    // MATCH_RESPAWN <segundos>: cuenta atras en el HUD (0 = ya ha reaparecido)
+    EventWowMessage("MATCH_RESPAWN").Add(static_cast<uint32>(delay.count())).Send(player);
+}
+
+void EventWowMatch::UpdateRespawns(Milliseconds diff)
+{
+    if (_respawns.empty() || _state == EventWowMatchState::Ended)
+        return;
+
+    GuidVector due;
+    for (auto& [guid, remaining] : _respawns)
+    {
+        if (remaining > diff)
+            remaining -= diff;
+        else
+            due.push_back(guid);
+    }
+
+    for (ObjectGuid const& guid : due)
+    {
+        _respawns.erase(guid);
+        if (Player* player = ObjectAccessor::FindPlayer(guid))
+            DoRespawn(player);
+    }
+}
+
+void EventWowMatch::DoRespawn(Player* player)
+{
+    if (player->GetInstanceId() != _instanceId)
+        return;
+
+    if (!player->IsAlive())
+    {
+        player->ResurrectPlayer(1.0f);
+        player->SpawnCorpseBones();
+    }
+
+    player->CombatStop(true);
+    player->SetFullHealth();
+    TeleportToRespawn(player);
+    EventWowMessage("MATCH_RESPAWN").Add(0).Send(player);
+}
+
+void EventWowMatch::TeleportToRespawn(Player* player)
+{
+    Position const& pos = GetRespawnPosition(player);
+    player->NearTeleportTo(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), pos.GetOrientation());
 }
 
 void EventWowMatch::SetResult(ObjectGuid guid, EventWowMatchResult result)

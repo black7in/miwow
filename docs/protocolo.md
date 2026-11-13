@@ -66,6 +66,7 @@ opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `Regi
 | `MATCH_STATE` | `NONE` / estado, id juego, segundos | partida del jugador (al conectar, en cada cambio y al volver al lobby). Estados: `LOADING` (en camino, sigue en modo lobby), `WAITING` (dentro, esperando al resto), `COUNTDOWN`, `RUNNING`, `ENDED` (resultado; luego vuelta al lobby). segundos = lo que queda del estado, 0 = sin tiempo |
 | `MATCH_HUD` | texto | objetivo que muestra el HUD (vacio = nada) |
 | `MATCH_END` | `WIN`/`LOSE`/`NONE`, texto | resultado del jugador y resumen |
+| `MATCH_RESPAWN` | segundos | has muerto: reapareces en N s (0 = ya has reaparecido). Morir nunca saca de la partida |
 
 ## Pendiente
 

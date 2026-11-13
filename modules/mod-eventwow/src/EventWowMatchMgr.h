@@ -41,6 +41,9 @@ public:
     // Eventos de jugador (EventWow_MatchPlayerScript)
     void OnPlayerMapChanged(Player* player);
     void OnPlayerLogout(Player* player);
+    // Hooks de muerte (pueden llegar desde el hilo del mapa de la instancia)
+    void OnPlayerDied(Player* player);
+    bool CanRepopAtGraveyard(Player* player);
     void OnPlayerConnected(Player* player);
     bool GetDestinationInstance(Player* player, uint32 mapId, uint32& instanceId) const;
     bool CanEnterInstance(Player* player, uint32 mapId, uint32 instanceId, bool& allow) const;

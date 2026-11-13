@@ -4,9 +4,11 @@
 #include "ScriptMgr.h"
 #include "WorldSession.h"
 
+// El mapa no basta: la Isla de los GM esta en Kalimdor (mapa 1), igual que Orgrimmar y otros cementerios
 bool EventWowLobby::IsInLobby(Player const* player)
 {
-    return player->GetMapId() == sEventWowConfig.Lobby.GetMapId();
+    WorldLocation const& lobby = sEventWowConfig.Lobby;
+    return player->GetMapId() == lobby.GetMapId() && player->GetExactDist2d(&lobby) <= Radius;
 }
 
 // Visible solo para GMs (nivel >= moderador) mientras esta en el lobby
@@ -87,6 +89,10 @@ public:
 
         // El progreso no existe en EventWow: sin experiencia
         player->SetPlayerFlag(PLAYER_FLAGS_NO_XP_GAIN);
+
+        // Pudo desconectarse muerto (p. ej. dentro de una partida): siempre vivo en el lobby
+        if (!player->IsAlive())
+            EventWowLobby::RestoreBaseState(player);
     }
 
     // Equipo, mochila y bolsas (destruir una bolsa destruye su contenido)

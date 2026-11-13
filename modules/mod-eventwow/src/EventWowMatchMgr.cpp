@@ -349,9 +349,40 @@ void EventWowMatchMgr::OnPlayerMapChanged(Player* player)
     // Ha acabado en otro mapa (p. ej. liberar espiritu en una mazmorra, teleport de GM): fuera de la partida
     LOG_DEBUG("module.eventwow", "EventWow: {} salio de la instancia de la partida {} (mapa {})",
         player->GetName(), match->GetId(), player->GetMapId());
+    // Al lobby siempre (resucitado): el cementerio de una mazmorra puede estar en el mismo mapa que el lobby
     RemovePlayer(*match, player->GetGUID(), false);
-    if (!EventWowLobby::IsInLobby(player))
+    if (EventWowLobby::IsInLobby(player))
+    {
+        EventWowLobby::RestoreBaseState(player);
+        EventWowLobby::SetVisibility(player, true);
+    }
+    else
         EventWowLobby::ReturnToLobby(player);
+}
+
+void EventWowMatchMgr::OnPlayerDied(Player* player)
+{
+    MatchSlot const* slot = GetMatchSlot(player);
+    if (!slot || !slot->Arrived)
+        return;
+
+    if (EventWowMatch* match = GetMatch(player))
+        match->HandlePlayerDied(player);
+}
+
+bool EventWowMatchMgr::CanRepopAtGraveyard(Player* player)
+{
+    MatchSlot const* slot = GetMatchSlot(player);
+    if (!slot || !slot->Arrived)
+        return true;
+
+    // Nunca al cementerio (estaria fuera de la instancia). Vivo = ha caido fuera del mapa: al punto de reaparicion.
+    // Muerto = ha liberado el espiritu: se queda como fantasma ahi hasta que el juego lo resucite.
+    if (player->IsAlive())
+        if (EventWowMatch* match = GetMatch(player))
+            match->TeleportToRespawn(player);
+
+    return false;
 }
 
 void EventWowMatchMgr::OnPlayerLogout(Player* player)
@@ -464,6 +495,8 @@ public:
         PLAYERHOOK_ON_OVERRIDE_INSTANCE_DESTINATION,
         PLAYERHOOK_ON_OVERRIDE_INSTANCE_ENTER,
         PLAYERHOOK_ON_MAP_CHANGED,
+        PLAYERHOOK_ON_PLAYER_JUST_DIED,
+        PLAYERHOOK_CAN_REPOP_AT_GRAVEYARD,
         PLAYERHOOK_ON_LOGOUT
     }) { }
 
@@ -483,6 +516,17 @@ public:
     {
         if (sEventWowConfig.Enabled)
             sEventWowMatchMgr.OnPlayerMapChanged(player);
+    }
+
+    void OnPlayerJustDied(Player* player) override
+    {
+        if (sEventWowConfig.Enabled)
+            sEventWowMatchMgr.OnPlayerDied(player);
+    }
+
+    bool OnPlayerCanRepopAtGraveyard(Player* player) override
+    {
+        return !sEventWowConfig.Enabled || sEventWowMatchMgr.CanRepopAtGraveyard(player);
     }
 
     void OnPlayerLogout(Player* player) override
