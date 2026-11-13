@@ -9,8 +9,8 @@
 struct EventWowConfig
 {
     bool Enabled = true;
-    uint8 CharacterRace = 1;  // RACE_HUMAN
-    uint8 CharacterClass = 1; // CLASS_WARRIOR
+    uint8 CharacterRace = 4;   // RACE_NIGHTELF
+    uint8 CharacterClass = 11; // CLASS_DRUID
 
     // Punto ancla del lobby: entrada en cada login y retorno al salir de un minijuego
     WorldLocation Lobby;

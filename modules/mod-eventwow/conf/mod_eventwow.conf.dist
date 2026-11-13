@@ -26,11 +26,15 @@ EventWow.Enable = 1
 #    EventWow.Character.Race / EventWow.Character.Class
 #        Description: Unica raza/clase con la que se puede crear personaje (IDs de ChrRaces/ChrClasses).
 #                     Se aplica tambien a GMs (las mascaras del core no).
-#                     Debe coincidir con EVENTWOW_CONFIG.RACE/CLASS del cliente (GlueXML/CharacterSelect.lua).
-#        Default:     1 - Human / 1 - Warrior
+#                     Debe coincidir con EVENTWOW_CONFIG.RACE/CLASS del cliente (GlueXML/CharacterSelect.lua),
+#                     con playercreateinfo (data/sql/db-world/..._lobby_playercreateinfo*.sql) y con
+#                     CharacterCreating.Disabled.RaceMask/ClassMask (abajo).
+#                     Druida: mana nativo y el core ya sabe cambiarle el tipo de poder (formas); base de los
+#                     "disfraces" de los minijuegos. Humano druida no existe en 3.3.5.
+#        Default:     4 - Night Elf / 11 - Druid
 
-EventWow.Character.Race = 1
-EventWow.Character.Class = 1
+EventWow.Character.Race = 4
+EventWow.Character.Class = 11
 
 #
 #    EventWow.Lobby.MapId / X / Y / Z / O
@@ -98,17 +102,24 @@ HeroicCharactersPerRealm = 0
 
 #
 #    CharacterCreating.Disabled.RaceMask
-#        Motivo: solo humano. 1790 = todas las razas jugables excepto Human (1).
-#                (2 Orc + 4 Dwarf + 8 NightElf + 16 Undead + 32 Tauren + 64 Gnome + 128 Troll + 512 BloodElf + 1024 Draenei)
+#        Motivo: solo elfo de la noche. 1783 = todas las razas jugables excepto NightElf (8).
+#                (1 Human + 2 Orc + 4 Dwarf + 16 Undead + 32 Tauren + 64 Gnome + 128 Troll + 512 BloodElf + 1024 Draenei)
 
-CharacterCreating.Disabled.RaceMask = 1790
+CharacterCreating.Disabled.RaceMask = 1783
 
 #
 #    CharacterCreating.Disabled.ClassMask
-#        Motivo: solo guerrero. 1534 = todas las clases excepto Warrior (1).
-#                (2 Paladin + 4 Hunter + 8 Rogue + 16 Priest + 32 DK + 64 Shaman + 128 Mage + 256 Warlock + 1024 Druid)
+#        Motivo: solo druida. 511 = todas las clases excepto Druid (1024).
+#                (1 Warrior + 2 Paladin + 4 Hunter + 8 Rogue + 16 Priest + 32 DK + 64 Shaman + 128 Mage + 256 Warlock)
 
-CharacterCreating.Disabled.ClassMask = 1534
+CharacterCreating.Disabled.ClassMask = 511
+
+#
+#    StartPlayerLevel
+#        Motivo: nivel fijo del contenedor. 80 (maximo): cualquier hechizo/vehiculo de 3.3.5 funciona sin
+#                penalizacion por nivel. No sube (PLAYER_FLAGS_NO_XP_GAIN); las stats las fija cada minijuego.
+
+StartPlayerLevel = 80
 
 #
 #    SkipCinematics

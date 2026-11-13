@@ -108,8 +108,8 @@ Datos clave de la API Glue:
 `modules/mod-eventwow/`:
 - `EventWowConfig` (WorldScript OnAfterConfigLoad): cachea `EventWow.Enable`, `EventWow.Character.Race/Class`.
 - `EventWow_AccountScript::CanAccountCreateCharacter`: solo raza/clase configuradas (tambien GMs).
-- Overrides: `CharactersPerRealm/Account = 1`, `HeroicCharactersPerRealm = 0`, RaceMask 1790 (solo humano),
-  ClassMask 1534 (solo guerrero), `SkipCinematics = 2`.
+- Overrides: `CharactersPerRealm/Account = 1`, `HeroicCharactersPerRealm = 0`, RaceMask/ClassMask (solo la raza/clase del
+  contenedor; desde 2026-11-13 elfo de la noche druida nivel 80), `SkipCinematics = 2`.
 
 ### Hecho (corte vertical pasos 1-2, compilado y probado por el usuario 2026-11-13)
 - Core (rama `eventwow`, commit `4fc546e73`): hook `OnPlayerOverrideLoginLocation` (ver `docs/core-changes.md`).
@@ -161,10 +161,10 @@ Datos clave de la API Glue:
   `EventWowFriends.lua`; lista nativa: conectados primero, estado, invitar, quitar, susurrar, anadir). Servidor:
   `OnPlayerNotVisibleGloballyFor` en `EventWowLobby.cpp` (sin el, los amigos del lobby salian desconectados).
 - **SIGUIENTE SESION: personajes por juego ("disfraz")** - ver decision 2026-11-13 abajo. Orden:
-  1. Cambiar el contenedor a **elfo de la noche druida** (no existe humano druida en 3.3.5) y nivel fijo (propuesto 80,
-     sin confirmar): `EventWow.Character.Race/Class` (4/11), RaceMask 1783, ClassMask 511, `StartPlayerLevel`
-     (override), `EVENTWOW_CONFIG` del cliente (fileStrings NightElf/DRUID), SQL `playercreateinfo` de raza 4 clase 11
-     al lobby. Hay que borrar los personajes de prueba (humano guerrero).
+  1. HECHO (probado por el usuario 2026-11-13): contenedor = **elfo de la noche druida nivel 80**: `EventWow.Character.Race/Class`
+     4/11, RaceMask 1783, ClassMask 511, override `StartPlayerLevel = 80`, `EVENTWOW_CONFIG` NIGHTELF/DRUID, SQL
+     `2026_11_13_00_lobby_playercreateinfo_druid.sql` (druida al lobby, humano guerrero de vuelta a Villadorada).
+     Personajes de prueba borrados de `eventwow_characters` (tablas por personaje vaciadas).
   2. Prototipo de disfraz en el juego de prueba (morph, vida/mana fijos, 2-3 hechizos existentes, barra en el HUD;
      comprobar que no queda nada al salir/desconectar/morir).
   3. Prototipo de vehiculo con una criatura-vehiculo existente.
@@ -280,7 +280,6 @@ Despues: grupos/emparejamiento multijugador, minijuegos reales, lobby definitivo
   - Hechizos: primero existentes; propios = `spell_dbc` (servidor) + `Spell.dbc` parcheado en patch-4.MPQ (cliente).
 
 ### Decisiones abiertas
-- Nivel fijo del contenedor (propuesto 80).
 - Cuando se elige el personaje: en el panel antes de buscar, al empezar la partida o asignado por el juego.
 - Login: cuenta+contrasena (actual) vs launcher/solo nombre.
 - Lobby definitivo (mapa propio) - de momento Isla de los GM.

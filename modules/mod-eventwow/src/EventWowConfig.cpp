@@ -16,8 +16,8 @@ EventWowConfig& EventWowConfig::Instance()
 void EventWowConfig::Load()
 {
     Enabled = sConfigMgr->GetOption<bool>("EventWow.Enable", true);
-    CharacterRace = sConfigMgr->GetOption<uint8>("EventWow.Character.Race", 1);
-    CharacterClass = sConfigMgr->GetOption<uint8>("EventWow.Character.Class", 1);
+    CharacterRace = sConfigMgr->GetOption<uint8>("EventWow.Character.Race", 4);
+    CharacterClass = sConfigMgr->GetOption<uint8>("EventWow.Character.Class", 11);
 
     Lobby.WorldRelocate(
         sConfigMgr->GetOption<uint32>("EventWow.Lobby.MapId", 1),

@@ -565,8 +565,8 @@ end
 -- =====================================================================
 
 EVENTWOW_CONFIG = {
-	RACE = "HUMAN",          -- fileString de GetAvailableRaces (HUMAN, ORC, DWARF, NIGHTELF, SCOURGE, TAUREN, GNOME, TROLL, BLOODELF, DRAENEI)
-	CLASS = "WARRIOR",       -- fileString de GetAvailableClasses (WARRIOR, PALADIN, HUNTER, ROGUE, PRIEST, DEATHKNIGHT, SHAMAN, MAGE, WARLOCK, DRUID)
+	RACE = "NIGHTELF",       -- fileString de GetAvailableRaces (HUMAN, ORC, DWARF, NIGHTELF, SCOURGE, TAUREN, GNOME, TROLL, BLOODELF, DRAENEI)
+	CLASS = "DRUID",         -- fileString de GetAvailableClasses (WARRIOR, PALADIN, HUNTER, ROGUE, PRIEST, DEATHKNIGHT, SHAMAN, MAGE, WARLOCK, DRUID)
 	SEX = SEX_MALE,          -- SEX_MALE / SEX_FEMALE (el modelo nunca se ve; en los minijuegos se cambia)
 	AUTO_ACTION_DELAY = 0.2, -- segundos antes de ejecutar la accion automatica
 
