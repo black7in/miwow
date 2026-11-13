@@ -1,0 +1,9 @@
+# Archivos del cliente: guardar tal cual (los originales de Blizzard usan CRLF)
+client/** -text
+
+# Modulo C++: LF, como exige AzerothCore (.editorconfig)
+modules/** text eol=lf
+
+# Scripts de PowerShell y docs
+*.ps1 text eol=crlf
+*.md text eol=lf

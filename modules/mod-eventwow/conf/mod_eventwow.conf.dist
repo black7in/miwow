@@ -1,0 +1,70 @@
+[worldserver]
+
+###################################################################################################
+# EventWow - configuracion del modulo
+#
+# Copiar a configs/modules/mod_eventwow.conf (sin .dist).
+#
+# IMPORTANTE: los .conf de modulos se cargan DESPUES de worldserver.conf y sus claves lo pisan
+# (ConfigMgr::AddKey). Por eso las opciones del core que EventWow necesita viven aqui y no en
+# worldserver.conf: este archivo es la lista completa de lo que cambiamos del core.
+# worldserver.conf solo debe llevar infraestructura (BD, IPs, puertos, rutas) - ver docs/despliegue.md
+###################################################################################################
+
+###################################################################################################
+# OPCIONES PROPIAS
+###################################################################################################
+
+#
+#    EventWow.Enable
+#        Description: Activa el modulo.
+#        Default:     1
+
+EventWow.Enable = 1
+
+#
+#    EventWow.Character.Race / EventWow.Character.Class
+#        Description: Unica raza/clase con la que se puede crear personaje (IDs de ChrRaces/ChrClasses).
+#                     Se aplica tambien a GMs (las mascaras del core no).
+#                     Debe coincidir con EVENTWOW_CONFIG.RACE/CLASS del cliente (GlueXML/CharacterSelect.lua).
+#        Default:     1 - Human / 1 - Warrior
+
+EventWow.Character.Race = 1
+EventWow.Character.Class = 1
+
+###################################################################################################
+# OVERRIDES DEL CORE (pisan worldserver.conf)
+###################################################################################################
+
+#
+#    CharactersPerRealm / CharactersPerAccount
+#        Motivo: un solo personaje por cuenta; el cliente entra automaticamente con el.
+
+CharactersPerRealm = 1
+CharactersPerAccount = 1
+
+#
+#    HeroicCharactersPerRealm
+#        Motivo: sin Caballeros de la Muerte.
+
+HeroicCharactersPerRealm = 0
+
+#
+#    CharacterCreating.Disabled.RaceMask
+#        Motivo: solo humano. 1790 = todas las razas jugables excepto Human (1).
+#                (2 Orc + 4 Dwarf + 8 NightElf + 16 Undead + 32 Tauren + 64 Gnome + 128 Troll + 512 BloodElf + 1024 Draenei)
+
+CharacterCreating.Disabled.RaceMask = 1790
+
+#
+#    CharacterCreating.Disabled.ClassMask
+#        Motivo: solo guerrero. 1534 = todas las clases excepto Warrior (1).
+#                (2 Paladin + 4 Hunter + 8 Rogue + 16 Priest + 32 DK + 64 Shaman + 128 Mage + 256 Warlock + 1024 Druid)
+
+CharacterCreating.Disabled.ClassMask = 1534
+
+#
+#    SkipCinematics
+#        Motivo: el personaje nunca debe verse; sin cinematica de introduccion.
+
+SkipCinematics = 2

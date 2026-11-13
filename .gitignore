@@ -1,0 +1,21 @@
+# Core: repositorio propio (fork de AzerothCore, rama eventwow)
+/azerothcore-wotlk/
+
+# Build de CMake / Visual Studio (binarios, configs, logs locales)
+/server/
+
+# Interfaz original de Blizzard: se regenera con tools/Merge-Interface.ps1
+/client/interface-original/
+
+# Salida generada por tools/Build-Patch.ps1
+/client/patches/
+
+# Configuracion local con datos de entorno (credenciales, IPs)
+*.conf
+!*.conf.dist
+
+# Varios
+Thumbs.db
+desktop.ini
+*.tmp
+*.log
