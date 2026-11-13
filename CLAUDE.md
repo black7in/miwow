@@ -198,8 +198,12 @@ Datos clave de la API Glue:
      - Nombres (en pruebas): solo los de jugadores. `EventWow_SetupUnitNames` (EventWow.lua) fuerza CVars
        (`UnitNameOwn = 1`, `UnitName*Pet/Guardian/TotemName = 0`). Comprobado: el vehiculo conducido NO cuenta como
        mascota para el cliente (sale como PNJ) y cambiar `UNITNAME_TITLE_*` desde Lua no tiene efecto: se edita
-       `client/src/Interface/FrameXML/GlobalStrings.lua` (`UNITNAME_TITLE_CHARM/MINION = ""`, "Esbirro de X").
-       Falta decidir como ocultar el nombre del vehiculo (UnitNameNPC = 0 o entradas propias sin nombre).
+       `client/src/Interface/FrameXML/GlobalStrings.lua` (`UNITNAME_TITLE_CHARM/MINION` y `UNITNAME_SUMMON_TITLE3`
+       = "": subtitulo "Esbirro de X" quitado, probado).
+       Al conducir, el cliente muestra sobre el vehiculo el nombre de la CRIATURA y nunca el del conductor (probado),
+       y el nombre es por entrada (no por jugador). Decision: **vehiculos propios de EventWow sin nombre**, rango de
+       entradas reservado **9500000-9599999**, copias de vehiculos existentes sin script/heroico/clic/locale
+       (SQL `_05`: 9500000 = Salvaged Chopper; probado: sin nombre encima; el retrato del vehiculo muestra "Entidad desconocida", aceptado). El nombre es un campo mas: un juego puede darle uno.
      - Personajes con vehiculo no deberian llevar hechizos de disfraz (las teclas 1.. chocarian con la barra propia).
   Despues: carrera con fases.
 - Corte vertical pasos 6-7 (compilado y probado por el usuario 2026-11-13):
