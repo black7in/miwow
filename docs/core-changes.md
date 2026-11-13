@@ -14,7 +14,7 @@ Repositorio del core: `azerothcore-wotlk/` (fork local, luego remoto privado).
 |---|---|---|---|
 | 2026-11-12 | `2948c203f` (chore(DB): import pending files) | `2948c203f` | Inicio: sin cambios al core |
 | 2026-11-13 | `2948c203f` | `4fc546e73` | Hook OnPlayerOverrideLoginLocation compilado y probado (lobby) |
-| 2026-11-13 | `2948c203f` | `71970693a` | Hooks de instancia (partidas) - PENDIENTE de compilar y probar |
+| 2026-11-13 | `2948c203f` | `71970693a` | Hooks de instancia (partidas) compilados y probados |
 
 > Actualizar esta tabla cada vez que se haga rebase sobre un upstream nuevo.
 

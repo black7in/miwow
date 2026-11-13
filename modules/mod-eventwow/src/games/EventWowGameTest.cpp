@@ -26,7 +26,7 @@ void AddSC_eventwow_game_test()
     game.Id = "test";
     game.Name = "Prueba";
     game.Description = "Minijuego de prueba en solitario: aguanta 30 segundos en la instancia y vuelve al lobby.";
-    game.Icon = "Interface\Icons\INV_Misc_QuestionMark";
+    game.Icon = "Interface\\Icons\\INV_Misc_QuestionMark";
     game.MinPlayers = 1;
     game.MaxPlayers = 1;
     game.MapId = 389;

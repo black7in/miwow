@@ -143,7 +143,7 @@ Datos clave de la API Glue:
     security > SEC_PLAYER, log `module.eventwow.chat`); `EventWowQueue.cpp` (QUEUE/LEAVE PROVISIONAL: solo estado);
     juegos de maqueta `race`/`invasion` en `EventWowGames.cpp` (quitar con el framework).
   - Siguiente idea: amigos (pestanas en la zona del chat), chat compacto en partida.
-- Corte vertical pasos 6-7 (escrito 2026-11-13, PENDIENTE de compilar/probar; CMake: archivos nuevos y `games/`):
+- Corte vertical pasos 6-7 (compilado y probado por el usuario 2026-11-13):
   - Core (commit `71970693a`): hooks `OnPlayerOverrideInstanceDestination` / `OnPlayerOverrideInstanceEnter`.
   - Servidor: `EventWowMatchMgr.*` (sustituye a `EventWowQueue.cpp`: cola por juego, emparejamiento con
     Max o Min + `EventWow.Queue.FillWait`, una instancia por partida con `InstanceSave` propio, teleport con
@@ -157,6 +157,9 @@ Datos clave de la API Glue:
     cuenta atras, resultado, Abandonar); `EventWow_SetMode("lobby"|"match")` (en partida: mundo + PlayerFrame/
     TargetFrame/BuffFrame/CastingBar; ventanas y acciones siguen bloqueadas; sin chat).
   - Pendiente: muerte dentro de la partida (liberar espiritu saca de ella), chat en partida, "disfraz".
+  - Observacion pendiente: reinicios de instancia del core. Mazmorras 5 normal no tienen reinicio programado
+    (seguro). Bandas (semanal) / heroicos (diario) si: una partida en esos mapas se cortaria a la hora del reinicio.
+    Opcion propuesta: que `Validate()` rechace mapas con `MapDifficulty.resetTime` != 0. Sin decidir.
 - Subir ambos repos a un remoto privado.
 
 ## Hoja de ruta

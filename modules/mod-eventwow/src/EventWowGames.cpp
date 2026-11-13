@@ -112,7 +112,7 @@ void AddSC_eventwow_games()
         "race",
         "Carrera",
         "Llega el primero a la meta esquivando los obstáculos del recorrido. (Maqueta: todavía no existe.)",
-        "Interface\Icons\Ability_Rogue_Sprint",
+        "Interface\\Icons\\Ability_Rogue_Sprint",
         2,
         10
     });
@@ -120,7 +120,7 @@ void AddSC_eventwow_games()
         "invasion",
         "Invasión",
         "Resistid juntos oleada tras oleada de enemigos hasta derrotar al jefe final. (Maqueta: todavía no existe.)",
-        "Interface\Icons\Spell_Shadow_SummonFelGuard",
+        "Interface\\Icons\\Spell_Shadow_SummonFelGuard",
         5,
         20
     });
