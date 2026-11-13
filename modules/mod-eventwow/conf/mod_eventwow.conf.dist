@@ -120,3 +120,11 @@ AddonChannel = 1
 #                descarga en 1 minuto en vez de 30 (memoria con muchas partidas).
 
 Instance.UnloadDelay = 60000
+
+#
+#    GM.LoginState
+#        Motivo: .gm on activa el "modo dev" del panel igual que .dev on (EventWowDevMode.cpp) y los dos
+#                deben comportarse igual: .dev se quita en cada login, asi que el modo GM tambien empieza
+#                desactivado. Se entra siempre al panel; .gm on / .dev on cuando haga falta.
+
+GM.LoginState = 0

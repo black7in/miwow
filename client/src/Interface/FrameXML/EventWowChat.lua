@@ -30,6 +30,9 @@ EVENTWOW_NATIVE_CHAT_FRAMES = {
 
 EventWow_Chat = {
 	onlineCount = nil,
+	-- Chat nativo oculto (siempre salvo en modo dev); marco -> padre original
+	nativeHidden = false,
+	nativeParents = {},
 };
 
 local hiddenParent = CreateFrame("Frame", "EventWowChatHiddenParent", UIParent);
@@ -41,29 +44,39 @@ end
 
 -- Ocultar el chat nativo ------------------------------------------------------------------------
 
+-- Reversible (modo dev): se guarda el padre original de cada marco y las pestanas solo se ocultan
+-- mientras EventWow_Chat.nativeHidden
 local function EventWow_HideNativeChatFrame(frame)
 	if ( not frame ) then
 		return;
 	end
-	frame:SetParent(hiddenParent);
-
-	local tab = _G[frame:GetName().."Tab"];
-	if ( tab ) then
-		tab:Hide();
-		hooksecurefunc(tab, "Show", function(self)
-			self:Hide();
-		end);
+	if ( not EventWow_Chat.nativeParents[frame] ) then
+		EventWow_Chat.nativeParents[frame] = frame:GetParent();
+		local tab = _G[frame:GetName().."Tab"];
+		if ( tab ) then
+			hooksecurefunc(tab, "Show", function(self)
+				if ( EventWow_Chat.nativeHidden ) then
+					self:Hide();
+				end
+			end);
+		end
+	end
+	if ( EventWow_Chat.nativeHidden ) then
+		frame:SetParent(hiddenParent);
+		local tab = _G[frame:GetName().."Tab"];
+		if ( tab ) then
+			tab:Hide();
+		end
 	end
 end
 
 local function EventWow_HideNativeChat()
+	EventWow_Chat.nativeHidden = true;
 	for i = 1, NUM_CHAT_WINDOWS do
 		EventWow_HideNativeChatFrame(_G["ChatFrame"..i]);
 	end
 	for _, name in ipairs(EVENTWOW_NATIVE_CHAT_FRAMES) do
-		if ( _G[name] ) then
-			_G[name]:SetParent(hiddenParent);
-		end
+		EventWow_HideNativeChatFrame(_G[name]);
 	end
 
 	-- Ventanas temporales (p.ej. una pestana por susurro)
@@ -86,6 +99,28 @@ local function EventWow_HideNativeChat()
 			return editBox;
 		end
 		return openChat(text, chatFrame);
+	end
+end
+
+-- visible = true en modo dev (EventWow.lua): el chat nativo vuelve a su sitio
+function EventWowChat_SetNativeVisible(visible)
+	if ( EventWow_Chat.nativeHidden == not visible ) then
+		return;
+	end
+	EventWow_Chat.nativeHidden = not visible;
+	for frame, parent in pairs(EventWow_Chat.nativeParents) do
+		if ( visible ) then
+			frame:SetParent(parent);
+			local tab = frame.GetName and _G[frame:GetName().."Tab"];
+			if ( tab and (frame.isDocked or frame:IsShown()) ) then
+				tab:Show();
+			end
+		else
+			EventWow_HideNativeChatFrame(frame);
+		end
+	end
+	if ( visible ) then
+		FCF_DockUpdate();
 	end
 end
 

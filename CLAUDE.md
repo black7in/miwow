@@ -161,6 +161,17 @@ Datos clave de la API Glue:
     del mapa -> punto de reaparicion). `IsInLobby` = mismo mapa Y a menos de 250 m del ancla (la Isla GM comparte
     Kalimdor con Orgrimmar). Login muerto -> resucita.
   - Pendiente: chat en partida, "disfraz".
+- Modo dev (2026-11-13; probado con .dev/.gm; "Ocultar panel" y reglas de jugador en modo dev sin probar):
+  - Activo con `.dev on` (`PLAYER_FLAGS_DEVELOPER`) o `.gm on`, SOLO por comando (quien puede: RBAC del core).
+    El core no avisa del cambio de modo GM: `EventWowDevMode.cpp` lo comprueba cada 250 ms para los conectados y
+    manda `DEV_MODE 0/1`. `.gm` y `.dev` iguales: los dos se quitan al hacer login (`.dev` en el modulo, `.gm` con el
+    override `GM.LoginState = 0`).
+  - Cliente: en modo dev se ve el panel igual; boton "Ocultar panel" (barra superior) o `/eventwow` ->
+    `EventWow_SetPanelHidden` (EventWow.lua, solo cliente, no toca flags): todos los marcos, sin portada/panel,
+    ventanas y acciones desbloqueadas, chat nativo (`EventWowChat_SetNativeVisible`); boton "Mostrar panel" arriba.
+    Al salir del modo dev el panel vuelve. En partida el HUD sigue visible.
+  - Regla general en servidor: `EventWowDevMode.h` `IsActive()`; `EventWowMatchMgr` no aplica muerte/salida/vuelta al
+    lobby/estado base/cola-solo-lobby en modo dev (ver decision 2026-11-13).
   - Observacion pendiente: reinicios de instancia del core. Mazmorras 5 normal no tienen reinicio programado
     (seguro). Bandas (semanal) / heroicos (diario) si: una partida en esos mapas se cortaria a la hora del reinicio.
     Opcion propuesta: que `Validate()` rechace mapas con `MapDifficulty.resetTime` != 0. Sin decidir.
@@ -218,6 +229,12 @@ Despues: grupos/emparejamiento multijugador, minijuegos reales, lobby definitivo
   - Hooks del core que ya existen (verificar al implementar): `OnPlayerJustDied`, `OnPlayerCanRepopAtGraveyard`,
     `OnPlayerReleasedGhost`, `CanResurrect` -> en principio sin tocar el core.
   - Las herramientas se disenan con el primer minijuego real que necesite muertes; antes, solo la regla por defecto.
+- **Reglas de EventWow solo para jugadores; en modo dev (`.gm on` o `.dev on`) = AzerothCore normal** dentro del
+  mundo: muerte (cementerio original), salir de la instancia (se queda donde este), fin/abandono de partida (no se
+  le lleva al lobby), estado base al entrar, cola fuera del lobby, interfaz nativa. Comprobar con
+  `EventWowDevMode::IsActive(player)` en toda regla nueva. Se decide por MODO, no por cuenta: un GM sin modo dev es
+  un jugador (asi prueba el producto). NO afecta a login ni reglas de cuenta (todos entran al lobby/panel,
+  un personaje, raza/clase fijas; modo dev desactivado en cada login).
 
 ### Decisiones abiertas
 - Login: cuenta+contrasena (actual) vs launcher/solo nombre.

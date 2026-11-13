@@ -34,6 +34,7 @@ EVENTWOW_PANEL = {
 
 EVENTWOW_STR_PANEL_TITLE = "EVENTWOW";
 EVENTWOW_STR_PANEL_MENU = "Menú";
+EVENTWOW_STR_PANEL_HIDE = "Ocultar panel";
 EVENTWOW_STR_PANEL_GAMES = "MINIJUEGOS";
 EVENTWOW_STR_PANEL_CONNECTING = "Conectando con el servidor...";
 EVENTWOW_STR_PANEL_NO_GAMES = "No hay minijuegos disponibles.";
@@ -215,6 +216,16 @@ local function EventWow_CreateTopBar(panel)
 
 	local name = bar:CreateFontString("EventWowPanelPlayerName", "ARTWORK", "GameFontHighlight");
 	name:SetPoint("RIGHT", menu, "LEFT", -12, 0);
+
+	-- Solo en modo dev (.gm on o .dev on): interfaz nativa sin tocar ningun flag
+	local hide = CreateFrame("Button", "EventWowPanelHideButton", bar, "UIPanelButtonTemplate");
+	hide:SetSize(120, 22);
+	hide:SetPoint("LEFT", title, "RIGHT", 16, 0);
+	hide:SetText(EVENTWOW_STR_PANEL_HIDE);
+	hide:SetScript("OnClick", function()
+		EventWow_SetPanelHidden(true);
+	end);
+	hide:Hide();
 end
 
 function EventWowPanel_UpdatePlayerName()
@@ -422,5 +433,12 @@ EventWow_RegisterListener("CONNECTED", function()
 	EventWowPanel_Update();
 end);
 EventWow_RegisterListener("GAMES", EventWowPanel_Update);
+EventWow_RegisterListener("DEV_MODE", function()
+	if ( EventWow_UI.dev ) then
+		EventWowPanelHideButton:Show();
+	else
+		EventWowPanelHideButton:Hide();
+	end
+end);
 
 EventWow_CreatePanel();

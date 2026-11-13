@@ -1,6 +1,7 @@
 #include "EventWowMatchMgr.h"
 #include "DataMap.h"
 #include "EventWowConfig.h"
+#include "EventWowDevMode.h"
 #include "EventWowGames.h"
 #include "EventWowLobby.h"
 #include "EventWowMatch.h"
@@ -95,7 +96,7 @@ char const* EventWowMatchMgr::Enqueue(Player* player, EventWowGameInfo const& ga
     if (GetMatchSlot(player))
         return "QUEUE_IN_MATCH";
 
-    if (!EventWowLobby::IsInLobby(player))
+    if (!EventWowLobby::IsInLobby(player) && !EventWowDevMode::IsActive(player))
         return "QUEUE_NOT_IN_LOBBY";
 
     // Una sola cola a la vez: apuntarse a otro juego sustituye la anterior
@@ -302,10 +303,10 @@ void EventWowMatchMgr::RemovePlayer(EventWowMatch& match, ObjectGuid guid, bool 
     if (!player || !player->IsInWorld())
         return;
 
-    if (teleport && player->GetInstanceId() == match.GetInstanceId())
+    if (teleport && player->GetInstanceId() == match.GetInstanceId() && !EventWowDevMode::IsActive(player))
         EventWowLobby::ReturnToLobby(player);  // MATCH_STATE NONE al llegar (OnPlayerMapChanged)
-    else if (EventWowLobby::IsInLobby(player))
-        SendNoMatch(player);
+    else
+        SendNoMatch(player);  // se queda donde esta (modo dev, o aun no habia llegado)
 }
 
 bool EventWowMatchMgr::IsMatchInstance(uint32 instanceId) const
@@ -341,7 +342,8 @@ void EventWowMatchMgr::OnPlayerMapChanged(Player* player)
 
         slot->Arrived = true;
         EventWowLobby::SetVisibility(player, false);
-        EventWowLobby::RestoreBaseState(player);
+        if (!EventWowDevMode::IsActive(player))
+            EventWowLobby::RestoreBaseState(player);
         match->HandlePlayerArrived(player);
         return;
     }
@@ -351,6 +353,9 @@ void EventWowMatchMgr::OnPlayerMapChanged(Player* player)
         player->GetName(), match->GetId(), player->GetMapId());
     // Al lobby siempre (resucitado): el cementerio de una mazmorra puede estar en el mismo mapa que el lobby
     RemovePlayer(*match, player->GetGUID(), false);
+    if (EventWowDevMode::IsActive(player))
+        return;
+
     if (EventWowLobby::IsInLobby(player))
     {
         EventWowLobby::RestoreBaseState(player);
@@ -363,7 +368,7 @@ void EventWowMatchMgr::OnPlayerMapChanged(Player* player)
 void EventWowMatchMgr::OnPlayerDied(Player* player)
 {
     MatchSlot const* slot = GetMatchSlot(player);
-    if (!slot || !slot->Arrived)
+    if (!slot || !slot->Arrived || EventWowDevMode::IsActive(player))
         return;
 
     if (EventWowMatch* match = GetMatch(player))
@@ -373,7 +378,7 @@ void EventWowMatchMgr::OnPlayerDied(Player* player)
 bool EventWowMatchMgr::CanRepopAtGraveyard(Player* player)
 {
     MatchSlot const* slot = GetMatchSlot(player);
-    if (!slot || !slot->Arrived)
+    if (!slot || !slot->Arrived || EventWowDevMode::IsActive(player))
         return true;
 
     // Nunca al cementerio (estaria fuera de la instancia). Vivo = ha caido fuera del mapa: al punto de reaparicion.

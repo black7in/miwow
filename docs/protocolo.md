@@ -67,6 +67,7 @@ opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `Regi
 | `MATCH_HUD` | texto | objetivo que muestra el HUD (vacio = nada) |
 | `MATCH_END` | `WIN`/`LOSE`/`NONE`, texto | resultado del jugador y resumen |
 | `MATCH_RESPAWN` | segundos | has muerto: reapareces en N s (0 = ya has reaparecido). Morir nunca saca de la partida |
+| `DEV_MODE` | 0/1 | modo dev (`.gm on` o `.dev on`; se comprueba cada 250 ms). Al conectar y en cada cambio. En modo dev el cliente permite ocultar el panel (solo cliente) |
 
 ## Pendiente
 

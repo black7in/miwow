@@ -89,9 +89,16 @@ EVENTWOW_LOBBY_BLOCKED_PANELS = {
 	"WorldMapFrame",
 };
 
+EVENTWOW_STR_DEV_SHOW_PANEL = "Mostrar panel";
+EVENTWOW_STR_DEV_ONLY = "Solo en modo dev (.gm on o .dev on).";
+
 EventWow_UI = {
 	-- "lobby" | "match" (nil antes de inicializar)
 	mode = nil,
+	-- Modo dev (.gm on o .dev on, lo avisa el servidor con DEV_MODE): permite ocultar el panel
+	dev = false,
+	-- Panel oculto: interfaz nativa sin restricciones (solo en modo dev; no toca ningun flag)
+	panelHidden = false,
 	savedParents = {},
 };
 
@@ -149,12 +156,22 @@ local function EventWow_CreateWorldCover()
 	return f;
 end
 
+-- Interfaz nativa sin restricciones: modo dev + panel oculto
+function EventWow_IsUnrestricted()
+	return EventWow_UI.dev and EventWow_UI.panelHidden;
+end
+
+-- Ventanas y acciones bloqueadas (lobby y partida, salvo con el panel oculto en modo dev)
+function EventWow_IsRestricted()
+	return EventWow_UI.mode ~= nil and not EventWow_IsUnrestricted();
+end
+
 local function EventWow_WrapBlockedFunctions()
 	for _, name in ipairs(EVENTWOW_LOBBY_BLOCKED_FUNCTIONS) do
 		local original = _G[name];
 		if ( original ) then
 			_G[name] = function(...)
-				if ( EventWow_UI.mode ) then
+				if ( EventWow_IsRestricted() ) then
 					return;
 				end
 				return original(...);
@@ -166,7 +183,7 @@ local function EventWow_WrapBlockedFunctions()
 		local frame = _G[name];
 		if ( frame ) then
 			frame:HookScript("OnShow", function(self)
-				if ( EventWow_UI.mode ) then
+				if ( EventWow_IsRestricted() ) then
 					self:Hide();
 				end
 			end);
@@ -182,28 +199,27 @@ local function EventWow_SetupGameMenu()
 	GameMenuFrame:SetHeight(GameMenuFrame:GetHeight() - GameMenuButtonMacros:GetHeight() - 1);
 end
 
--- mode: "lobby" (portada + panel) o "match" (mundo visible + HUD de EventWowMatch.lua)
-function EventWow_SetMode(mode)
-	if ( EventWow_UI.mode == mode ) then
-		return;
-	end
-	EventWow_UI.mode = mode;
-	local lobby = mode == "lobby";
+-- Aplica el modo actual: EventWow_UI.mode ("lobby" | "match") + panel oculto en modo dev
+local function EventWow_ApplyMode()
+	local mode, dev = EventWow_UI.mode, EventWow_IsUnrestricted();
+	local lobby = mode == "lobby" and not dev;
 
 	for _, name in ipairs(EVENTWOW_LOBBY_HIDDEN_FRAMES) do
-		if ( not lobby and EVENTWOW_MATCH_VISIBLE_FRAMES[name] ) then
+		if ( dev or (mode == "match" and EVENTWOW_MATCH_VISIBLE_FRAMES[name]) ) then
 			EventWow_RestoreFrame(name);
 		else
 			EventWow_HideFrame(name);
 		end
 	end
 
-	for _, name in ipairs(EVENTWOW_LOBBY_BLOCKED_PANELS) do
-		if ( _G[name] ) then
-			_G[name]:Hide();
+	if ( not dev ) then
+		for _, name in ipairs(EVENTWOW_LOBBY_BLOCKED_PANELS) do
+			if ( _G[name] ) then
+				_G[name]:Hide();
+			end
 		end
+		CloseAllBags();
 	end
-	CloseAllBags();
 
 	if ( lobby ) then
 		EventWowWorldCover:Show();
@@ -212,6 +228,22 @@ function EventWow_SetMode(mode)
 		EventWowWorldCover:Hide();
 		EventWowPanel:Hide();
 	end
+
+	EventWowChat_SetNativeVisible(dev);
+	if ( dev ) then
+		EventWowDevButton:Show();
+	else
+		EventWowDevButton:Hide();
+	end
+end
+
+-- mode: "lobby" (portada + panel) o "match" (mundo visible + HUD de EventWowMatch.lua)
+function EventWow_SetMode(mode)
+	if ( EventWow_UI.mode == mode ) then
+		return;
+	end
+	EventWow_UI.mode = mode;
+	EventWow_ApplyMode();
 end
 
 -- Compatibilidad
@@ -219,7 +251,60 @@ function EventWow_SetLobbyMode(enabled)
 	EventWow_SetMode(enabled and "lobby" or "match");
 end
 
+-- Modo dev (DEV_MODE del servidor). Al salir de el, el panel vuelve siempre.
+function EventWow_SetDevMode(enabled)
+	enabled = enabled and true or false;
+	if ( EventWow_UI.dev == enabled ) then
+		return;
+	end
+	EventWow_UI.dev = enabled;
+	if ( not enabled ) then
+		EventWow_UI.panelHidden = false;
+	end
+	EventWow_ApplyMode();
+	EventWow_FireListeners("DEV_MODE");
+end
+
+-- Ocultar / mostrar el panel (solo en modo dev; solo cliente)
+function EventWow_SetPanelHidden(hidden)
+	hidden = hidden and EventWow_UI.dev and true or false;
+	if ( EventWow_UI.panelHidden == hidden ) then
+		return;
+	end
+	EventWow_UI.panelHidden = hidden;
+	EventWow_ApplyMode();
+end
+
+-- Boton flotante con el panel oculto para volver a mostrarlo
+local function EventWow_CreateDevButton()
+	local button = CreateFrame("Button", "EventWowDevButton", UIParent, "UIPanelButtonTemplate");
+	button:SetSize(150, 22);
+	button:SetPoint("TOP", UIParent, "TOP", 0, -2);
+	button:SetFrameStrata("HIGH");
+	button:SetText(EVENTWOW_STR_DEV_SHOW_PANEL);
+	button:SetScript("OnClick", function()
+		EventWow_SetPanelHidden(false);
+	end);
+	button:Hide();
+end
+
+-- DEV_MODE <0|1>: .gm on o .dev on
+EventWow_RegisterHandler("DEV_MODE", function(fields)
+	EventWow_SetDevMode(fields[1] == "1");
+end);
+
+-- /eventwow: ocultar / mostrar el panel (modo dev)
+SLASH_EVENTWOW1 = "/eventwow";
+SlashCmdList["EVENTWOW"] = function()
+	if ( EventWow_UI.dev ) then
+		EventWow_SetPanelHidden(not EventWow_UI.panelHidden);
+	else
+		DEFAULT_CHAT_FRAME:AddMessage(EVENTWOW_STR_DEV_ONLY, 1, 0.2, 0.2);
+	end
+end
+
 EventWow_CreateWorldCover();
+EventWow_CreateDevButton();
 EventWow_WrapBlockedFunctions();
 EventWow_SetupGameMenu();
 
