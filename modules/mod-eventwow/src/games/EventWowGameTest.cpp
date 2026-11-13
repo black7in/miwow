@@ -1,5 +1,8 @@
 #include "EventWowGames.h"
 #include "EventWowMatch.h"
+#include "Map.h"
+#include "Player.h"
+#include "SharedDefines.h"
 
 // Minijuego de prueba del corte vertical: valida cola -> instancia -> partida -> fin -> lobby.
 // Entra solo, cuenta atras, aguanta el temporizador y gana. Se puede abandonar en cualquier momento.
@@ -24,6 +27,33 @@ protected:
 
 private:
     Seconds _duration;
+};
+
+// Prototipo de tienda: cada jugador recibe oro al empezar y hay un mercader junto al inicio (EventWowShop.h).
+// Libros = instantaneos (stats al comprarlos); la pocion va a la mochila y se usa (Inventory = true).
+class EventWowGameTestShop : public EventWowGameTest
+{
+public:
+    EventWowGameTestShop() : EventWowGameTest(180s) { }
+
+protected:
+    static constexpr uint32 VendorEntry = 9500100;
+    static constexpr int32 StartMoney = 200 * GOLD;
+
+    void OnStart() override
+    {
+        EventWowGameTest::OnStart();
+        SetHud("Compra libros al mercader y mira como suben tus stats.");
+
+        // Delante del punto de inicio, mirando hacia el
+        if (InstanceMap* map = GetMap())
+            map->SummonCreature(VendorEntry, Position(2.86f, -17.66f, -17.84f, 1.25f));
+
+        ForEachPlayer([](Player* player)
+        {
+            player->ModifyMoney(StartMoney);
+        });
+    }
 };
 
 void AddSC_eventwow_game_test()
@@ -57,7 +87,18 @@ void AddSC_eventwow_game_test()
     vehicle.Icon = "Interface\\Icons\\Spell_Nature_Swiftness";
     vehicle.Factory = []() { return std::make_unique<EventWowGameTest>(60s); };
 
+    // Prototipo de tienda (oro de partida, libros de stats instantaneos, pocion en la mochila)
+    EventWowGameInfo shop = game;
+    shop.Id = "test_shop";
+    shop.Name = "Prueba de tienda";
+    shop.Description = "Prototipo de tienda en solitario: empiezas con 200 de oro; compra libros de stats y pociones "
+        "al mercader durante 3 minutos.";
+    shop.Icon = "Interface\\Icons\\INV_Misc_Coin_01";
+    shop.Inventory = true;
+    shop.Factory = []() { return std::make_unique<EventWowGameTestShop>(); };
+
     sEventWowGames.Register(std::move(game));
     sEventWowGames.Register(std::move(group));
     sEventWowGames.Register(std::move(vehicle));
+    sEventWowGames.Register(std::move(shop));
 }

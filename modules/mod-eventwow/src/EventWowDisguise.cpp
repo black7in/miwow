@@ -264,7 +264,8 @@ public:
 
     void OnSpellCheckCast(Spell* spell, bool /*strict*/, SpellCastResult& res) override
     {
-        if (res != SPELL_CAST_OK || spell->IsTriggered())
+        // Desencadenados y los de objetos (pociones de la tienda...) siempre se permiten
+        if (res != SPELL_CAST_OK || spell->IsTriggered() || spell->m_castItemGUID)
             return;
 
         Player const* player = spell->GetCaster() ? spell->GetCaster()->ToPlayer() : nullptr;

@@ -16,8 +16,11 @@ namespace EventWowLobby
     // No toca a las cuentas GM (su modo GM / invisibilidad lo gestiona el core).
     void SetVisibility(Player* player, bool inLobby);
 
-    // Estado base del personaje: vivo, vida completa, sin auras, combate ni disfraz
+    // Estado base del personaje: vivo, vida completa, sin auras, combate, disfraz, oro ni objetos
     void RestoreBaseState(Player* player);
+
+    // Sin equipo, mochila, bolsas ni oro (el oro y los objetos solo existen dentro de una partida: tienda)
+    void ClearInventory(Player* player);
 
     // Restaura el estado base, lo hace invisible y lo lleva al punto ancla del lobby
     bool ReturnToLobby(Player* player);

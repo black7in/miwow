@@ -34,7 +34,8 @@ EventWow/
     protocolo.md              protocolo cliente<->servidor (addon messages): transporte, fragmentacion, mensajes
   tools/
     Merge-Interface.ps1       consolida Interface de los MPQ extraidos respetando el orden de carga
-    Build-Patch.ps1           copia client/src -> client/patches/patch-4.MPQ
+    Build-Patch.ps1           copia client/src -> client/patches/patch-4.MPQ (+ DBC con Build-Dbc.ps1)
+    Build-Dbc.ps1             DBC del cliente = client/DBCs/DBC<locale> + filas EventWow de las tablas *_dbc de la BD world
     Diff-Config.ps1           audita worldserver.conf vs .dist (cambios hechos a mano)
 ```
 
@@ -53,6 +54,11 @@ EventWow/
 - Para interceptar funciones globales de otros archivos, envolverlas (wrap) desde un archivo que cargue
   despues segun `GlueXML.toc` / `FrameXML.toc`, en vez de copiar el archivo original.
 - No hay interprete Lua instalado: revisar sintaxis a mano. Errores en cliente: `SET scriptErrors "1"`.
+- **DBC** (objetos, hechizos... propios): fuente de verdad = tablas `*_dbc` de AzerothCore en la BD world (SQL del
+  modulo). El servidor las fusiona con sus DBC al arrancar: sus archivos DBC (ingles) NO se tocan. El cliente recibe
+  el DBC original de `client/DBCs/DBCesES` (no versionado; `DBCenEN` = ingles, para un parche futuro) + nuestras filas
+  (ID >= 9500000) en `patch-4.MPQ/DBFilesClient`: lo hace `Build-Patch` (necesita la BD arrancada; `-SkipDbc` sin ella).
+  Objetos: `item_dbc` se rellena DESDE `item_template` en el SQL (con `DBC.EnforceItemAttributes = 1` deben coincidir).
 
 ### Servidor (AzerothCore)
 - No modificar el core si se puede evitar: todo en modulos (`mod-eventwow`), hooks de ScriptMgr.
@@ -215,6 +221,21 @@ Datos clave de la API Glue:
        nativo actual - maximo nativo medido al disfrazarse), asi Aguante/Intelecto/libros/auras suben vida y mana.
      - Comando GM: `.eventwow stat add <stat> <valor>` | `reset` | `list` (seleccionado o uno mismo).
      - Siguiente: tienda (capa 3) con moneda propia de partida; libros = filas de catalogo en BD.
+  5. Prototipo de tienda (probado por el usuario 2026-11-13, incluido Item.dbc en el cliente). Decisiones del usuario: todo
+     nativo (PNJ vendedor en el mundo, ventana de vendedor, bolsas), **oro de WoW = moneda de partida** (0 fuera de ella),
+     objetos propios ya. Item.dbc: filas en `item_dbc` (SQL `_08`) + `tools/Build-Dbc.ps1` (ver "DBC" en Reglas).
+     - `EventWowShop.*`: tabla world `eventwow_item` (Entry, Flags; SQL `_07`). `INSTANT` (0x1) = al comprarlo se
+       destruye y sus stats de `item_template` (stat_type/stat_value, armadura) x cantidad van a `EventWowStats`
+       (hook `OnPlayerAfterStoreOrEquipNewItem`; necesita hueco en la mochila). Sin fila = objeto normal.
+     - `EventWowLobby::ClearInventory` (equipo, bolsas, recompra, oro = 0): en `RestoreBaseState` (tambien al llegar
+       a la partida) y en CADA login (antes solo el primero).
+     - `EventWowGameInfo::Inventory` -> 9o campo de `GAMES` (protocolo v5): el cliente deja abrir las bolsas en
+       partida (`EVENTWOW_INVENTORY_FUNCTIONS`, EventWow.lua). `OnSpellCheckCast` del disfraz deja lanzar hechizos de
+       objetos (pociones).
+     - SQL `_08`: libros 9500000-9500003 (Fuerza/Intelecto +20, Poder con hechizos +50, Aguante +20; 50 oro), vendedor
+       9500100 "Mercader" (copia de Kixxle 8305, faccion 35) con los libros + Pocion de sanacion runica (33447).
+       Arregla tambien los iconos de `eventwow_character` (`'\I'` en MySQL pierde la barra: escribir `\\`).
+     - Juego `test_shop` (`EventWowGameTestShop`, 180 s, Piromano): 200 oro al empezar e invoca al vendedor junto al inicio.
   Despues: carrera con fases.
 - Corte vertical pasos 6-7 (compilado y probado por el usuario 2026-11-13):
   - Core (commit `71970693a`): hooks `OnPlayerOverrideInstanceDestination` / `OnPlayerOverrideInstanceEnter`.

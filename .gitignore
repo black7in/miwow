@@ -7,6 +7,9 @@
 # Interfaz original de Blizzard: se regenera con tools/Merge-Interface.ps1
 /client/interface-original/
 
+# DBC originales del cliente (Blizzard): base de tools/Build-Dbc.ps1. DBCesES = cliente esES, DBCenEN = ingles
+/client/DBCs/
+
 # Salida generada por tools/Build-Patch.ps1
 /client/patches/
 

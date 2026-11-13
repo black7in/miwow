@@ -34,7 +34,22 @@ void EventWowLobby::RestoreBaseState(Player* player)
     player->RemoveAllAuras();
     EventWowDisguise::Remove(player);
     EventWowStats::Reset(player);
+    ClearInventory(player);
     player->SetFullHealth();
+}
+
+// Equipo, mochila y bolsas (destruir una bolsa destruye su contenido)
+void EventWowLobby::ClearInventory(Player* player)
+{
+    for (uint8 slot = EQUIPMENT_SLOT_START; slot < INVENTORY_SLOT_ITEM_END; ++slot)
+        if (player->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
+            player->DestroyItem(INVENTORY_SLOT_BAG_0, slot, true);
+
+    // Lo vendido en la tienda (recompra)
+    for (uint8 slot = BUYBACK_SLOT_START; slot < BUYBACK_SLOT_END; ++slot)
+        player->RemoveItemFromBuyBackSlot(slot, true);
+
+    player->SetMoney(0);
 }
 
 bool EventWowLobby::ReturnToLobby(Player* player)
@@ -49,14 +64,13 @@ bool EventWowLobby::ReturnToLobby(Player* player)
 //    incluso si el jugador se desconecto dentro de un minijuego.
 //  - Los jugadores del lobby son invisibles para los demas (visibilidad server-side tipo GM),
 //    asi el servidor no envia trafico de visibilidad entre ellos.
-//  - Primer login: personaje neutro (sin objetos, sin XP).
+//  - Cada login: personaje neutro (sin objetos ni oro, sin XP).
 class EventWow_LobbyPlayerScript : public PlayerScript
 {
 public:
     EventWow_LobbyPlayerScript() : PlayerScript("EventWow_LobbyPlayerScript", {
         PLAYERHOOK_ON_OVERRIDE_LOGIN_LOCATION,
         PLAYERHOOK_ON_LOAD_FROM_DB,
-        PLAYERHOOK_ON_FIRST_LOGIN,
         PLAYERHOOK_ON_LOGIN,
         PLAYERHOOK_NOT_VISIBLE_GLOBALLY_FOR
     }) { }
@@ -88,14 +102,6 @@ public:
         EventWowLobby::SetVisibility(player, true);
     }
 
-    void OnPlayerFirstLogin(Player* player) override
-    {
-        if (!sEventWowConfig.Enabled)
-            return;
-
-        RemoveAllItems(player);
-    }
-
     void OnPlayerLogin(Player* player) override
     {
         if (!sEventWowConfig.Enabled)
@@ -120,17 +126,12 @@ public:
         if (changed)
             session->SendTutorialsData();
 
+        // Oro y objetos solo existen dentro de una partida (pudo desconectarse en ella)
+        EventWowLobby::ClearInventory(player);
+
         // Pudo desconectarse muerto (p. ej. dentro de una partida): siempre vivo en el lobby
         if (!player->IsAlive())
             EventWowLobby::RestoreBaseState(player);
-    }
-
-    // Equipo, mochila y bolsas (destruir una bolsa destruye su contenido)
-    static void RemoveAllItems(Player* player)
-    {
-        for (uint8 slot = EQUIPMENT_SLOT_START; slot < INVENTORY_SLOT_ITEM_END; ++slot)
-            if (player->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
-                player->DestroyItem(INVENTORY_SLOT_BAG_0, slot, true);
     }
 };
 
