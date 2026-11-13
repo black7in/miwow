@@ -69,6 +69,13 @@ opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `Regi
 | `MATCH_RESPAWN` | segundos | has muerto: reapareces en N s (0 = ya has reaparecido). Morir nunca saca de la partida |
 | `DEV_MODE` | 0/1 | modo dev (`.gm on` o `.dev on`; se comprueba cada 250 ms). Al conectar y en cada cambio. En modo dev el cliente permite ocultar el panel (solo cliente) |
 
+## Susurros y canales (fuera del protocolo)
+
+- Los susurros son los nativos del core (`SendChatMessage(..., "WHISPER")`, eventos `CHAT_MSG_WHISPER/_INFORM/AFK/DND`):
+  el cliente los muestra en una pestana por conversacion del chat del panel (filtrados del chat nativo).
+- Canales (General, Comercio...): no existen. `EventWowChat.cpp` descarta `CMSG_JOIN_CHANNEL` salvo en modo dev
+  y al salir del modo dev se abandonan todos (`CleanupChannels`). El cliente filtra `CHAT_MSG_CHANNEL*`.
+
 ## Pendiente
 
 - `ONLINE` se difunde en cada login/logout: agrupar si hay muchos jugadores.

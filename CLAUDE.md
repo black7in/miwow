@@ -142,7 +142,12 @@ Datos clave de la API Glue:
     `EventWowChat.cpp` (CHAT/ONLINE, historial 50, limite 200 caracteres y frecuencia, silencio `CanSpeak`, rango GM =
     security > SEC_PLAYER, log `module.eventwow.chat`); `EventWowQueue.cpp` (QUEUE/LEAVE PROVISIONAL: solo estado);
     juegos de maqueta `race`/`invasion` en `EventWowGames.cpp` (quitar con el framework).
-  - Siguiente idea: amigos (pestanas en la zona del chat), chat compacto en partida.
+  - Chat v2 (probado por el usuario 2026-11-13): pestanas planas [Global] + una por conversacion privada (susurros nativos; se
+    abre al recibir/enviar o al hacer clic en un nombre; contador de no leidos, sonido; "x" o clic derecho cierra y
+    conserva el historial; max 8). Sin tutoriales: cliente (`EventWow_DisableTutorials`) + servidor (flags de tutorial
+    todos vistos en cada login, `EventWowLobby.cpp`). Sin canales: el servidor descarta
+    `CMSG_JOIN_CHANNEL` salvo en modo dev (`EventWow_ChatServerScript`) y `CleanupChannels` al salir del modo dev.
+  - Siguiente (orden acordado): amigos (API nativa) -> grupos (API nativa, max 5) -> cola en grupo -> carrera con fases.
 - Corte vertical pasos 6-7 (compilado y probado por el usuario 2026-11-13):
   - Core (commit `71970693a`): hooks `OnPlayerOverrideInstanceDestination` / `OnPlayerOverrideInstanceEnter`.
   - Servidor: `EventWowMatchMgr.*` (sustituye a `EventWowQueue.cpp`: cola por juego, emparejamiento con

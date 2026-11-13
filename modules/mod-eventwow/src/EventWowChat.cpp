@@ -1,10 +1,14 @@
 #include "DataMap.h"
+#include "EventWowConfig.h"
+#include "EventWowDevMode.h"
 #include "EventWowProtocol.h"
 #include "GameTime.h"
 #include "Log.h"
+#include "Opcodes.h"
 #include "Player.h"
 #include "ScriptMgr.h"
 #include "Util.h"
+#include "WorldPacket.h"
 #include "WorldSession.h"
 #include <algorithm>
 #include <deque>
@@ -147,9 +151,31 @@ namespace
     }
 }
 
+// Los canales (General, Comercio, Defensa local, personalizados...) no existen en EventWow: se descarta la peticion
+// de unirse (el cliente la manda al entrar y al cambiar de zona), asi ni se reciben ni generan trafico.
+// En modo dev si (AzerothCore normal); al salir de el, EventWowDevMode saca al jugador de todos (CleanupChannels).
+class EventWow_ChatServerScript : public ServerScript
+{
+public:
+    EventWow_ChatServerScript() : ServerScript("EventWow_ChatServerScript", {
+        SERVERHOOK_CAN_PACKET_RECEIVE
+    }) { }
+
+    bool CanPacketReceive(WorldSession* session, WorldPacket const& packet) override
+    {
+        if (packet.GetOpcode() != CMSG_JOIN_CHANNEL || !sEventWowConfig.Enabled)
+            return true;
+
+        Player* player = session->GetPlayer();
+        return player && EventWowDevMode::IsActive(player);
+    }
+};
+
 void AddSC_eventwow_chat()
 {
     EventWowProtocol::RegisterHandler("CHAT", HandleChat);
     EventWowProtocol::RegisterConnectListener(OnConnect);
     EventWowProtocol::RegisterDisconnectListener(OnDisconnect);
+
+    new EventWow_ChatServerScript();
 }

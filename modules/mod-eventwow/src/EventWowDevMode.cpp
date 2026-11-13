@@ -56,8 +56,14 @@ public:
         EventWowProtocol::ForEachConnected([](Player* player)
         {
             DevModeState const* state = player->CustomData.Get<DevModeState>("EventWowDevMode");
-            if (state && state->Sent != EventWowDevMode::IsActive(player))
-                SendState(player);
+            if (!state || state->Sent == EventWowDevMode::IsActive(player))
+                return;
+
+            // Fuera del modo dev los canales no existen (EventWowChat.cpp)
+            if (state->Sent)
+                player->CleanupChannels();
+
+            SendState(player);
         });
     }
 

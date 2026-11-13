@@ -90,6 +90,22 @@ public:
         // El progreso no existe en EventWow: sin experiencia
         player->SetPlayerFlag(PLAYER_FLAGS_NO_XP_GAIN);
 
+        // Sin tutoriales: todos vistos (por cuenta; se guarda en BD). El cliente ya recibio los flags al
+        // autenticarse, asi que se reenvian (el primer login tambien queda cubierto).
+        WorldSession* session = player->GetSession();
+        bool changed = false;
+        for (uint8 i = 0; i < MAX_ACCOUNT_TUTORIAL_VALUES; ++i)
+        {
+            if (session->GetTutorialInt(i) != 0xFFFFFFFF)
+            {
+                session->SetTutorialInt(i, 0xFFFFFFFF);
+                changed = true;
+            }
+        }
+
+        if (changed)
+            session->SendTutorialsData();
+
         // Pudo desconectarse muerto (p. ej. dentro de una partida): siempre vivo en el lobby
         if (!player->IsAlive())
             EventWowLobby::RestoreBaseState(player);

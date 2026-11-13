@@ -303,6 +303,19 @@ SlashCmdList["EVENTWOW"] = function()
 	end
 end
 
+-- Sin tutoriales ni consejos para jugadores nuevos (tambien en modo dev). El servidor ademas los marca todos
+-- como vistos en cada login (EventWowLobby.cpp); esto cubre lo que el cliente dispare por su cuenta.
+local function EventWow_DisableTutorials()
+	SetCVar("showTutorials", "0");
+	SetCVar("showNewbieTips", "0");
+	TutorialFrame:UnregisterEvent("TUTORIAL_TRIGGER");
+	TutorialFrame_NewTutorial = function() end;
+	TutorialFrame:Hide();
+	TutorialFrameAlertButton:Hide();
+	hooksecurefunc(TutorialFrameAlertButton, "Show", TutorialFrameAlertButton.Hide);
+end
+
+EventWow_DisableTutorials();
 EventWow_CreateWorldCover();
 EventWow_CreateDevButton();
 EventWow_WrapBlockedFunctions();
