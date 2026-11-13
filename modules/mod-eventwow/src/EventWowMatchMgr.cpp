@@ -7,6 +7,7 @@
 #include "EventWowLobby.h"
 #include "EventWowMatch.h"
 #include "EventWowProtocol.h"
+#include "EventWowStats.h"
 #include "GameTime.h"
 #include "Group.h"
 #include "InstanceSaveMgr.h"
@@ -694,8 +695,9 @@ void EventWowMatchMgr::RemovePlayer(EventWowMatch& match, ObjectGuid guid, bool 
         if (slot && slot->MatchId == match.GetId())
             player->CustomData.Erase(MatchKey);
 
-        // Tambien en modo dev y en el logout: el disfraz es de la partida
+        // Tambien en modo dev y en el logout: disfraz y bonificaciones son de la partida
         EventWowDisguise::Remove(player);
+        EventWowStats::Reset(player);
     }
 
     // Bind temporal que el core crea al entrar (InstanceMap::AddPlayerToMap)

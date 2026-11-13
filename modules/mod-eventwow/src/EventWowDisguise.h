@@ -8,7 +8,9 @@ struct EventWowCharacterInfo;
 // (EventWowCharacters.h) y lo deshace sin dejar rastro. Nada se guarda en BD:
 //  - Modelo: display y display nativo (asi las auras de transformacion vuelven al disfraz, no a la raza).
 //  - Escala.
-//  - Vida/poder maximos fijos: hooks OnPlayerAfterUpdateMaxHealth/MaxPower (al final del calculo del core).
+//  - Vida/poder maximos = base del personaje + lo que el motor sume sobre el contenedor sin disfraz (stats,
+//    auras): hooks OnPlayerAfterUpdateMaxHealth/MaxPower (al final del calculo del core).
+//  - Stats del personaje (EventWowStats, como un objeto equipado); se restan al quitar el disfraz.
 //  - Tipo de poder (mana/ira/energia), como las formas del druida.
 //  - Hechizos temporales (learnSpell temporal: no se guardan). Mientras va disfrazado (salvo modo dev)
 //    solo puede lanzar esos (OnSpellCheckCast); los desencadenados no cuentan. Los de un vehiculo los lanza

@@ -104,6 +104,35 @@ void EventWowCharacters::Load()
         } while (result->NextRow());
     }
 
+    //                                                 0              1       2
+    if (QueryResult result = WorldDatabase.Query("SELECT `CharacterId`, `Stat`, `Value` FROM `eventwow_character_stat`"))
+    {
+        do
+        {
+            Field* fields = result->Fetch();
+            uint32 const characterId = fields[0].Get<uint32>();
+            std::string const key = fields[1].Get<std::string>();
+            int32 const value = fields[2].Get<int32>();
+
+            auto itr = _characters.find(characterId);
+            if (itr == _characters.end())
+            {
+                LOG_ERROR("module.eventwow", "EventWow: eventwow_character_stat: el personaje {} no existe", characterId);
+                continue;
+            }
+
+            std::optional<EventWowStat> stat = EventWowStats::FromKey(key);
+            if (!stat)
+            {
+                LOG_ERROR("module.eventwow", "EventWow: personaje {} ({}): stat desconocida '{}'", characterId, itr->second.Name, key);
+                continue;
+            }
+
+            if (value)
+                itr->second.Stats.emplace_back(*stat, value);
+        } while (result->NextRow());
+    }
+
     //                                                 0         1
     if (QueryResult result = WorldDatabase.Query("SELECT `GameId`, `CharacterId` FROM `eventwow_game_character` ORDER BY `GameId`, `Sort`, `CharacterId`"))
     {

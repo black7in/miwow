@@ -5,10 +5,12 @@
 #include "EventWowConfig.h"
 #include "EventWowDevMode.h"
 #include "EventWowProtocol.h"
+#include "EventWowStats.h"
 #include "Log.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
 #include "TemporarySummon.h"
+#include <algorithm>
 #include "ScriptMgr.h"
 #include "Spell.h"
 #include "SpellInfo.h"
@@ -27,6 +29,10 @@ namespace
         ObjectGuid VehicleGuid;
         // No se pudo invocar: no se reintenta (evita repetirlo en cada Update)
         bool VehicleFailed = false;
+        // Maximos nativos del contenedor al disfrazarse (sin las stats del personaje). Lo que el motor sume
+        // por encima (stats del personaje, libros, auras) se suma a la vida/poder base del personaje.
+        float NativeHealth = 0.0f;
+        float NativePower = 0.0f;
     };
 
     // Mas lejos que esto (reaparicion, teleport) se invoca otro vehiculo en vez de subir al antiguo
@@ -88,8 +94,8 @@ void EventWowDisguise::Apply(Player* player, EventWowCharacterInfo const& charac
     if (GetSlot(player))
         Remove(player);
 
+    // CharacterId aun 0: los hooks no actuan hasta medir los maximos nativos
     DisguiseSlot* slot = player->CustomData.GetDefault<DisguiseSlot>(DisguiseKey);
-    slot->CharacterId = character.Id;
 
     if (character.DisplayId)
     {
@@ -103,7 +109,17 @@ void EventWowDisguise::Apply(Player* player, EventWowCharacterInfo const& charac
     if (player->getPowerType() != power)
         player->setPowerType(power);
 
-    // Con el slot ya puesto, los hooks fijan los maximos
+    player->UpdateMaxHealth();
+    player->UpdateMaxPower(power);
+    slot->NativeHealth = float(player->GetMaxHealth());
+    slot->NativePower = float(player->GetMaxPower(power));
+    slot->CharacterId = character.Id;
+
+    // Stats del personaje (como un objeto equipado): el motor recalcula todo lo derivado
+    for (auto const& [stat, value] : character.Stats)
+        EventWowStats::Add(player, stat, value);
+
+    // Con el slot completo, los hooks fijan los maximos: base del personaje + lo que sumen las stats
     player->UpdateMaxHealth();
     player->UpdateMaxPower(power);
     player->SetFullHealth();
@@ -133,10 +149,16 @@ void EventWowDisguise::Remove(Player* player)
 
     std::vector<uint32> const spells = slot->AddedSpells;
     ObjectGuid const vehicleGuid = slot->VehicleGuid;
+    EventWowCharacterInfo const* character = sEventWowCharacters.Get(slot->CharacterId);
     // Primero fuera el slot: a partir de aqui los hooks ya no fuerzan nada
     player->CustomData.Erase(DisguiseKey);
 
     DismissVehicle(player, vehicleGuid);
+
+    // Solo las stats del personaje; las de la partida (libros...) las quita EventWowStats::Reset
+    if (character)
+        for (auto const& [stat, value] : character->Stats)
+            EventWowStats::Add(player, stat, -value);
 
     for (uint32 spellId : spells)
         player->removeSpell(spellId, SPEC_MASK_ALL, true);
@@ -212,18 +234,23 @@ public:
         PLAYERHOOK_ON_AFTER_UPDATE_MAX_POWER
     }) { }
 
+    // Vida maxima = vida base del personaje + lo que el motor sume sobre el contenedor sin disfraz
+    // (Aguante y vida de las stats, auras...). Asi Health es la base y las stats la suben de forma nativa.
     void OnPlayerAfterUpdateMaxHealth(Player* player, float& value) override
     {
-        if (EventWowCharacterInfo const* character = EventWowDisguise::Get(player))
-            if (character->Health)
-                value = float(character->Health);
+        DisguiseSlot const* slot = GetSlot(player);
+        EventWowCharacterInfo const* character = slot ? sEventWowCharacters.Get(slot->CharacterId) : nullptr;
+        if (character && character->Health)
+            value = std::max(1.0f, float(character->Health) + value - slot->NativeHealth);
     }
 
+    // Igual para el poder del personaje (Intelecto y mana de las stats suben el mana)
     void OnPlayerAfterUpdateMaxPower(Player* player, Powers& power, float& value) override
     {
-        if (EventWowCharacterInfo const* character = EventWowDisguise::Get(player))
-            if (character->MaxPower && power == Powers(character->PowerType))
-                value = float(character->MaxPower);
+        DisguiseSlot const* slot = GetSlot(player);
+        EventWowCharacterInfo const* character = slot ? sEventWowCharacters.Get(slot->CharacterId) : nullptr;
+        if (character && character->MaxPower && power == Powers(character->PowerType))
+            value = std::max(0.0f, float(character->MaxPower) + value - slot->NativePower);
     }
 };
 

@@ -2,6 +2,7 @@
 #define MOD_EVENTWOW_CHARACTERS_H
 
 #include "Define.h"
+#include "EventWowStats.h"
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -17,13 +18,17 @@ struct EventWowCharacterInfo
     std::string Icon;           // ruta de textura del cliente
     uint32 DisplayId = 0;       // modelo (CreatureDisplayInfo)
     float Scale = 1.0f;
-    uint32 Health = 0;          // vida maxima fija
+    // Vida/poder BASE: el motor suma encima lo que den las stats (Aguante, Intelecto, libros...) y auras
+    uint32 Health = 0;          // vida maxima base
     uint8 PowerType = 0;        // Powers: 0 mana, 1 ira, 3 energia
-    uint32 MaxPower = 0;        // maximo fijo del PowerType (ira/energia en unidades internas: 100 de ira = 1000)
+    uint32 MaxPower = 0;        // maximo base del PowerType (ira/energia en unidades internas: 100 de ira = 1000)
     std::vector<uint32> Spells; // por orden de ranura (barra del HUD)
     // Vehiculo opcional (creature_template con VehicleId): el disfrazado va siempre montado en el asiento 0.
     // Sus hechizos, velocidad y vida son los de la criatura (barra nativa de vehiculo). 0 = a pie.
     uint32 VehicleEntry = 0;
+    // Bonificaciones de stats del personaje (eventwow_character_stat), como las de un objeto: se suman a las
+    // nativas del contenedor y el motor calcula lo derivado (EventWowStats.h)
+    std::vector<std::pair<EventWowStat, int32>> Stats;
 
     bool HasSpell(uint32 spellId) const;
 };
