@@ -165,8 +165,24 @@ Datos clave de la API Glue:
      4/11, RaceMask 1783, ClassMask 511, override `StartPlayerLevel = 80`, `EVENTWOW_CONFIG` NIGHTELF/DRUID, SQL
      `2026_11_13_00_lobby_playercreateinfo_druid.sql` (druida al lobby, humano guerrero de vuelta a Villadorada).
      Personajes de prueba borrados de `eventwow_characters` (tablas por personaje vaciadas).
-  2. Prototipo de disfraz en el juego de prueba (morph, vida/mana fijos, 2-3 hechizos existentes, barra en el HUD;
-     comprobar que no queda nada al salir/desconectar/morir).
+  2. Prototipo de disfraz (probado por el usuario 2026-11-13):
+     - BD world (SQL del modulo): `eventwow_character` (Id, Name, Description, Icon, DisplayId, Scale, Health, PowerType,
+       MaxPower), `eventwow_character_spell` (CharacterId, Slot, SpellId), `eventwow_game_character` (GameId,
+       CharacterId, Sort). Prueba: personaje 1 "Piromano goblin" (modelo 7052, 5000 vida, 2000 mana, Bola de Fuego /
+       Nova de Escarcha / Traslacion) en `test` y `test_group`. Se cargan al arrancar (sin comando de recarga aun).
+     - `EventWowCharacters.*` (catalogo), `EventWowDisguise.*` (Apply/Remove: display nativo + display, escala, tipo de
+       poder, vida/poder max por hooks, hechizos temporales; `OnSpellCheckCast` solo deja lanzar los del disfraz salvo
+       modo dev). Estado en `CustomData` (se pierde con logout).
+     - Framework: `EventWowMatch::GetAssignedCharacter` (virtual; por defecto el primero del juego) se aplica al llegar;
+       `SetCharacter` para juegos con seleccion. Se quita en `EventWowMatchMgr::RemovePlayer` (fin, abandono, salir,
+       logout; tambien modo dev) y en `RestoreBaseState`.
+     - Cliente: `EventWowAbilities.lua` (barra propia abajo, botones seguros `CastSpellByID`, teclas 1..0 por override
+       bindings, cooldown/coste/alcance). Protocolo v4: `MATCH_CHARACTER`. Oculta los mensajes de sistema
+       `ERR_LEARN_SPELL_S` / `ERR_LEARN_ABILITY_S` / `ERR_SPELL_UNLEARNED_S` (salvo modo dev con panel oculto).
+     - Comprobar: modelo/escala/vida/mana, lanzar con clic y teclas, que Rejuvenecimiento etc. del druida no se
+       pueden lanzar, y que todo vuelve al acabar/abandonar/desconectar/morir.
+     - Pendiente del disfraz: stats primarias/AP/velocidad, ajustes de dano por personaje, comando de recarga,
+       fase `Picking`.
   3. Prototipo de vehiculo con una criatura-vehiculo existente.
   Despues: carrera con fases.
 - Corte vertical pasos 6-7 (compilado y probado por el usuario 2026-11-13):
@@ -262,8 +278,14 @@ Despues: grupos/emparejamiento multijugador, minijuegos reales, lobby definitivo
   un jugador (asi prueba el producto). NO afecta a login ni reglas de cuenta (todos entran al lobby/panel,
   un personaje, raza/clase fijas; modo dev desactivado en cada login).
 
-- **Personajes por juego (decidido con el usuario, sin implementar)**: cada juego declara sus personajes jugables
-  (pocos hechizos cada uno, nunca los de clase). Dos modos, ambos aceptados:
+- **Personajes por juego (decidido con el usuario; prototipo de disfraz hecho)**: cada juego declara sus personajes
+  jugables (pocos hechizos cada uno, nunca los de clase).
+  - **Personaje = disfraz + vehiculo opcional** (no dos modos excluyentes): p. ej. carrera = goblin (disfraz) en una
+    moto (vehiculo, pone velocidad y habilidades); arena = heroes solo con disfraz, cada uno con stats y hechizos.
+  - **Fichas en BD world** (tablas `eventwow_character*`), no en C++: ajustar sin compilar. Los juegos siguen en C++.
+  - **Eleccion segun el juego**: asignado (carreras: todos iguales; `GetAssignedCharacter`) o fase de seleccion
+    `Picking` dentro de la partida (arenas, estilo Dota; sin implementar). Elegir en el panel antes de buscar: descartado.
+  Disfraz y vehiculo, ambos aceptados:
   - **Disfraz** (por defecto): el propio personaje con morph/escala, hechizos temporales (`learnSpell(id, true)`, no se
     guardan) y **barra de habilidades propia en el HUD** (la barra nativa se guarda en `character_action`: no usarla).
   - **Vehiculo**: subirlo a una criatura-vehiculo (`creature_template`: modelo, stats, hechizos 1-8, barra nativa de
@@ -280,6 +302,5 @@ Despues: grupos/emparejamiento multijugador, minijuegos reales, lobby definitivo
   - Hechizos: primero existentes; propios = `spell_dbc` (servidor) + `Spell.dbc` parcheado en patch-4.MPQ (cliente).
 
 ### Decisiones abiertas
-- Cuando se elige el personaje: en el panel antes de buscar, al empezar la partida o asignado por el juego.
 - Login: cuenta+contrasena (actual) vs launcher/solo nombre.
 - Lobby definitivo (mapa propio) - de momento Isla de los GM.

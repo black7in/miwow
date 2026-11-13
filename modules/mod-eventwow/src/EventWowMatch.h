@@ -80,6 +80,13 @@ protected:
     // GetRespawnPosition() a los 5 s; cada juego decide su regla (checkpoint, eliminado, esperar...).
     virtual void OnPlayerDied(Player* player) { RespawnPlayer(player, 5s); }
     virtual Position const& GetRespawnPosition(Player* player) const;
+    // Personaje (EventWowCharacters.h) con el que se disfraza al llegar a la instancia. 0 = ninguno (el juego
+    // lo elegira despues con SetCharacter, p. ej. tras una fase de seleccion). Por defecto: el primero que
+    // ofrece el juego en eventwow_game_character (juegos donde todos son iguales, como una carrera).
+    virtual uint32 GetAssignedCharacter(Player* player) const;
+
+    // Disfraza al jugador (sustituye el disfraz anterior). Se quita solo al salir de la partida.
+    bool SetCharacter(Player* player, uint32 characterId);
 
     // Resucita (vida completa) y lleva a GetRespawnPosition() tras delay (0s = ya). El HUD muestra la cuenta atras.
     void RespawnPlayer(Player* player, Seconds delay);

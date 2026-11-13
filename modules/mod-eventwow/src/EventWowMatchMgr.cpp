@@ -2,6 +2,7 @@
 #include "DataMap.h"
 #include "EventWowConfig.h"
 #include "EventWowDevMode.h"
+#include "EventWowDisguise.h"
 #include "EventWowGames.h"
 #include "EventWowLobby.h"
 #include "EventWowMatch.h"
@@ -692,6 +693,9 @@ void EventWowMatchMgr::RemovePlayer(EventWowMatch& match, ObjectGuid guid, bool 
         MatchSlot const* slot = GetMatchSlot(player);
         if (slot && slot->MatchId == match.GetId())
             player->CustomData.Erase(MatchKey);
+
+        // Tambien en modo dev y en el logout: el disfraz es de la partida
+        EventWowDisguise::Remove(player);
     }
 
     // Bind temporal que el core crea al entrar (InstanceMap::AddPlayerToMap)

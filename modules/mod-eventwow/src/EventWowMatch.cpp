@@ -1,5 +1,7 @@
 #include "EventWowMatch.h"
+#include "EventWowCharacters.h"
 #include "EventWowConfig.h"
+#include "EventWowDisguise.h"
 #include "EventWowGames.h"
 #include "EventWowMatchMgr.h"
 #include "EventWowProtocol.h"
@@ -128,7 +130,28 @@ void EventWowMatch::HandlePlayerArrived(Player* player)
 
     SendState(player);
     SendHud(player);
+    if (uint32 const characterId = GetAssignedCharacter(player))
+        SetCharacter(player, characterId);
+
     OnPlayerArrived(player);
+}
+
+// Personajes -------------------------------------------------------------------------------------
+
+uint32 EventWowMatch::GetAssignedCharacter(Player* /*player*/) const
+{
+    std::vector<uint32> const& characters = sEventWowCharacters.GetForGame(_game->Id);
+    return characters.empty() ? 0 : characters.front();
+}
+
+bool EventWowMatch::SetCharacter(Player* player, uint32 characterId)
+{
+    EventWowCharacterInfo const* character = sEventWowCharacters.Get(characterId);
+    if (!character || !HasPlayer(player->GetGUID()) || player->GetInstanceId() != _instanceId)
+        return false;
+
+    EventWowDisguise::Apply(player, *character);
+    return true;
 }
 
 void EventWowMatch::HandlePlayerLeft(ObjectGuid guid)

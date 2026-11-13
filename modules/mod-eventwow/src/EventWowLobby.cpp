@@ -1,5 +1,6 @@
 #include "EventWowLobby.h"
 #include "EventWowConfig.h"
+#include "EventWowDisguise.h"
 #include "Player.h"
 #include "ScriptMgr.h"
 #include "WorldSession.h"
@@ -30,6 +31,7 @@ void EventWowLobby::RestoreBaseState(Player* player)
 
     player->CombatStop(true);
     player->RemoveAllAuras();
+    EventWowDisguise::Remove(player);
     player->SetFullHealth();
 }
 
