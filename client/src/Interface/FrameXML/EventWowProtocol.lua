@@ -8,7 +8,7 @@
 
 EVENTWOW_PROTOCOL = {
 	PREFIX = "EWOW",
-	VERSION = 2,
+	VERSION = 3,
 	-- 255 (limite del core) - "EWOW\t" - flag, con margen
 	MAX_CHUNK = 240,
 	DEBUG = true,
@@ -26,6 +26,18 @@ EVENTWOW_ERROR_TEXTS = {
 	QUEUE_NOT_IN_LOBBY = "Solo puedes buscar partida desde el lobby.",
 	QUEUE_GAME_UNAVAILABLE = "Este minijuego todavía no está disponible.",
 	QUEUE_IN_MATCH = "Ya estás en una partida.",
+	QUEUE_NOT_LEADER = "Solo el líder del grupo puede buscar partida.",
+	QUEUE_SOLO_ONLY = "Este minijuego es individual: sal del grupo para buscar partida.",
+	QUEUE_GROUP_TOO_BIG = "Grupo demasiado grande para este minijuego (máximo %s).",
+	QUEUE_GROUP_OFFLINE = "%s no está conectado.",
+	QUEUE_GROUP_BUSY = "%s no está en el lobby.",
+	QUEUE_GROUP_CANCELLED = "%s ha cancelado la búsqueda.",
+	QUEUE_GROUP_LOGOUT = "%s se ha desconectado: búsqueda cancelada.",
+	QUEUE_GROUP_CHANGED = "El grupo ha cambiado: búsqueda cancelada.",
+	QUEUE_GROUP_DECLINED = "%s rechazó la partida: búsqueda cancelada.",
+	QUEUE_GROUP_NOT_ACCEPTED = "Alguien de tu grupo no aceptó a tiempo: búsqueda cancelada.",
+	GROUP_IN_MATCH = "No puedes cambiar de grupo durante una partida.",
+	GROUP_TARGET_IN_MATCH = "%s está en una partida.",
 	MATCH_CREATE_FAILED = "No se pudo crear la partida. Inténtalo de nuevo.",
 	MATCH_TELEPORT_FAILED = "No se pudo entrar en la partida.",
 };
@@ -37,7 +49,7 @@ EventWow_Protocol = {
 	helloSent = false,
 	connected = false,
 	isGM = false,
-	-- Catalogo recibido (GAMES): { id, icon, minPlayers, maxPlayers, name, description, playable }
+	-- Catalogo recibido (GAMES): { id, icon, minPlayers, maxPlayers, name, description, playable, maxPartySize }
 	games = {},
 };
 
@@ -172,12 +184,12 @@ EventWow_RegisterHandler("ERROR", function(fields)
 	UIErrorsFrame:AddMessage(text, 1, 0.2, 0.2, 1.0);
 end);
 
--- GAMES <n> (<id> <icono> <min> <max> <nombre> <descripcion> <jugable 0/1>) x n
+-- GAMES <n> (<id> <icono> <min> <max> <nombre> <descripcion> <jugable 0/1> <grupo max>) x n
 EventWow_RegisterHandler("GAMES", function(fields)
 	local count = tonumber(fields[1]) or 0;
 	local games = {};
 	for i = 1, count do
-		local base = 1 + (i - 1) * 7;
+		local base = 1 + (i - 1) * 8;
 		tinsert(games, {
 			id = fields[base + 1],
 			icon = fields[base + 2],
@@ -186,6 +198,7 @@ EventWow_RegisterHandler("GAMES", function(fields)
 			name = fields[base + 5],
 			description = fields[base + 6],
 			playable = fields[base + 7] == "1",
+			maxPartySize = tonumber(fields[base + 8]) or 1,
 		});
 	end
 	EventWow_Protocol.games = games;

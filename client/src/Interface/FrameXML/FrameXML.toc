@@ -148,6 +148,8 @@ LocalizationPost.xml
 # EventWow: ultimo para poder envolver funciones/marcos de todo FrameXML
 EventWowProtocol.lua
 EventWowChat.lua
+EventWowGroup.lua
 EventWowPanel.lua
 EventWowMatch.lua
+EventWowMatchFound.lua
 EventWow.lua

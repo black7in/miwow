@@ -147,7 +147,17 @@ Datos clave de la API Glue:
     conserva el historial; max 8). Sin tutoriales: cliente (`EventWow_DisableTutorials`) + servidor (flags de tutorial
     todos vistos en cada login, `EventWowLobby.cpp`). Sin canales: el servidor descarta
     `CMSG_JOIN_CHANNEL` salvo en modo dev (`EventWow_ChatServerScript`) y `CleanupChannels` al salir del modo dev.
-  - Siguiente (orden acordado): amigos (API nativa) -> grupos (API nativa, max 5) -> cola en grupo -> carrera con fases.
+- Grupos + cola en grupo (probado por el usuario 2026-11-13). Ver "Grupos" en `docs/protocolo.md`.
+  - Decision: grupos NATIVOS de AzerothCore (no propios). Servidor `EventWowGroups.cpp`: max 5 sin banda, no
+    invitar/aceptar en partida, cambio de grupo -> fuera de la cola. `EventWowGameInfo::MaxPartySize` (1 = individual).
+  - `EventWowMatchMgr`: entrada de cola = jugador o grupo entero (lo apunta el lider); `UnbindAllFor` al cerrar partida.
+  - Cliente: `EventWowGroup.lua` (seccion GRUPO abajo a la derecha: miembros, lider, invitar, expulsar, salir),
+    boton de buscar segun grupo, alt+clic invita, pestana "Grupo" en el chat (CHAT_MSG_PARTY*), marcos de grupo nativos visibles en partida. Protocolo v3.
+  - Juego `test_group` (1-5 jugadores, grupo hasta 5) para probarlo.
+- Partida encontrada con confirmacion tipo Dota 2 (probado por el usuario 2026-11-13): `EventWowMatchMgr` propuestas
+  (`StartProposal/AcceptProposal/FailProposal`, `EventWow.Queue.AcceptTimeout` = 20 s); quien rechaza o no acepta sale
+  de la cola con su grupo, el resto vuelve con su antiguedad. Cliente `EventWowMatchFound.lua` (popup Aceptar/Rechazar).
+- Siguiente (orden acordado): amigos (API nativa) -> carrera con fases.
 - Corte vertical pasos 6-7 (compilado y probado por el usuario 2026-11-13):
   - Core (commit `71970693a`): hooks `OnPlayerOverrideInstanceDestination` / `OnPlayerOverrideInstanceEnter`.
   - Servidor: `EventWowMatchMgr.*` (sustituye a `EventWowQueue.cpp`: cola por juego, emparejamiento con

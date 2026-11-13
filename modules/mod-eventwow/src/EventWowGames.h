@@ -22,6 +22,9 @@ struct EventWowGameInfo
     std::string Icon;        // ruta de textura del cliente
     uint8 MinPlayers = 1;
     uint8 MaxPlayers = 1;
+    // Tamano maximo de un grupo (nativo) que puede buscar partida junto. 1 = solo individual.
+    // Validate() lo limita a MaxPlayers y al tamano de grupo (MAXGROUPSIZE = 5).
+    uint8 MaxPartySize = 1;
 
     // Partida: mapa de mazmorra/banda (con instance_template) donde se crea una instancia por partida,
     // punto de aparicion y factoria de la clase del minijuego (EventWowMatch.h).

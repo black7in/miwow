@@ -56,6 +56,15 @@ EventWow.Lobby.O = 1.65007
 EventWow.Queue.FillWait = 15
 
 #
+#    EventWow.Queue.AcceptTimeout
+#        Description: Segundos para aceptar una partida encontrada (minimo 5). Si alguien rechaza o no
+#                     acepta a tiempo, se cancela: su entrada (el solo o todo su grupo) sale de la cola y
+#                     los que no rechazaron vuelven a ella automaticamente, con su antiguedad.
+#        Default:     20
+
+EventWow.Queue.AcceptTimeout = 20
+
+#
 #    EventWow.Match.LoadTimeout
 #        Description: Segundos para que todos los jugadores de una partida lleguen a la instancia.
 #                     Los que no llegan quedan fuera y la partida empieza con el resto.

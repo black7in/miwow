@@ -2,12 +2,15 @@
 --   Global:  chat global (CHAT por el protocolo) + todo lo que mostraria ChatFrame1 (sistema, errores...).
 --   Una por conversacion privada (susurros nativos): se abre al recibir o enviar un susurro, o al hacer clic en
 --   un nombre. Contador de no leidos; clic derecho o "x" la cierra (el historial se conserva en la sesion).
+--   Grupo:   chat de grupo nativo (CHAT_MSG_PARTY*). Fija (sin cerrar) mientras estas en un grupo, justo tras Global;
+--            al salir del grupo desaparece y se borra su historial.
 -- Contraparte en el servidor: modules/mod-eventwow/src/EventWowChat.cpp
 --
 --  - El chat nativo (ChatFrame1-10, pestanas, dock, botones) se oculta, pero sigue existiendo; vuelve con el
 --    panel oculto en modo dev (EventWowChat_SetNativeVisible).
 --  - Los canales (General, Comercio...) no existen: el servidor no deja unirse (salvo modo dev) y aqui se filtran.
 --  - Los susurros no se muestran en el chat nativo (solo en su pestana), salvo con el panel oculto en modo dev.
+--  - Alt+clic en un nombre: invitar al grupo.
 --  - Texto que empieza por "/" -> comandos nativos (/reload, /w, /r...); por "." -> comandos de GM
 --    (el core los intercepta antes de decirlos); el resto -> CHAT global o susurro segun la pestana.
 
@@ -20,6 +23,8 @@ EVENTWOW_CHAT = {
 	COLOR_PLAYER = "|cff99ccff",
 	COLOR_GM = "|cff33ffcc",
 	COLOR_WHISPER = { 1, 0.5, 1 },
+	COLOR_PARTY = { 0.67, 0.67, 1 },
+	PARTY_KEY = "#party",   -- clave de la conversacion de grupo (un nombre de jugador nunca lleva "#")
 	-- Pestanas
 	TAB_HEIGHT = 24,
 	TAB_GLOBAL_WIDTH = 80,
@@ -32,6 +37,7 @@ EVENTWOW_CHAT = {
 	COLOR_TAB_LINE = { 0.35, 0.35, 0.4, 0.8 },
 	COLOR_ACCENT_GLOBAL = { 1, 0.82, 0, 1 },
 	COLOR_ACCENT_WHISPER = { 1, 0.5, 1, 1 },
+	COLOR_ACCENT_PARTY = { 0.67, 0.67, 1, 1 },
 	COLOR_BADGE = { 0.85, 0.2, 0.6, 1 },
 };
 
@@ -39,6 +45,8 @@ EVENTWOW_STR_CHAT_TAB_GLOBAL = "Global";
 EVENTWOW_STR_CHAT_ONLINE = "%d conectados";
 EVENTWOW_STR_CHAT_PLACEHOLDER = "Escribe un mensaje... (Intro)";
 EVENTWOW_STR_CHAT_PLACEHOLDER_WHISPER = "Mensaje para %s... (Intro)";
+EVENTWOW_STR_CHAT_TAB_PARTY = "Grupo";
+EVENTWOW_STR_CHAT_PLACEHOLDER_PARTY = "Mensaje para el grupo... (Intro)";
 EVENTWOW_STR_CHAT_FROM = "%s: ";
 EVENTWOW_STR_CHAT_TO = "Tú: ";
 EVENTWOW_STR_CHAT_AFK = "%s está ausente: ";
@@ -66,6 +74,9 @@ EVENTWOW_CHAT_FILTERED_EVENTS = {
 	"CHAT_MSG_WHISPER_INFORM",
 	"CHAT_MSG_AFK",
 	"CHAT_MSG_DND",
+	-- Van a la pestana Grupo
+	"CHAT_MSG_PARTY",
+	"CHAT_MSG_PARTY_LEADER",
 };
 
 EventWow_Chat = {
@@ -205,7 +216,9 @@ local function EventWow_UpdatePlaceholder()
 		return;
 	end
 	local conversation = EventWow_Chat.conversations[EventWow_Chat.activeTab];
-	if ( conversation ) then
+	if ( conversation and conversation.party ) then
+		EventWowChatPlaceholder:SetText(EVENTWOW_STR_CHAT_PLACEHOLDER_PARTY);
+	elseif ( conversation ) then
 		EventWowChatPlaceholder:SetText(format(EVENTWOW_STR_CHAT_PLACEHOLDER_WHISPER, conversation.name));
 	else
 		EventWowChatPlaceholder:SetText(EVENTWOW_STR_CHAT_PLACEHOLDER);
@@ -248,7 +261,7 @@ local function EventWow_PaintTab(tab)
 	end
 
 	if ( tab.close ) then
-		if ( active or tab.hover ) then
+		if ( (active or tab.hover) and not tab.isParty ) then
 			tab.close:Show();
 		else
 			tab.close:Hide();
@@ -318,7 +331,6 @@ local function EventWow_GetTab(index)
 		return tab;
 	end
 
-	EventWow_SetColor(tab.accent, EVENTWOW_CHAT.COLOR_ACCENT_WHISPER);
 	tab.label:SetPoint("LEFT", tab, "LEFT", 8, 0);
 	tab.label:SetPoint("RIGHT", tab.badge, "LEFT", -4, 0);
 
@@ -379,8 +391,11 @@ function EventWowChat_LayoutTabs()
 	local previous = global;
 	for i, key in ipairs(EventWow_Chat.order) do
 		local tab = EventWow_GetTab(i);
+		local conversation = EventWow_Chat.conversations[key];
 		tab.key = key;
-		tab.label:SetText(EventWow_Chat.conversations[key].name);
+		tab.isParty = conversation.party;
+		tab.label:SetText(conversation.name);
+		EventWow_SetColor(tab.accent, conversation.party and EVENTWOW_CHAT.COLOR_ACCENT_PARTY or EVENTWOW_CHAT.COLOR_ACCENT_WHISPER);
 		tab:SetWidth(width);
 		tab:ClearAllPoints();
 		tab:SetPoint("BOTTOMLEFT", previous, "BOTTOMRIGHT", EVENTWOW_CHAT.TAB_GAP, 0);
@@ -437,7 +452,8 @@ function EventWowChat_OpenConversation(name)
 	if ( not conversation.open ) then
 		if ( #EventWow_Chat.order >= EVENTWOW_CHAT.MAX_CONVERSATIONS ) then
 			for _, oldKey in ipairs(EventWow_Chat.order) do
-				if ( oldKey ~= EventWow_Chat.activeTab and EventWow_Chat.conversations[oldKey].unread == 0 ) then
+				local old = EventWow_Chat.conversations[oldKey];
+				if ( oldKey ~= EventWow_Chat.activeTab and old.unread == 0 and not old.party ) then
 					EventWowChat_CloseConversation(oldKey);
 					break;
 				end
@@ -450,10 +466,11 @@ function EventWowChat_OpenConversation(name)
 	return conversation, key;
 end
 
--- Cierra la pestana; el historial se conserva por si se vuelve a abrir
-function EventWowChat_CloseConversation(key)
+-- Cierra la pestana; el historial se conserva por si se vuelve a abrir.
+-- La de grupo no se cierra a mano (force: al salir del grupo)
+function EventWowChat_CloseConversation(key, force)
 	local conversation = EventWow_Chat.conversations[key];
-	if ( not conversation or not conversation.open ) then
+	if ( not conversation or not conversation.open or (conversation.party and not force) ) then
 		return;
 	end
 	conversation.open = nil;
@@ -480,10 +497,9 @@ function EventWowChat_AddMessage(text, r, g, b)
 	end
 end
 
--- Anade una linea a la conversacion con name (la abre si hace falta)
-local function EventWow_AddPrivateMessage(name, text, incoming)
-	local conversation, key = EventWowChat_OpenConversation(name);
-	local r, g, b = unpack(EVENTWOW_CHAT.COLOR_WHISPER);
+-- Linea en una conversacion ya abierta
+local function EventWow_AddConversationLine(conversation, key, text, incoming, color)
+	local r, g, b = unpack(color);
 	tinsert(conversation.lines, { text, r, g, b });
 	if ( #conversation.lines > EVENTWOW_CHAT.MAX_LINES ) then
 		tremove(conversation.lines, 1);
@@ -495,6 +511,41 @@ local function EventWow_AddPrivateMessage(name, text, incoming)
 		conversation.unread = conversation.unread + 1;
 		EventWowChat_LayoutTabs();
 	end
+end
+
+-- Pestana Grupo: existe mientras estes en un grupo (justo detras de Global)
+local function EventWow_UpdatePartyConversation()
+	local key = EVENTWOW_CHAT.PARTY_KEY;
+	local conversation = EventWow_Chat.conversations[key];
+	if ( GetNumPartyMembers() > 0 ) then
+		if ( conversation and conversation.open ) then
+			return;
+		end
+		if ( not conversation ) then
+			conversation = { name = EVENTWOW_STR_CHAT_TAB_PARTY, lines = {}, unread = 0, party = true };
+			EventWow_Chat.conversations[key] = conversation;
+		end
+		conversation.open = true;
+		tinsert(EventWow_Chat.order, 1, key);
+		EventWowChat_LayoutTabs();
+	elseif ( conversation ) then
+		EventWowChat_CloseConversation(key, true);
+		EventWow_Chat.conversations[key] = nil;
+	end
+end
+
+local function EventWow_AddPartyMessage(text, incoming)
+	EventWow_UpdatePartyConversation();
+	local conversation = EventWow_Chat.conversations[EVENTWOW_CHAT.PARTY_KEY];
+	if ( conversation ) then
+		EventWow_AddConversationLine(conversation, EVENTWOW_CHAT.PARTY_KEY, text, incoming, EVENTWOW_CHAT.COLOR_PARTY);
+	end
+end
+
+-- Anade una linea a la conversacion con name (la abre si hace falta)
+local function EventWow_AddPrivateMessage(name, text, incoming)
+	local conversation, key = EventWowChat_OpenConversation(name);
+	EventWow_AddConversationLine(conversation, key, text, incoming, EVENTWOW_CHAT.COLOR_WHISPER);
 end
 
 -- CHAT <unix time> <rango> <nombre> <texto>
@@ -526,8 +577,26 @@ end
 local notFoundPattern = (string.gsub(ERR_CHAT_PLAYER_NOT_FOUND_S, "([%(%)%.%%%+%-%*%?%[%]%^%$])", "%%%1"));
 notFoundPattern = "^"..(string.gsub(notFoundPattern, "%%%%s", "(.+)")).."$";
 
--- Susurros (eventos nativos del chat)
+-- Susurros y grupo (eventos nativos del chat)
 local function EventWow_OnWhisperEvent(self, event, text, name)
+	if ( event == "PARTY_MEMBERS_CHANGED" or event == "PLAYER_ENTERING_WORLD" ) then
+		EventWow_UpdatePartyConversation();
+		return;
+	end
+
+	if ( event == "CHAT_MSG_PARTY" or event == "CHAT_MSG_PARTY_LEADER" ) then
+		if ( not name or name == "" ) then
+			return;
+		end
+		local line = EventWow_TimeStamp(time());
+		if ( event == "CHAT_MSG_PARTY_LEADER" ) then
+			line = line..EVENTWOW_GROUP.LEADER_ICON.." ";
+		end
+		local own = name == UnitName("player");
+		EventWow_AddPartyMessage(line..(own and name or EventWow_PlayerLink(name))..": "..EventWow_EscapeText(text), not own);
+		return;
+	end
+
 	if ( event == "CHAT_MSG_SYSTEM" ) then
 		local missing = string.match(text or "", notFoundPattern);
 		local conversation = missing and EventWow_Chat.conversations[EventWow_Key(missing)];
@@ -586,6 +655,8 @@ function EventWowChat_Submit(editBox)
 		EventWow_SendNative(text);
 	elseif ( first == "." ) then
 		SendChatMessage(text, "SAY");
+	elseif ( conversation and conversation.party ) then
+		SendChatMessage(text, "PARTY");
 	elseif ( conversation ) then
 		SendChatMessage(text, "WHISPER", nil, conversation.name);
 	else
@@ -595,10 +666,14 @@ end
 
 -- Marco -----------------------------------------------------------------------------------------
 
--- Clic en un nombre: abrir su conversacion
+-- Clic en un nombre: abrir su conversacion. Alt+clic: invitar al grupo (como en el chat nativo).
 local function EventWow_OnHyperlinkClick(self, link)
 	local kind, name = strsplit(":", link);
 	if ( kind ~= "player" or not name or name == "" or name == UnitName("player") ) then
+		return;
+	end
+	if ( IsAltKeyDown() ) then
+		InviteUnit(name);
 		return;
 	end
 	local _, key = EventWowChat_OpenConversation(name);
@@ -701,6 +776,10 @@ whisperFrame:RegisterEvent("CHAT_MSG_WHISPER_INFORM");
 whisperFrame:RegisterEvent("CHAT_MSG_AFK");
 whisperFrame:RegisterEvent("CHAT_MSG_DND");
 whisperFrame:RegisterEvent("CHAT_MSG_SYSTEM");
+whisperFrame:RegisterEvent("CHAT_MSG_PARTY");
+whisperFrame:RegisterEvent("CHAT_MSG_PARTY_LEADER");
+whisperFrame:RegisterEvent("PARTY_MEMBERS_CHANGED");
+whisperFrame:RegisterEvent("PLAYER_ENTERING_WORLD");
 whisperFrame:SetScript("OnEvent", EventWow_OnWhisperEvent);
 
 EventWow_RegisterHandler("CHAT", EventWow_OnChatMessage);

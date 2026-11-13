@@ -51,6 +51,11 @@ EVENTWOW_MATCH_VISIBLE_FRAMES = {
 	TargetFrame = true,
 	BuffFrame = true,
 	CastingBarFrame = true,
+	-- Marcos de grupo nativos (solo se ven con grupo)
+	PartyMemberFrame1 = true,
+	PartyMemberFrame2 = true,
+	PartyMemberFrame3 = true,
+	PartyMemberFrame4 = true,
 };
 
 -- Funciones globales (llamadas desde Bindings.xml / micro menu) que no hacen nada en el lobby ni en partida

@@ -2,6 +2,7 @@
 #include "DBCStores.h"
 #include "EventWowConfig.h"
 #include "EventWowProtocol.h"
+#include "Group.h"
 #include "Log.h"
 #include "MapMgr.h"
 #include "ObjectMgr.h"
@@ -36,6 +37,8 @@ void EventWowGames::Validate()
 {
     for (EventWowGameInfo& game : _games)
     {
+        game.MaxPartySize = std::clamp<uint8>(game.MaxPartySize, 1, std::max<uint8>(1, std::min<uint8>(game.MaxPlayers, MAXGROUPSIZE)));
+
         if (!game.IsPlayable())
             continue;
 
@@ -62,7 +65,7 @@ void EventWowGames::Validate()
 
 namespace
 {
-    // GAMES <n> (<id> <icono> <min> <max> <nombre> <descripcion> <jugable 0/1>) x n
+    // GAMES <n> (<id> <icono> <min> <max> <nombre> <descripcion> <jugable 0/1> <grupo max>) x n
     void SendGameList(Player* player)
     {
         auto const& games = sEventWowGames.GetAll();
@@ -71,7 +74,7 @@ namespace
         message.Add(static_cast<uint32>(games.size()));
         for (EventWowGameInfo const& game : games)
             message.Add(game.Id).Add(game.Icon).Add(game.MinPlayers).Add(game.MaxPlayers)
-                .Add(game.Name).Add(game.Description).Add(game.IsPlayable() ? 1 : 0);
+                .Add(game.Name).Add(game.Description).Add(game.IsPlayable() ? 1 : 0).Add(game.MaxPartySize);
 
         message.Send(player);
     }
@@ -122,7 +125,8 @@ void AddSC_eventwow_games()
         "Resistid juntos oleada tras oleada de enemigos hasta derrotar al jefe final. (Maqueta: todavía no existe.)",
         "Interface\\Icons\\Spell_Shadow_SummonFelGuard",
         5,
-        20
+        20,
+        5
     });
 
     new EventWow_GamesWorldScript();

@@ -1,7 +1,7 @@
 # Protocolo cliente <-> servidor (addon messages)
 
 Implementacion: servidor `modules/mod-eventwow/src/EventWowProtocol.*`, cliente
-`client/src/Interface/FrameXML/EventWowProtocol.lua`. Version actual: **2**
+`client/src/Interface/FrameXML/EventWowProtocol.lua`. Version actual: **3**
 (`EventWowProtocol::Version` / `EVENTWOW_PROTOCOL.VERSION`; cambiarla en ambos lados a la vez).
 
 ## Transporte
@@ -49,9 +49,11 @@ opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `Regi
 | `HELLO` | version | primer `PLAYER_ENTERING_WORLD` de cada carga del Lua (login, `/reload`) | `WELCOME` + listeners, o `ERROR VERSION` |
 | `LIST` | - | pedir el catalogo de nuevo | `GAMES` |
 | `CHAT` | texto | chat global (max 200 caracteres; rafaga 3, luego 1 por segundo) | `CHAT` a todos, o `ERROR MUTED/CHAT_RATE/CHAT_TOO_LONG` |
-| `QUEUE` | id juego | "Buscar partida" | `QUEUE_STATUS`, o `ERROR QUEUE_UNKNOWN_GAME/QUEUE_GAME_UNAVAILABLE/QUEUE_IN_MATCH/QUEUE_NOT_IN_LOBBY` |
-| `LEAVE` | - | "Cancelar" la cola | `QUEUE_STATUS NONE` |
+| `QUEUE` | id juego | "Buscar partida" (solo, o el lider por todo su grupo) | `QUEUE_STATUS` a todos los apuntados, o `ERROR` (ver "Grupos") |
+| `LEAVE` | - | "Cancelar" la cola (sale todo el grupo) | `QUEUE_STATUS NONE` a todos; los demas, `ERROR QUEUE_GROUP_CANCELLED <nombre>` |
 | `ABANDON` | - | "Abandonar" / "Volver al lobby" en partida | vuelta al lobby y `MATCH_STATE NONE` |
+| `ACCEPT` | id propuesta | "Aceptar" la partida encontrada | `MATCH_FOUND_STATUS` a todos; si es el ultimo, `MATCH_FOUND_END ACCEPTED` + partida |
+| `DECLINE` | id propuesta | "Rechazar" (tambien `LEAVE`, logout o cambio de grupo con propuesta pendiente) | `MATCH_FOUND_END` a todos (ver "Partida encontrada") |
 
 ### Servidor -> cliente
 
@@ -59,10 +61,13 @@ opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `Regi
 |---|---|---|
 | `WELCOME` | version, rango (0 jugador, 1 GM) | handshake correcto |
 | `ERROR` | codigo, detalle... | textos en `EVENTWOW_ERROR_TEXTS` (EventWowProtocol.lua); `UNKNOWN_OP <op>` |
-| `GAMES` | n, luego n x (id, icono, min, max, nombre, descripcion, jugable 0/1) | catalogo de minijuegos (no jugable = maqueta, "Proximamente") |
+| `GAMES` | n, luego n x (id, icono, min, max, nombre, descripcion, jugable 0/1, grupo max) | catalogo de minijuegos (no jugable = maqueta, "Proximamente") |
 | `CHAT` | unix time, rango, nombre, texto | chat global; al conectar llegan los ultimos 50 (historial) |
 | `ONLINE` | n | jugadores conectados (cada vez que alguien conecta/desconecta) |
-| `QUEUE_STATUS` | `QUEUED` id segundos / `NONE` | estado de la cola (tambien al conectar) |
+| `QUEUE_STATUS` | `QUEUED` id segundos jugadores-de-la-entrada / `NONE` | estado de la cola (tambien al conectar) |
+| `MATCH_FOUND` | id, id juego, segundos para aceptar, total, aceptados, tu 0/1 | partida encontrada: aceptar o rechazar (tambien al conectar si sigue pendiente) |
+| `MATCH_FOUND_STATUS` | id, aceptados, total | alguien ha aceptado |
+| `MATCH_FOUND_END` | id, `ACCEPTED`/`REQUEUED`/`REMOVED` | fin de la confirmacion: a la partida / de vuelta a la cola / fuera de la cola |
 | `MATCH_STATE` | `NONE` / estado, id juego, segundos | partida del jugador (al conectar, en cada cambio y al volver al lobby). Estados: `LOADING` (en camino, sigue en modo lobby), `WAITING` (dentro, esperando al resto), `COUNTDOWN`, `RUNNING`, `ENDED` (resultado; luego vuelta al lobby). segundos = lo que queda del estado, 0 = sin tiempo |
 | `MATCH_HUD` | texto | objetivo que muestra el HUD (vacio = nada) |
 | `MATCH_END` | `WIN`/`LOSE`/`NONE`, texto | resultado del jugador y resumen |
@@ -75,6 +80,37 @@ opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `Regi
   el cliente los muestra en una pestana por conversacion del chat del panel (filtrados del chat nativo).
 - Canales (General, Comercio...): no existen. `EventWowChat.cpp` descarta `CMSG_JOIN_CHANNEL` salvo en modo dev
   y al salir del modo dev se abandonan todos (`CleanupChannels`). El cliente filtra `CHAT_MSG_CHANNEL*`.
+
+## Grupos
+
+Grupos **nativos** del core (no van por el protocolo): el panel (`EventWowGroup.lua`) usa `InviteUnit`, `UninviteUnit`,
+`PromoteToLeader`, `LeaveParty` y los eventos `PARTY_*`; la invitacion es el dialogo nativo. Alt+clic en un nombre
+del chat invita. El chat de grupo va a la pestana "Grupo" del chat (fija mientras estas en grupo; escribir ahi = `/p`).
+
+Reglas (`EventWowGroups.cpp`, no en modo dev): maximo 5 (se descarta `CMSG_GROUP_RAID_CONVERT`); no se invita ni se
+acepta en partida (`ERROR GROUP_IN_MATCH`, `GROUP_TARGET_IN_MATCH <nombre>`).
+
+Cola en grupo (`EventWowMatchMgr`): `QUEUE` del lider apunta al grupo entero como una entrada (nunca se separa).
+- Requisitos: ser el lider (`QUEUE_NOT_LEADER`), juego con `MaxPartySize` > 1 (`QUEUE_SOLO_ONLY <max>`) y grupo que
+  quepa (`QUEUE_GROUP_TOO_BIG <max>`), todos conectados al protocolo (`QUEUE_GROUP_OFFLINE <nombre>`), en el lobby y
+  sin partida (`QUEUE_GROUP_BUSY <nombre>`).
+- Sale entera de la cola si: cualquiera cancela (`QUEUE_GROUP_CANCELLED <nombre>` a los demas), se desconecta
+  (`QUEUE_GROUP_LOGOUT <nombre>`) o el grupo cambia (entra/sale alguien, se disuelve: `QUEUE_GROUP_CHANGED`).
+- Emparejamiento: por orden de llegada, entradas enteras que quepan en `MaxPlayers` (puede saltarse una entrada
+  grande para llenar con otras mas pequenas).
+
+### Partida encontrada (confirmacion tipo Dota 2)
+
+Lo emparejado no va directo a la partida: es una propuesta (`MATCH_FOUND`, popup `EventWowMatchFound.lua` con
+Aceptar/Rechazar y cuenta atras de `EventWow.Queue.AcceptTimeout`, 20 s).
+- Todos aceptan -> `MATCH_FOUND_END ACCEPTED` y se crea la partida (`MATCH_STATE LOADING`...).
+- Alguien rechaza (`DECLINE`, `LEAVE`, logout, cambio de grupo) o no acepta a tiempo -> se cancela. Las entradas
+  con algun culpable salen de la cola (`REMOVED`; sus companeros de grupo reciben `ERROR QUEUE_GROUP_DECLINED <nombre>`
+  / `QUEUE_GROUP_NOT_ACCEPTED` / el motivo de `LEAVE`, logout o cambio de grupo). El resto vuelve a la cola
+  automaticamente con su antiguedad (`REQUEUED`) y puede emparejarse de nuevo en el siguiente segundo.
+- Durante la propuesta los jugadores siguen "en cola" (`QUEUE_STATUS QUEUED`) y no pueden apuntarse a otra.
+- Instancias: el core liga tambien al lider de quien entra (aunque no este en la partida); al cerrar la partida se
+  quitan todos los binds de su InstanceSave (`UnbindAllFor`).
 
 ## Pendiente
 

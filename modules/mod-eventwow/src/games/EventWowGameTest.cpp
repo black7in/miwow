@@ -33,5 +33,16 @@ void AddSC_eventwow_game_test()
     game.Start.Relocate(3.81f, -14.82f, -17.84f, 4.39f);
     game.Factory = []() { return std::make_unique<EventWowGameTest>(); };
 
+    // Misma prueba para varios jugadores: valida la cola en grupo y el emparejamiento de grupos/individuales
+    EventWowGameInfo group = game;
+    group.Id = "test_group";
+    group.Name = "Prueba en grupo";
+    group.Description = "Minijuego de prueba para 1-5 jugadores: busca partida solo o con tu grupo, aguantad 30 segundos "
+        "en la instancia y volved al lobby.";
+    group.Icon = "Interface\\Icons\\Spell_Holy_PrayerOfFortitude";
+    group.MaxPlayers = 5;
+    group.MaxPartySize = 5;
+
     sEventWowGames.Register(std::move(game));
+    sEventWowGames.Register(std::move(group));
 }

@@ -9,6 +9,7 @@ void AddSC_eventwow_games();
 void AddSC_eventwow_chat();
 void AddSC_eventwow_matches();
 void AddSC_eventwow_dev_mode();
+void AddSC_eventwow_groups();
 
 // Minijuegos (games/). Se registran antes que las maquetas: el orden es el del panel.
 void AddSC_eventwow_game_test();
@@ -24,4 +25,5 @@ void Addmod_eventwowScripts()
     AddSC_eventwow_chat();
     AddSC_eventwow_matches();
     AddSC_eventwow_dev_mode();
+    AddSC_eventwow_groups();
 }

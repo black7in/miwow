@@ -40,8 +40,16 @@ EVENTWOW_STR_PANEL_CONNECTING = "Conectando con el servidor...";
 EVENTWOW_STR_PANEL_NO_GAMES = "No hay minijuegos disponibles.";
 EVENTWOW_STR_PANEL_SOLO = "Solitario";
 EVENTWOW_STR_PANEL_PLAYERS = "%d-%d jugadores";
+EVENTWOW_STR_PANEL_PARTY = "%s  ·  en grupo hasta %d";
+EVENTWOW_STR_PANEL_NO_PARTY = "%s  ·  sin grupos";
 EVENTWOW_STR_PANEL_SEARCH = "Buscar partida";
+EVENTWOW_STR_PANEL_SEARCH_GROUP = "Buscar partida en grupo (%d)";
+EVENTWOW_STR_PANEL_NOT_LEADER = "Solo el líder busca partida";
+EVENTWOW_STR_PANEL_SOLO_ONLY = "Individual: sal del grupo";
+EVENTWOW_STR_PANEL_GROUP_TOO_BIG = "Grupo demasiado grande (máx. %d)";
 EVENTWOW_STR_PANEL_QUEUED = "Buscando partida: %s  |cffffffff%s|r";
+EVENTWOW_STR_PANEL_FOUND = "Partida encontrada: %s. Esperando confirmación...";
+EVENTWOW_STR_PANEL_QUEUED_GROUP ="Buscando partida en grupo (%d): %s  |cffffffff%s|r";
 EVENTWOW_STR_PANEL_CANCEL = "Cancelar";
 EVENTWOW_STR_PANEL_UNAVAILABLE = "Próximamente";
 EVENTWOW_STR_PANEL_ENTERING = "Partida encontrada: %s. Entrando...";
@@ -118,7 +126,13 @@ function EventWowPanel_UpdateDetail()
 		EventWowPanelDetailIcon:SetTexture(game.icon);
 		EventWowPanelDetailIcon:Show();
 		EventWowPanelDetailName:SetText(game.name);
-		EventWowPanelDetailPlayers:SetText(EventWow_PlayersText(game));
+		local players = EventWow_PlayersText(game);
+		if ( (game.maxPartySize or 1) > 1 ) then
+			players = format(EVENTWOW_STR_PANEL_PARTY, players, game.maxPartySize);
+		elseif ( (game.maxPlayers or 1) > 1 ) then
+			players = format(EVENTWOW_STR_PANEL_NO_PARTY, players);
+		end
+		EventWowPanelDetailPlayers:SetText(players);
 		EventWowPanelDetailDescription:SetText(game.description);
 		EventWowPanelDetailMessage:SetText("");
 	else
@@ -134,19 +148,33 @@ function EventWowPanel_UpdateDetail()
 	end
 
 	-- Una sola cola: si estas en cola (o entrando en una partida) se ve su estado (aunque mires otro juego)
-	if ( EventWow_Panel.queue or EventWowMatch_IsLoading() ) then
+	-- EventWowMatch.lua carga despues que este archivo
+	local loading = EventWowMatch_IsLoading and EventWowMatch_IsLoading();
+	if ( EventWow_Panel.queue or loading ) then
 		EventWowPanelSearchButton:Hide();
 		EventWowPanelQueue:Show();
 		EventWowPanel_UpdateQueueText();
 	else
 		EventWowPanelQueue:Hide();
 		EventWowPanelSearchButton:Show();
+		-- En grupo busca el lider por todos (EventWowGroup.lua); el servidor lo vuelve a comprobar
+		local size = EventWowGroup_GetSize();
+		local text, enabled = EVENTWOW_STR_PANEL_SEARCH, hasGame and game.playable and EventWow_Protocol.connected;
 		if ( hasGame and not game.playable ) then
-			EventWowPanelSearchButton:SetText(EVENTWOW_STR_PANEL_UNAVAILABLE);
-		else
-			EventWowPanelSearchButton:SetText(EVENTWOW_STR_PANEL_SEARCH);
+			text = EVENTWOW_STR_PANEL_UNAVAILABLE;
+		elseif ( hasGame and size > 1 ) then
+			if ( not EventWowGroup_IsLeaderOrSolo() ) then
+				text, enabled = EVENTWOW_STR_PANEL_NOT_LEADER, false;
+			elseif ( (game.maxPartySize or 1) <= 1 ) then
+				text, enabled = EVENTWOW_STR_PANEL_SOLO_ONLY, false;
+			elseif ( size > game.maxPartySize ) then
+				text, enabled = format(EVENTWOW_STR_PANEL_GROUP_TOO_BIG, game.maxPartySize), false;
+			else
+				text = format(EVENTWOW_STR_PANEL_SEARCH_GROUP, size);
+			end
 		end
-		if ( hasGame and game.playable and EventWow_Protocol.connected ) then
+		EventWowPanelSearchButton:SetText(text);
+		if ( enabled ) then
 			EventWowPanelSearchButton:Enable();
 		else
 			EventWowPanelSearchButton:Disable();
@@ -155,7 +183,7 @@ function EventWowPanel_UpdateDetail()
 end
 
 function EventWowPanel_UpdateQueueText()
-	if ( EventWowMatch_IsLoading() ) then
+	if ( EventWowMatch_IsLoading and EventWowMatch_IsLoading() ) then
 		local game = EventWow_FindGame(EventWow_Match.gameId);
 		EventWowPanelQueueText:SetText(format(EVENTWOW_STR_PANEL_ENTERING, game and game.name or tostring(EventWow_Match.gameId)));
 		EventWowPanelQueueCancel:Hide();
@@ -169,7 +197,16 @@ function EventWowPanel_UpdateQueueText()
 	end
 	local game = EventWow_FindGame(queue.gameId);
 	local name = game and game.name or queue.gameId;
-	EventWowPanelQueueText:SetText(format(EVENTWOW_STR_PANEL_QUEUED, name, EventWow_FormatElapsed(GetTime() - queue.startTime)));
+	if ( EventWow_MatchFound and EventWow_MatchFound.current ) then
+		EventWowPanelQueueText:SetText(format(EVENTWOW_STR_PANEL_FOUND, name));
+		return;
+	end
+	local elapsed = EventWow_FormatElapsed(GetTime() - queue.startTime);
+	if ( queue.players > 1 ) then
+		EventWowPanelQueueText:SetText(format(EVENTWOW_STR_PANEL_QUEUED_GROUP, queue.players, name, elapsed));
+	else
+		EventWowPanelQueueText:SetText(format(EVENTWOW_STR_PANEL_QUEUED, name, elapsed));
+	end
 end
 
 function EventWowPanel_Update()
@@ -351,6 +388,10 @@ local function EventWow_CreateDetail(panel)
 	cancel:SetText(EVENTWOW_STR_PANEL_CANCEL);
 	cancel:SetScript("OnClick", function()
 		PlaySound("igMainMenuOptionCheckBoxOff");
+		-- Con una partida encontrada pendiente, cancelar es rechazarla (EventWowMatchFound.lua)
+		if ( EventWow_MatchFound and EventWow_MatchFound.current ) then
+			EventWow_MatchFound.current.declined = true;
+		end
 		EventWow_Send("LEAVE");
 	end);
 
@@ -402,9 +443,15 @@ local function EventWow_CreatePanel()
 	EventWow_CreateGameList(panel);
 	EventWow_CreateDetail(panel);
 
+	-- Abajo: chat (izq.) + grupo (der., ancho fijo)
+	local group = EventWowGroup_Create(panel);
+	group:SetPoint("TOPRIGHT", EventWowPanelDetail, "BOTTOMRIGHT", 0, -EVENTWOW_PANEL.GAP);
+	group:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -EVENTWOW_PANEL.MARGIN, EVENTWOW_PANEL.MARGIN);
+	EventWow_ApplyBackdrop(group, EVENTWOW_PANEL.COLOR_SECTION);
+
 	local chat = EventWowChat_Create(panel);
 	chat:SetPoint("TOPLEFT", EventWowPanelGameList, "BOTTOMLEFT", 0, -EVENTWOW_PANEL.GAP);
-	chat:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -EVENTWOW_PANEL.MARGIN, EVENTWOW_PANEL.MARGIN);
+	chat:SetPoint("BOTTOMRIGHT", group, "BOTTOMLEFT", -EVENTWOW_PANEL.GAP, 0);
 	EventWow_ApplyBackdrop(chat, EVENTWOW_PANEL.COLOR_SECTION);
 
 	panel:SetScript("OnSizeChanged", EventWowPanel_Layout);
@@ -418,10 +465,14 @@ end
 
 -- Protocolo -------------------------------------------------------------------------------------
 
--- QUEUE_STATUS QUEUED <id> <segundos> | QUEUE_STATUS NONE
+-- QUEUE_STATUS QUEUED <id> <segundos> <jugadores> | QUEUE_STATUS NONE
 EventWow_RegisterHandler("QUEUE_STATUS", function(fields)
 	if ( fields[1] == "QUEUED" ) then
-		EventWow_Panel.queue = { gameId = fields[2], startTime = GetTime() - (tonumber(fields[3]) or 0) };
+		EventWow_Panel.queue = {
+			gameId = fields[2],
+			startTime = GetTime() - (tonumber(fields[3]) or 0),
+			players = tonumber(fields[4]) or 1,
+		};
 	else
 		EventWow_Panel.queue = nil;
 	end

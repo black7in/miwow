@@ -17,6 +17,7 @@ struct EventWowConfig
 
     // Partidas (EventWowMatchMgr)
     Seconds QueueFillWait = 15s;     // espera para llenar hasta MaxPlayers si ya hay MinPlayers
+    Seconds QueueAcceptTimeout = 20s; // tiempo para aceptar una partida encontrada
     Seconds MatchLoadTimeout = 30s;  // jugadores que no llegan a la instancia en este tiempo quedan fuera
     Seconds MatchReturnDelay = 8s;   // resultado en pantalla antes de volver al lobby
 

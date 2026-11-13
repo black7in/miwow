@@ -27,6 +27,7 @@ void EventWowConfig::Load()
         sConfigMgr->GetOption<float>("EventWow.Lobby.O", 1.65007f));
 
     QueueFillWait = Seconds(sConfigMgr->GetOption<uint32>("EventWow.Queue.FillWait", 15));
+    QueueAcceptTimeout = Seconds(std::max<uint32>(5, sConfigMgr->GetOption<uint32>("EventWow.Queue.AcceptTimeout", 20)));
     MatchLoadTimeout = Seconds(std::max<uint32>(5, sConfigMgr->GetOption<uint32>("EventWow.Match.LoadTimeout", 30)));
     MatchReturnDelay = Seconds(sConfigMgr->GetOption<uint32>("EventWow.Match.ReturnDelay", 8));
 
