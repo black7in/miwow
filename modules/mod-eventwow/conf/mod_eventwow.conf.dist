@@ -122,6 +122,14 @@ CharacterCreating.Disabled.ClassMask = 511
 StartPlayerLevel = 80
 
 #
+#    AlwaysMaxSkillForLevel
+#        Motivo: armas, Defensa, Desarmado... siempre al maximo del nivel (400 a nivel 80), en cada login
+#                (Player::UpdateSkillsForLevel). Asi no suben jugando (sin avisos de "ha aumentado") y todos los
+#                jugadores tienen el mismo indice de golpe/esquiva/parada. No toca profesiones (no hay).
+
+AlwaysMaxSkillForLevel = 1
+
+#
 #    SkipCinematics
 #        Motivo: el personaje nunca debe verse; sin cinematica de introduccion.
 

@@ -181,6 +181,8 @@ Datos clave de la API Glue:
        `ERR_LEARN_SPELL_S` / `ERR_LEARN_ABILITY_S` / `ERR_SPELL_UNLEARNED_S` (salvo modo dev con panel oculto).
      - Comprobar: modelo/escala/vida/mana, lanzar con clic y teclas, que Rejuvenecimiento etc. del druida no se
        pueden lanzar, y que todo vuelve al acabar/abandonar/desconectar/morir.
+     - Habilidades de armas/Defensa al maximo del nivel en cada login: override `AlwaysMaxSkillForLevel = 1`
+       (opcion del core, sin probar a peticion del usuario). No suben jugando ni salen avisos.
      - Pendiente del disfraz: stats primarias/AP/velocidad, ajustes de dano por personaje, comando de recarga,
        fase `Picking`.
   3. Prototipo de vehiculo con una criatura-vehiculo existente.
