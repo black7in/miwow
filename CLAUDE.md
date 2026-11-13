@@ -117,7 +117,13 @@ Datos clave de la API Glue:
 - Pendiente del "personaje neutro": hechizos/barra/stats -> los gestionara el sistema de "disfraz" de minijuegos.
 
 ### Pendiente
-- Corte vertical paso 3: limpieza UI en el mundo (FrameXML).
+- Corte vertical paso 3 (ocultacion probada por el usuario 2026-11-13):
+  - `client/src/Interface/FrameXML/EventWow.lua` (anadido al final de `FrameXML.toc`): `EventWow_SetLobbyMode(bool)`.
+    Lobby = portada hija de `WorldFrame` (tapa el mundo y el raton, tambien con Alt+Z), marcos reparentados a
+    `EventWowHiddenParent` (reversible), atajos de ventanas/acciones envueltos (no hacen nada), QuestLog/WorldMap
+    se cierran al abrirse, Esc sin "Macros". De momento siempre en modo lobby; el chat se mantiene.
+  - SQL `data/sql/db-auth/2026_11_13_00_rbac_instant_logout.sql`: RBAC 195 -> permiso 1 (logout sin 20 s).
+  - Pendiente: el personaje sigue pudiendo moverse con el teclado (invisible); enraizar en servidor si molesta.
 - Subir ambos repos a un remoto privado.
 
 ## Hoja de ruta
