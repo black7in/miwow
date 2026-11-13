@@ -11,7 +11,11 @@ struct EventWowCharacterInfo;
 //  - Vida/poder maximos fijos: hooks OnPlayerAfterUpdateMaxHealth/MaxPower (al final del calculo del core).
 //  - Tipo de poder (mana/ira/energia), como las formas del druida.
 //  - Hechizos temporales (learnSpell temporal: no se guardan). Mientras va disfrazado (salvo modo dev)
-//    solo puede lanzar esos (OnSpellCheckCast); los desencadenados no cuentan.
+//    solo puede lanzar esos (OnSpellCheckCast); los desencadenados no cuentan. Los de un vehiculo los lanza
+//    la criatura, no el jugador: no les afecta.
+//  - Vehiculo (opcional): se invoca la criatura junto a el y se le sube al asiento 0. Update() le vuelve a
+//    subir si se baja, y si el vehiculo muere o queda lejos (p. ej. tras reaparecer) invoca otro. Al quitar
+//    el disfraz se le baja y el vehiculo desaparece.
 // El estado vive en Player::CustomData: desaparece con el logout.
 // Quien lo quita: EventWowMatchMgr::RemovePlayer (fin, abandono, salir de la instancia, logout) y
 // EventWowLobby::RestoreBaseState.
@@ -25,6 +29,10 @@ namespace EventWowDisguise
 
     // Personaje con el que va disfrazado (nullptr = ninguno)
     EventWowCharacterInfo const* Get(Player const* player);
+
+    // Periodico (hilo del mundo, EventWowMatch): mantiene al jugador montado en su vehiculo.
+    // No hace nada muerto, en modo dev o sin vehiculo.
+    void Update(Player* player);
 
     void SendState(Player* player);
 }

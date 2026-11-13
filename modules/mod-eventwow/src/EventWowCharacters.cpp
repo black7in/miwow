@@ -4,6 +4,7 @@
 #include "EventWowConfig.h"
 #include "EventWowGames.h"
 #include "Log.h"
+#include "ObjectMgr.h"
 #include "ScriptMgr.h"
 #include "SharedDefines.h"
 #include "SpellMgr.h"
@@ -25,9 +26,9 @@ void EventWowCharacters::Load()
     _characters.clear();
     _gameCharacters.clear();
 
-    //                                                 0     1       2              3       4            5        6         7            8
-    if (QueryResult result = WorldDatabase.Query("SELECT `Id`, `Name`, `Description`, `Icon`, `DisplayId`, `Scale`, `Health`, `PowerType`, `MaxPower` "
-        "FROM `eventwow_character`"))
+    //                                                 0     1       2              3       4            5        6         7            8           9
+    if (QueryResult result = WorldDatabase.Query("SELECT `Id`, `Name`, `Description`, `Icon`, `DisplayId`, `Scale`, `Health`, `PowerType`, `MaxPower`, "
+        "`VehicleEntry` FROM `eventwow_character`"))
     {
         do
         {
@@ -42,6 +43,18 @@ void EventWowCharacters::Load()
             info.Health = fields[6].Get<uint32>();
             info.PowerType = fields[7].Get<uint8>();
             info.MaxPower = fields[8].Get<uint32>();
+            info.VehicleEntry = fields[9].Get<uint32>();
+
+            if (info.VehicleEntry)
+            {
+                CreatureTemplate const* vehicle = sObjectMgr->GetCreatureTemplate(info.VehicleEntry);
+                if (!vehicle || !vehicle->VehicleId)
+                {
+                    LOG_ERROR("module.eventwow", "EventWow: personaje {} ({}): la criatura {} no existe o no es un vehiculo, va a pie",
+                        info.Id, info.Name, info.VehicleEntry);
+                    info.VehicleEntry = 0;
+                }
+            }
 
             if (info.DisplayId && !sCreatureDisplayInfoStore.LookupEntry(info.DisplayId))
             {

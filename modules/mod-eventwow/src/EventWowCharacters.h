@@ -21,6 +21,9 @@ struct EventWowCharacterInfo
     uint8 PowerType = 0;        // Powers: 0 mana, 1 ira, 3 energia
     uint32 MaxPower = 0;        // maximo fijo del PowerType (ira/energia en unidades internas: 100 de ira = 1000)
     std::vector<uint32> Spells; // por orden de ranura (barra del HUD)
+    // Vehiculo opcional (creature_template con VehicleId): el disfrazado va siempre montado en el asiento 0.
+    // Sus hechizos, velocidad y vida son los de la criatura (barra nativa de vehiculo). 0 = a pie.
+    uint32 VehicleEntry = 0;
 
     bool HasSpell(uint32 spellId) const;
 };

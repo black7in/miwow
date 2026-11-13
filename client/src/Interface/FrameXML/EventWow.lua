@@ -51,6 +51,8 @@ EVENTWOW_MATCH_VISIBLE_FRAMES = {
 	TargetFrame = true,
 	BuffFrame = true,
 	CastingBarFrame = true,
+	-- Barra nativa de vehiculo (personajes con vehiculo; el motor la muestra solo al montar). Sin boton de bajarse.
+	VehicleMenuBar = true,
 	-- Marcos de grupo nativos (solo se ven con grupo)
 	PartyMemberFrame1 = true,
 	PartyMemberFrame2 = true,
@@ -171,18 +173,37 @@ function EventWow_IsRestricted()
 	return EventWow_UI.mode ~= nil and not EventWow_IsUnrestricted();
 end
 
+-- Teclas 1-6 en vehiculo: ActionButtonDown/Up(id) pulsan VehicleMenuBarActionButton<id> si la barra se ve
+EVENTWOW_VEHICLE_ACTION_FUNCTIONS = {
+	ActionButtonDown = true,
+	ActionButtonUp = true,
+};
+
+local function EventWow_IsVehicleAction(name, id)
+	return EVENTWOW_VEHICLE_ACTION_FUNCTIONS[name] and EventWow_UI.mode == "match" and VehicleMenuBar:IsVisible()
+		and type(id) == "number" and id <= VEHICLE_MAX_ACTIONBUTTONS;
+end
+
 local function EventWow_WrapBlockedFunctions()
 	for _, name in ipairs(EVENTWOW_LOBBY_BLOCKED_FUNCTIONS) do
 		local original = _G[name];
 		if ( original ) then
+			local functionName = name;
 			_G[name] = function(...)
-				if ( EventWow_IsRestricted() ) then
+				if ( EventWow_IsRestricted() and not EventWow_IsVehicleAction(functionName, ...) ) then
 					return;
 				end
 				return original(...);
 			end
 		end
 	end
+
+	-- El servidor vuelve a subir al vehiculo a quien se baja (EventWowDisguise): sin boton de bajarse
+	VehicleMenuBarLeaveButton:HookScript("OnShow", function(self)
+		if ( EventWow_IsRestricted() ) then
+			self:Hide();
+		end
+	end);
 
 	for _, name in ipairs(EVENTWOW_LOBBY_BLOCKED_PANELS) do
 		local frame = _G[name];

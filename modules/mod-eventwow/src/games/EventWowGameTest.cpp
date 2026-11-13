@@ -6,11 +6,14 @@
 // Mapa provisional: Sima Ignea (389), entrada (areatrigger_teleport 2230). Hay criaturas mas adentro.
 class EventWowGameTest : public EventWowMatch
 {
+public:
+    explicit EventWowGameTest(Seconds duration = 30s) : _duration(duration) { }
+
 protected:
     void OnStart() override
     {
         SetHud("Aguanta hasta que acabe el tiempo.");
-        SetTimer(30s);
+        SetTimer(_duration);
     }
 
     void OnTimerExpired() override
@@ -18,6 +21,9 @@ protected:
         SetResultForAll(EventWowMatchResult::Win);
         End("¡Prueba superada!");
     }
+
+private:
+    Seconds _duration;
 };
 
 void AddSC_eventwow_game_test()
@@ -43,6 +49,15 @@ void AddSC_eventwow_game_test()
     group.MaxPlayers = 5;
     group.MaxPartySize = 5;
 
+    // Prototipo de vehiculo: su personaje (eventwow_game_character) va montado en una moto
+    EventWowGameInfo vehicle = game;
+    vehicle.Id = "test_vehicle";
+    vehicle.Name = "Prueba en moto";
+    vehicle.Description = "Prototipo de vehiculo en solitario: conduce la moto durante 60 segundos y vuelve al lobby.";
+    vehicle.Icon = "Interface\\Icons\\Spell_Nature_Swiftness";
+    vehicle.Factory = []() { return std::make_unique<EventWowGameTest>(60s); };
+
     sEventWowGames.Register(std::move(game));
     sEventWowGames.Register(std::move(group));
+    sEventWowGames.Register(std::move(vehicle));
 }

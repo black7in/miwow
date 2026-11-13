@@ -185,7 +185,17 @@ Datos clave de la API Glue:
        (opcion del core, sin probar a peticion del usuario). No suben jugando ni salen avisos.
      - Pendiente del disfraz: stats primarias/AP/velocidad, ajustes de dano por personaje, comando de recarga,
        fase `Picking`.
-  3. Prototipo de vehiculo con una criatura-vehiculo existente.
+  3. Prototipo de vehiculo (probado por el usuario 2026-11-13; el goblin no hace la animacion de sentado: buscar modelo):
+     - `eventwow_character.VehicleEntry` (SQL `_03` ALTER, `_04` datos): personaje 2 "Motorista goblin" (goblin en
+       Salvaged Chopper 33062, moto de Ulduar; su script `npc_salvaged_chopper` solo cambia un boton con pasajero)
+       en el juego nuevo `test_vehicle` (Sima Ignea, 60 s).
+     - `EventWowDisguise`: invoca el vehiculo (TempSummon manual, faccion del jugador) y lo sube al asiento 0; al quitar
+       lo baja y despawnea. `Update()` cada 1 s desde `EventWowMatch::Update`: si se baja, vuelve a subirlo; si el
+       vehiculo murio o esta a > 10 m (reaparicion) invoca otro (no en modo dev / muerto). Caso limite: si sale del
+       mapa sin pasar por `Remove` (teleport GM), el vehiculo queda en la instancia hasta que se descarga.
+     - Cliente: `VehicleMenuBar` visible en partida, `VehicleMenuBarLeaveButton` oculto, teclas 1-6 permitidas en
+       vehiculo (`EVENTWOW_VEHICLE_ACTION_FUNCTIONS` en EventWow.lua).
+     - Personajes con vehiculo no deberian llevar hechizos de disfraz (las teclas 1.. chocarian con la barra propia).
   Despues: carrera con fases.
 - Corte vertical pasos 6-7 (compilado y probado por el usuario 2026-11-13):
   - Core (commit `71970693a`): hooks `OnPlayerOverrideInstanceDestination` / `OnPlayerOverrideInstanceEnter`.

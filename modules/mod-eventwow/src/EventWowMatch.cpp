@@ -77,6 +77,17 @@ void EventWowMatch::Update(Milliseconds diff)
 
     bool const expired = TickTimer(diff);
     UpdateRespawns(diff);
+
+    _disguiseTimer += diff;
+    if (_disguiseTimer >= 1s)
+    {
+        _disguiseTimer = 0ms;
+        ForEachPlayer([this](Player* player)
+        {
+            if (player->GetInstanceId() == _instanceId)
+                EventWowDisguise::Update(player);
+        });
+    }
     switch (_state)
     {
         case EventWowMatchState::Loading:

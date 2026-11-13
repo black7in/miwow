@@ -6,7 +6,9 @@
 #include "EventWowDevMode.h"
 #include "EventWowProtocol.h"
 #include "Log.h"
+#include "ObjectAccessor.h"
 #include "Player.h"
+#include "TemporarySummon.h"
 #include "ScriptMgr.h"
 #include "Spell.h"
 #include "SpellInfo.h"
@@ -21,7 +23,47 @@ namespace
         uint32 CharacterId = 0;
         // Hechizos que anadio el disfraz (los que el personaje ya conocia no se le quitan)
         std::vector<uint32> AddedSpells;
+        // Vehiculo invocado (en el mapa del jugador)
+        ObjectGuid VehicleGuid;
+        // No se pudo invocar: no se reintenta (evita repetirlo en cada Update)
+        bool VehicleFailed = false;
     };
+
+    // Mas lejos que esto (reaparicion, teleport) se invoca otro vehiculo en vez de subir al antiguo
+    constexpr float VehicleMaxDistance = 10.0f;
+
+    void SummonVehicle(Player* player, DisguiseSlot* slot, uint32 entry)
+    {
+        TempSummon* vehicle = player->SummonCreature(entry, *player, TEMPSUMMON_MANUAL_DESPAWN);
+        if (!vehicle || !vehicle->IsVehicle())
+        {
+            if (vehicle)
+                vehicle->DespawnOrUnsummon();
+
+            LOG_ERROR("module.eventwow", "EventWow: no se pudo invocar el vehiculo {} para {}", entry, player->GetName());
+            slot->VehicleGuid.Clear();
+            slot->VehicleFailed = true;
+            return;
+        }
+
+        // Amistoso para su conductor (y para su equipo cuando haya equipos)
+        vehicle->SetFaction(player->GetFaction());
+        slot->VehicleGuid = vehicle->GetGUID();
+        player->EnterVehicle(vehicle, 0);
+    }
+
+    // Baja al jugador y hace desaparecer el vehiculo (si sigue en su mapa)
+    void DismissVehicle(Player* player, ObjectGuid vehicleGuid)
+    {
+        if (player->GetVehicle())
+            player->ExitVehicle();
+
+        if (!vehicleGuid)
+            return;
+
+        if (Creature* vehicle = ObjectAccessor::GetCreature(*player, vehicleGuid))
+            vehicle->DespawnOrUnsummon();
+    }
 
     DisguiseSlot* GetSlot(Player const* player)
     {
@@ -76,6 +118,9 @@ void EventWowDisguise::Apply(Player* player, EventWowCharacterInfo const& charac
         slot->AddedSpells.push_back(spellId);
     }
 
+    if (character.VehicleEntry)
+        SummonVehicle(player, slot, character.VehicleEntry);
+
     LOG_DEBUG("module.eventwow", "EventWow: {} disfrazado de {} ({})", player->GetName(), character.Name, character.Id);
     SendState(player);
 }
@@ -87,8 +132,11 @@ void EventWowDisguise::Remove(Player* player)
         return;
 
     std::vector<uint32> const spells = slot->AddedSpells;
+    ObjectGuid const vehicleGuid = slot->VehicleGuid;
     // Primero fuera el slot: a partir de aqui los hooks ya no fuerzan nada
     player->CustomData.Erase(DisguiseKey);
+
+    DismissVehicle(player, vehicleGuid);
 
     for (uint32 spellId : spells)
         player->removeSpell(spellId, SPEC_MASK_ALL, true);
@@ -111,6 +159,32 @@ void EventWowDisguise::Remove(Player* player)
 
     LOG_DEBUG("module.eventwow", "EventWow: {} sin disfraz", player->GetName());
     SendState(player);
+}
+
+void EventWowDisguise::Update(Player* player)
+{
+    DisguiseSlot* slot = GetSlot(player);
+    if (!slot || slot->VehicleFailed || player->GetVehicle())
+        return;
+
+    EventWowCharacterInfo const* character = sEventWowCharacters.Get(slot->CharacterId);
+    if (!character || !character->VehicleEntry)
+        return;
+
+    if (!player->IsInWorld() || !player->IsAlive() || player->IsBeingTeleported() || EventWowDevMode::IsActive(player))
+        return;
+
+    Creature* vehicle = slot->VehicleGuid ? ObjectAccessor::GetCreature(*player, slot->VehicleGuid) : nullptr;
+    if (vehicle && (!vehicle->IsAlive() || vehicle->GetExactDist(player) > VehicleMaxDistance))
+    {
+        vehicle->DespawnOrUnsummon();
+        vehicle = nullptr;
+    }
+
+    if (vehicle)
+        player->EnterVehicle(vehicle, 0);
+    else
+        SummonVehicle(player, slot, character->VehicleEntry);
 }
 
 void EventWowDisguise::SendState(Player* player)

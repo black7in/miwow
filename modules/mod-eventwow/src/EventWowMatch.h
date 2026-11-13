@@ -125,6 +125,8 @@ private:
     std::string _hud;
     // Reapariciones pendientes: jugador -> tiempo restante
     std::unordered_map<ObjectGuid, Milliseconds> _respawns;
+    // Mantenimiento de los disfraces (volver a subir al vehiculo), cada segundo
+    Milliseconds _disguiseTimer = 0ms;
 };
 
 #endif
