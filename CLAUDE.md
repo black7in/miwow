@@ -205,7 +205,7 @@ Datos clave de la API Glue:
        entradas reservado **9500000-9599999**, copias de vehiculos existentes sin script/heroico/clic/locale
        (SQL `_05`: 9500000 = Salvaged Chopper; probado: sin nombre encima; el retrato del vehiculo muestra "Entidad desconocida", aceptado). El nombre es un campo mas: un juego puede darle uno.
      - Personajes con vehiculo no deberian llevar hechizos de disfraz (las teclas 1.. chocarian con la barra propia).
-  4. Stats, capa 1: modificadores (probado por el usuario 2026-11-13; mana 2500 en vez de los 3500 esperados: revisar). Herramientas para un futuro "Hero Siege".
+  4. Stats, capa 1: modificadores (probado por el usuario 2026-11-13: 6000 vida, 3500 mana, como se esperaba). Herramientas para un futuro "Hero Siege".
      - `EventWowStats.*`: `Add/Get/Reset` por jugador (`CustomData`), 23 stats con clave estable (str, agi, sta, int,
        spi, health, mana, armor, ap, rap, sp, crit, haste, hit, expertise, dodge, parry, block, resilience, armorpen,
        spellpen, mp5, hp5). Se aplican IGUAL que `Player::_ApplyItemBonuses`: lo derivado lo calcula el motor.
