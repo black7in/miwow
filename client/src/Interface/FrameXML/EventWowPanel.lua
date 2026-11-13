@@ -443,15 +443,15 @@ local function EventWow_CreatePanel()
 	EventWow_CreateGameList(panel);
 	EventWow_CreateDetail(panel);
 
-	-- Abajo: chat (izq.) + grupo (der., ancho fijo)
-	local group = EventWowGroup_Create(panel);
-	group:SetPoint("TOPRIGHT", EventWowPanelDetail, "BOTTOMRIGHT", 0, -EVENTWOW_PANEL.GAP);
-	group:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -EVENTWOW_PANEL.MARGIN, EVENTWOW_PANEL.MARGIN);
-	EventWow_ApplyBackdrop(group, EVENTWOW_PANEL.COLOR_SECTION);
+	-- Abajo: chat (izq.) + social: grupo y amigos (der., ancho fijo)
+	local social = EventWowSocial_Create(panel);
+	social:SetPoint("TOPRIGHT", EventWowPanelDetail, "BOTTOMRIGHT", 0, -EVENTWOW_PANEL.GAP);
+	social:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -EVENTWOW_PANEL.MARGIN, EVENTWOW_PANEL.MARGIN);
+	EventWow_ApplyBackdrop(social, EVENTWOW_PANEL.COLOR_SECTION);
 
 	local chat = EventWowChat_Create(panel);
 	chat:SetPoint("TOPLEFT", EventWowPanelGameList, "BOTTOMLEFT", 0, -EVENTWOW_PANEL.GAP);
-	chat:SetPoint("BOTTOMRIGHT", group, "BOTTOMLEFT", -EVENTWOW_PANEL.GAP, 0);
+	chat:SetPoint("BOTTOMRIGHT", social, "BOTTOMLEFT", -EVENTWOW_PANEL.GAP, 0);
 	EventWow_ApplyBackdrop(chat, EVENTWOW_PANEL.COLOR_SECTION);
 
 	panel:SetScript("OnSizeChanged", EventWowPanel_Layout);

@@ -53,8 +53,18 @@ public:
         PLAYERHOOK_ON_OVERRIDE_LOGIN_LOCATION,
         PLAYERHOOK_ON_LOAD_FROM_DB,
         PLAYERHOOK_ON_FIRST_LOGIN,
-        PLAYERHOOK_ON_LOGIN
+        PLAYERHOOK_ON_LOGIN,
+        PLAYERHOOK_NOT_VISIBLE_GLOBALLY_FOR
     }) { }
+
+    // La invisibilidad del lobby (SetVisibility) es solo para el mapa. En las listas globales del core
+    // (amigos y sus avisos de conexion, /who) un jugador del lobby debe verse conectado.
+    // false = visible globalmente (Player::IsVisibleGloballyFor). Las cuentas GM no pasan por aqui con nuestra
+    // invisibilidad: su visibilidad la gestiona el core.
+    bool OnPlayerNotVisibleGloballyFor(Player* player, Player const* /*viewer*/) override
+    {
+        return !sEventWowConfig.Enabled || player->GetSession()->GetSecurity() > SEC_PLAYER;
+    }
 
     bool OnPlayerOverrideLoginLocation(Player* /*player*/, WorldLocation& location) override
     {

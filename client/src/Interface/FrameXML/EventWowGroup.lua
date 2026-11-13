@@ -1,19 +1,16 @@
--- EventWow: seccion "GRUPO" del panel (abajo a la derecha, junto al chat).
+-- EventWow: pagina "Grupo" de la seccion social del panel (EventWowSocial.lua: pestanas Grupo / Amigos).
 -- Usa los grupos NATIVOS (API de grupo del cliente: InviteUnit, UninviteUnit, PromoteToLeader, LeaveParty).
 -- La invitacion recibida es el dialogo nativo (StaticPopup PARTY_INVITE). Alt+clic en un nombre del chat invita.
 -- Reglas en el servidor: modules/mod-eventwow/src/EventWowGroups.cpp (max 5, nunca banda, no en partida);
 -- la cola en grupo la lanza el lider desde el panel (EventWowMatchMgr).
 
 EVENTWOW_GROUP = {
-	WIDTH = 270,
 	MAX_MEMBERS = 5,   -- MAXGROUPSIZE del core
 	ROW_HEIGHT = 24,
 	LEADER_ICON = "|TInterface\\GroupFrame\\UI-Group-LeaderIcon:14:14:0:0|t",
 	COLOR_ROW_HOVER = { 1, 1, 1, 0.06 },
 };
 
-EVENTWOW_STR_GROUP_TITLE = "GRUPO";
-EVENTWOW_STR_GROUP_COUNT = "%d/%d";
 EVENTWOW_STR_GROUP_YOU = "(tú)";
 EVENTWOW_STR_GROUP_OFFLINE = "desconectado";
 EVENTWOW_STR_GROUP_EMPTY = "Libre";
@@ -73,7 +70,9 @@ function EventWowGroup_Update()
 	local members = EventWow_GetMembers();
 	local amLeader = inGroup and IsPartyLeader();
 
-	EventWowGroupCount:SetText(format(EVENTWOW_STR_GROUP_COUNT, #members, EVENTWOW_GROUP.MAX_MEMBERS));
+	if ( EventWowSocial_UpdateTabs ) then
+		EventWowSocial_UpdateTabs();
+	end
 
 	for i = 1, EVENTWOW_GROUP.MAX_MEMBERS do
 		local row = _G["EventWowGroupRow"..i];
@@ -169,7 +168,7 @@ end
 local function EventWow_CreateRow(parent, index)
 	local row = CreateFrame("Button", "EventWowGroupRow"..index, parent);
 	row:SetHeight(EVENTWOW_GROUP.ROW_HEIGHT);
-	row:SetPoint("TOPLEFT", parent, "TOPLEFT", 8, -28 - (index - 1) * (EVENTWOW_GROUP.ROW_HEIGHT + 2));
+	row:SetPoint("TOPLEFT", parent, "TOPLEFT", 8, -6 - (index - 1) * (EVENTWOW_GROUP.ROW_HEIGHT + 2));
 	row:SetPoint("RIGHT", parent, "RIGHT", -8, 0);
 
 	local hover = row:CreateTexture(nil, "BACKGROUND");
@@ -245,22 +244,15 @@ local function EventWow_CreateRow(parent, index)
 end
 
 function EventWowGroup_Create(parent)
+	-- Pagina de la seccion social (EventWowSocial.lua coloca el marco; titulo y contador van en su pestana)
 	local f = CreateFrame("Frame", "EventWowGroupFrame", parent);
-	f:SetWidth(EVENTWOW_GROUP.WIDTH);
-
-	local title = f:CreateFontString("EventWowGroupTitle", "ARTWORK", "GameFontNormal");
-	title:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -8);
-	title:SetText(EVENTWOW_STR_GROUP_TITLE);
-
-	local count = f:CreateFontString("EventWowGroupCount", "ARTWORK", "GameFontHighlightSmall");
-	count:SetPoint("TOPRIGHT", f, "TOPRIGHT", -10, -10);
 
 	for i = 1, EVENTWOW_GROUP.MAX_MEMBERS do
 		EventWow_CreateRow(f, i);
 	end
 
 	local hint = f:CreateFontString("EventWowGroupHint", "ARTWORK", "GameFontDisableSmall");
-	hint:SetPoint("TOPLEFT", f, "TOPLEFT", 14, -60);
+	hint:SetPoint("TOPLEFT", f, "TOPLEFT", 14, -38);
 	hint:SetPoint("RIGHT", f, "RIGHT", -14, 0);
 	hint:SetJustifyH("LEFT");
 	hint:SetText(EVENTWOW_STR_GROUP_HINT);

@@ -112,6 +112,15 @@ Aceptar/Rechazar y cuenta atras de `EventWow.Queue.AcceptTimeout`, 20 s).
 - Instancias: el core liga tambien al lider de quien entra (aunque no este en la partida); al cerrar la partida se
   quitan todos los binds de su InstanceSave (`UnbindAllFor`).
 
+## Amigos
+
+Lista de amigos **nativa** (no va por el protocolo): pestana "Amigos" de la seccion social del panel
+(`EventWowFriends.lua`, `EventWowSocial.lua`) con `GetFriendInfo`, `AddFriend`, `RemoveFriend`, `ShowFriends` y
+`FRIENDLIST_UPDATE`. Los avisos de conexion/desconexion son mensajes de sistema del core (salen en Global).
+- Servidor: los jugadores del lobby son invisibles en el mapa (`SERVERSIDE_VISIBILITY_GM`), y el core usa
+  `IsVisibleGloballyFor` para la lista de amigos, sus avisos y `/who`. `EventWowLobby.cpp` implementa
+  `OnPlayerNotVisibleGloballyFor` para que los jugadores (no las cuentas GM) cuenten como conectados en esas listas.
+
 ## Pendiente
 
 - `ONLINE` se difunde en cada login/logout: agrupar si hay muchos jugadores.

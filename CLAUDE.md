@@ -157,7 +157,10 @@ Datos clave de la API Glue:
 - Partida encontrada con confirmacion tipo Dota 2 (probado por el usuario 2026-11-13): `EventWowMatchMgr` propuestas
   (`StartProposal/AcceptProposal/FailProposal`, `EventWow.Queue.AcceptTimeout` = 20 s); quien rechaza o no acepta sale
   de la cola con su grupo, el resto vuelve con su antiguedad. Cliente `EventWowMatchFound.lua` (popup Aceptar/Rechazar).
-- Siguiente (orden acordado): amigos (API nativa) -> carrera con fases.
+- Amigos v1 (probado por el usuario 2026-11-13; mejorable): seccion social con pestanas [Grupo] [Amigos] (`EventWowSocial.lua`,
+  `EventWowFriends.lua`; lista nativa: conectados primero, estado, invitar, quitar, susurrar, anadir). Servidor:
+  `OnPlayerNotVisibleGloballyFor` en `EventWowLobby.cpp` (sin el, los amigos del lobby salian desconectados).
+- Siguiente (orden acordado): carrera con fases.
 - Corte vertical pasos 6-7 (compilado y probado por el usuario 2026-11-13):
   - Core (commit `71970693a`): hooks `OnPlayerOverrideInstanceDestination` / `OnPlayerOverrideInstanceEnter`.
   - Servidor: `EventWowMatchMgr.*` (sustituye a `EventWowQueue.cpp`: cola por juego, emparejamiento con
