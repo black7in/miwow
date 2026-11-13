@@ -36,22 +36,35 @@ Texto en UTF-8.
 
 ## Mensajes
 
+### Conexion
+
+`HELLO` lo gestiona el propio protocolo: si la version coincide, el jugador queda "conectado" (recibe los broadcasts)
+y se llama a los `RegisterConnectListener` (catalogo, historial de chat, `ONLINE`, estado de cola). Cualquier otro
+opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `RegisterDisconnectListener`.
+
 ### Cliente -> servidor
 
 | OP | Campos | Cuando | Respuesta |
 |---|---|---|---|
-| `HELLO` | version | primer `PLAYER_ENTERING_WORLD` de cada carga del Lua (login, `/reload`) | `WELCOME` + `GAMES`, o `ERROR VERSION` |
+| `HELLO` | version | primer `PLAYER_ENTERING_WORLD` de cada carga del Lua (login, `/reload`) | `WELCOME` + listeners, o `ERROR VERSION` |
 | `LIST` | - | pedir el catalogo de nuevo | `GAMES` |
+| `CHAT` | texto | chat global (max 200 caracteres; rafaga 3, luego 1 por segundo) | `CHAT` a todos, o `ERROR MUTED/CHAT_RATE/CHAT_TOO_LONG` |
+| `QUEUE` | id juego | "Buscar partida" (provisional: no empareja) | `QUEUE_STATUS`, o `ERROR QUEUE_UNKNOWN_GAME/QUEUE_NOT_IN_LOBBY` |
+| `LEAVE` | - | "Cancelar" la cola | `QUEUE_STATUS NONE` |
 
 ### Servidor -> cliente
 
 | OP | Campos | Significado |
 |---|---|---|
-| `WELCOME` | version | handshake correcto |
-| `ERROR` | codigo, detalle... | `VERSION <version del servidor>`, `UNKNOWN_OP <op>` |
+| `WELCOME` | version, rango (0 jugador, 1 GM) | handshake correcto |
+| `ERROR` | codigo, detalle... | textos en `EVENTWOW_ERROR_TEXTS` (EventWowProtocol.lua); `UNKNOWN_OP <op>` |
 | `GAMES` | n, luego n x (id, icono, min, max, nombre, descripcion) | catalogo de minijuegos |
+| `CHAT` | unix time, rango, nombre, texto | chat global; al conectar llegan los ultimos 50 (historial) |
+| `ONLINE` | n | jugadores conectados (cada vez que alguien conecta/desconecta) |
+| `QUEUE_STATUS` | `QUEUED` id segundos / `NONE` | estado de la cola (tambien al conectar) |
 
 ## Pendiente
 
-- Cola: `QUEUE <id>` / `LEAVE`, estado `QUEUE_STATUS`, inicio/fin de partida (pasos 5-6).
-- Limitar frecuencia de mensajes por jugador si hace falta.
+- Cola real (emparejamiento), inicio/fin de partida (paso 6).
+- `ONLINE` se difunde en cada login/logout: agrupar si hay muchos jugadores.
+- Chat: filtro de palabras, registro en BD (de momento log `module.eventwow.chat`).

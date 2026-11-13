@@ -131,6 +131,18 @@ Datos clave de la API Glue:
     `EventWowGames.h/.cpp` (catalogo `sEventWowGames` + handlers `HELLO`/`LIST`; juego provisional `test`).
   - Cliente: `FrameXML/EventWowProtocol.lua` (`EventWow_Send`, `EventWow_RegisterHandler`, `EventWow_Protocol.games`;
     `EVENTWOW_PROTOCOL.DEBUG` imprime en el chat). HELLO automatico al entrar al mundo.
+- Interfaz del lobby v1 (probada por el usuario 2026-11-13, incluida pantalla completa):
+  - Disposicion: barra superior (titulo, nombre con distintivo GM, boton Menu) / lista de juegos (izq.) + detalle con
+    "Buscar partida" o estado de cola (der.) / chat global abajo. Pantalla completa en cualquier resolucion
+    (`EventWowPanel_Layout`: reparto proporcional, filas segun alto), estilo oscuro plano.
+  - Cliente: `EventWowPanel.lua` (panel generico guiado por GAMES/QUEUE_STATUS), `EventWowChat.lua` (chat global; oculta
+    el chat nativo y copia lo que llega a ChatFrame1; "/" -> comandos nativos, "." -> comandos GM; Intro enfoca la caja).
+    `EventWowProtocol.lua`: `EventWow_RegisterListener` (CONNECTED, GAMES), textos de error `EVENTWOW_ERROR_TEXTS`.
+  - Servidor: HELLO movido a `EventWowProtocol` (conectados + Connect/DisconnectListener, `Broadcast`);
+    `EventWowChat.cpp` (CHAT/ONLINE, historial 50, limite 200 caracteres y frecuencia, silencio `CanSpeak`, rango GM =
+    security > SEC_PLAYER, log `module.eventwow.chat`); `EventWowQueue.cpp` (QUEUE/LEAVE PROVISIONAL: solo estado);
+    juegos de maqueta `race`/`invasion` en `EventWowGames.cpp` (quitar con el framework).
+  - Siguiente idea: amigos (pestanas en la zona del chat), chat compacto en partida.
 - Subir ambos repos a un remoto privado.
 
 ## Hoja de ruta

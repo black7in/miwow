@@ -147,4 +147,6 @@ AnimationSystem.lua
 LocalizationPost.xml
 # EventWow: ultimo para poder envolver funciones/marcos de todo FrameXML
 EventWowProtocol.lua
+EventWowChat.lua
+EventWowPanel.lua
 EventWow.lua

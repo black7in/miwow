@@ -3,13 +3,18 @@
 #include "DataMap.h"
 #include "EventWowConfig.h"
 #include "Log.h"
+#include "ObjectAccessor.h"
+#include "ObjectGuid.h"
 #include "Player.h"
 #include "ScriptMgr.h"
 #include "SharedDefines.h"
+#include "StringConvert.h"
 #include "Tokenize.h"
 #include "WorldPacket.h"
+#include "WorldSession.h"
 #include <algorithm>
 #include <map>
+#include <mutex>
 
 namespace
 {
@@ -32,6 +37,52 @@ namespace
     {
         static std::map<std::string, EventWowProtocol::Handler, std::less<>> handlers;
         return handlers;
+    }
+
+    std::vector<EventWowProtocol::PlayerListener>& GetConnectListeners()
+    {
+        static std::vector<EventWowProtocol::PlayerListener> listeners;
+        return listeners;
+    }
+
+    std::vector<EventWowProtocol::PlayerListener>& GetDisconnectListeners()
+    {
+        static std::vector<EventWowProtocol::PlayerListener> listeners;
+        return listeners;
+    }
+
+    // Jugadores que completaron HELLO. Mutex por si algun logout llega fuera del hilo del mundo.
+    std::mutex ConnectedLock;
+    GuidUnorderedSet Connected;
+
+    bool IsConnected(ObjectGuid guid)
+    {
+        std::lock_guard<std::mutex> lock(ConnectedLock);
+        return Connected.count(guid) != 0;
+    }
+
+    // HELLO <version>
+    void HandleHello(Player* player, EventWowProtocol::Args const& args)
+    {
+        Optional<uint32> version = args.empty() ? std::nullopt : Acore::StringTo<uint32>(args[0]);
+        if (version != EventWowProtocol::Version)
+        {
+            LOG_DEBUG("module.eventwow", "EventWow: {} usa protocolo {}, servidor {}",
+                player->GetName(), args.empty() ? "?" : args[0], EventWowProtocol::Version);
+            EventWowMessage("ERROR").Add("VERSION").Add(EventWowProtocol::Version).Send(player);
+            return;
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(ConnectedLock);
+            Connected.insert(player->GetGUID());
+        }
+
+        // WELCOME <version> <rango: 0 jugador, 1 GM> (el panel muestra el distintivo)
+        uint8 const rank = player->GetSession()->GetSecurity() > SEC_PLAYER ? 1 : 0;
+        EventWowMessage("WELCOME").Add(EventWowProtocol::Version).Add(rank).Send(player);
+        for (auto const& listener : GetConnectListeners())
+            listener(player);
     }
 
     // "EWOW\t..."
@@ -68,6 +119,18 @@ namespace
 
         std::string_view const op = args.front();
         args.erase(args.begin());
+
+        if (op == "HELLO")
+        {
+            HandleHello(player, args);
+            return;
+        }
+
+        if (!IsConnected(player->GetGUID()))
+        {
+            LOG_DEBUG("module.eventwow", "EventWow: '{}' de {} antes de HELLO, ignorado", op, player->GetName());
+            return;
+        }
 
         auto& handlers = GetHandlers();
         auto itr = handlers.find(op);
@@ -133,6 +196,35 @@ void EventWowProtocol::RegisterHandler(std::string_view op, Handler handler)
     GetHandlers()[std::string(op)] = std::move(handler);
 }
 
+void EventWowProtocol::RegisterConnectListener(PlayerListener listener)
+{
+    GetConnectListeners().push_back(std::move(listener));
+}
+
+void EventWowProtocol::RegisterDisconnectListener(PlayerListener listener)
+{
+    GetDisconnectListeners().push_back(std::move(listener));
+}
+
+std::size_t EventWowProtocol::GetConnectedCount()
+{
+    std::lock_guard<std::mutex> lock(ConnectedLock);
+    return Connected.size();
+}
+
+void EventWowProtocol::ForEachConnected(std::function<void(Player* player)> const& func)
+{
+    std::vector<ObjectGuid> guids;
+    {
+        std::lock_guard<std::mutex> lock(ConnectedLock);
+        guids.assign(Connected.begin(), Connected.end());
+    }
+
+    for (ObjectGuid const& guid : guids)
+        if (Player* player = ObjectAccessor::FindConnectedPlayer(guid))
+            func(player);
+}
+
 EventWowMessage& EventWowMessage::Add(std::string_view field)
 {
     _payload += '\t';
@@ -164,6 +256,12 @@ void EventWowMessage::Send(Player* player) const
     }
 }
 
+void EventWowMessage::Broadcast() const
+{
+    // Un paquete por jugador: el emisor del whisper debe ser el propio receptor
+    EventWowProtocol::ForEachConnected([this](Player* player) { Send(player); });
+}
+
 // Intercepta los addon messages con prefijo EWOW: los del whisper se procesan, y en ningun canal
 // se reenvian (asi un jugador no puede hacerse pasar por el servidor ante otro cliente).
 class EventWow_ProtocolPlayerScript : public PlayerScript
@@ -172,12 +270,25 @@ public:
     EventWow_ProtocolPlayerScript() : PlayerScript("EventWow_ProtocolPlayerScript", {
         PLAYERHOOK_CAN_PLAYER_USE_PRIVATE_CHAT,
         PLAYERHOOK_CAN_PLAYER_USE_GROUP_CHAT,
-        PLAYERHOOK_CAN_PLAYER_USE_GUILD_CHAT
+        PLAYERHOOK_CAN_PLAYER_USE_GUILD_CHAT,
+        PLAYERHOOK_ON_LOGOUT
     }) { }
 
     using PlayerScript::OnPlayerCanUseChat;
 
-    // Handler::args apuntan al mensaje recibido: solo son validos durante la llamada al manejador
+    void OnPlayerLogout(Player* player) override
+    {
+        std::size_t erased = 0;
+        {
+            std::lock_guard<std::mutex> lock(ConnectedLock);
+            erased = Connected.erase(player->GetGUID());
+        }
+
+        if (erased)
+            for (auto const& listener : GetDisconnectListeners())
+                listener(player);
+    }
+
     bool OnPlayerCanUseChat(Player* player, uint32 /*type*/, uint32 language, std::string& msg,
         Player* /*receiver*/) override
     {

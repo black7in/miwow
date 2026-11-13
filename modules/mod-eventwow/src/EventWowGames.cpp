@@ -4,7 +4,6 @@
 #include "Log.h"
 #include "Player.h"
 #include "ScriptMgr.h"
-#include "StringConvert.h"
 #include <algorithm>
 
 EventWowGames& EventWowGames::Instance()
@@ -15,15 +14,19 @@ EventWowGames& EventWowGames::Instance()
 
 void EventWowGames::Register(EventWowGameInfo info)
 {
-    auto itr = std::find_if(_games.begin(), _games.end(),
-        [&info](EventWowGameInfo const& game) { return game.Id == info.Id; });
-    if (itr != _games.end())
+    if (GetGame(info.Id))
     {
         LOG_ERROR("module.eventwow", "EventWow: minijuego '{}' registrado dos veces, se ignora el segundo", info.Id);
         return;
     }
 
     _games.push_back(std::move(info));
+}
+
+EventWowGameInfo const* EventWowGames::GetGame(std::string_view id) const
+{
+    auto itr = std::find_if(_games.begin(), _games.end(), [id](EventWowGameInfo const& game) { return game.Id == id; });
+    return itr != _games.end() ? &*itr : nullptr;
 }
 
 namespace
@@ -40,22 +43,6 @@ namespace
                 .Add(game.Name).Add(game.Description);
 
         message.Send(player);
-    }
-
-    // HELLO <version>: el cliente entra al mundo (o recarga la UI)
-    void HandleHello(Player* player, EventWowProtocol::Args const& args)
-    {
-        Optional<uint32> version = args.empty() ? std::nullopt : Acore::StringTo<uint32>(args[0]);
-        if (version != EventWowProtocol::Version)
-        {
-            LOG_DEBUG("module.eventwow", "EventWow: {} usa protocolo {}, servidor {}",
-                player->GetName(), args.empty() ? "?" : args[0], EventWowProtocol::Version);
-            EventWowMessage("ERROR").Add("VERSION").Add(EventWowProtocol::Version).Send(player);
-            return;
-        }
-
-        EventWowMessage("WELCOME").Add(EventWowProtocol::Version).Send(player);
-        SendGameList(player);
     }
 
     // LIST: volver a pedir el catalogo
@@ -84,10 +71,11 @@ public:
 
 void AddSC_eventwow_games()
 {
-    EventWowProtocol::RegisterHandler("HELLO", HandleHello);
     EventWowProtocol::RegisterHandler("LIST", HandleList);
+    EventWowProtocol::RegisterConnectListener(SendGameList);
 
-    // Provisional (corte vertical): lo registrara el framework de minijuegos (paso 7)
+    // Provisional (corte vertical): los registrara el framework de minijuegos (paso 7).
+    // "race" e "invasion" solo existen para maquetar el panel con varios juegos.
     sEventWowGames.Register({
         "test",
         "Prueba",
@@ -95,6 +83,22 @@ void AddSC_eventwow_games()
         "Interface\\Icons\\INV_Misc_QuestionMark",
         1,
         1
+    });
+    sEventWowGames.Register({
+        "race",
+        "Carrera",
+        "Llega el primero a la meta esquivando los obstáculos del recorrido. (Maqueta: todavía no existe.)",
+        "Interface\\Icons\\Ability_Rogue_Sprint",
+        2,
+        10
+    });
+    sEventWowGames.Register({
+        "invasion",
+        "Invasión",
+        "Resistid juntos oleada tras oleada de enemigos hasta derrotar al jefe final. (Maqueta: todavía no existe.)",
+        "Interface\\Icons\\Spell_Shadow_SummonFelGuard",
+        5,
+        20
     });
 
     new EventWow_GamesWorldScript();

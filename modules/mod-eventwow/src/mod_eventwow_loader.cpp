@@ -6,6 +6,8 @@ void AddSC_eventwow_character();
 void AddSC_eventwow_lobby();
 void AddSC_eventwow_protocol();
 void AddSC_eventwow_games();
+void AddSC_eventwow_chat();
+void AddSC_eventwow_queue();
 
 void Addmod_eventwowScripts()
 {
@@ -14,4 +16,6 @@ void Addmod_eventwowScripts()
     AddSC_eventwow_lobby();
     AddSC_eventwow_protocol();
     AddSC_eventwow_games();
+    AddSC_eventwow_chat();
+    AddSC_eventwow_queue();
 }

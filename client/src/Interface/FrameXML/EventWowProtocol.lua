@@ -14,14 +14,25 @@ EVENTWOW_PROTOCOL = {
 	DEBUG = true,
 };
 
-EVENTWOW_STR_PROTOCOL_VERSION = "Version del cliente incompatible con el servidor. Actualiza el parche.";
 EVENTWOW_STR_PROTOCOL_ERROR = "Error del servidor: %s";
+
+-- Textos de ERROR <codigo> [detalle]; %s = detalle
+EVENTWOW_ERROR_TEXTS = {
+	VERSION = "Versión del cliente incompatible con el servidor. Actualiza el parche.",
+	MUTED = "Estás silenciado.",
+	CHAT_RATE = "Vas demasiado rápido. Espera un momento.",
+	CHAT_TOO_LONG = "Mensaje demasiado largo (máximo %s caracteres).",
+	QUEUE_UNKNOWN_GAME = "Ese minijuego no existe.",
+	QUEUE_NOT_IN_LOBBY = "Solo puedes buscar partida desde el lobby.",
+};
 
 EventWow_Protocol = {
 	handlers = {},
+	listeners = {},
 	buffer = nil,
 	helloSent = false,
 	connected = false,
+	isGM = false,
 	-- Catalogo recibido (GAMES): { id, icon, minPlayers, maxPlayers, name, description }
 	games = {},
 };
@@ -32,8 +43,28 @@ function EventWow_Debug(text)
 	end
 end
 
+-- Un manejador por opcode recibido del servidor: func(campos)
 function EventWow_RegisterHandler(op, func)
 	EventWow_Protocol.handlers[op] = func;
+end
+
+-- Avisos internos del cliente (varios por evento): "CONNECTED", "GAMES"
+function EventWow_RegisterListener(event, func)
+	local list = EventWow_Protocol.listeners[event];
+	if ( not list ) then
+		list = {};
+		EventWow_Protocol.listeners[event] = list;
+	end
+	tinsert(list, func);
+end
+
+function EventWow_FireListeners(event, ...)
+	local list = EventWow_Protocol.listeners[event];
+	if ( list ) then
+		for _, func in ipairs(list) do
+			func(...);
+		end
+	end
 end
 
 local function EventWow_IsUTF8Continuation(text, index)
@@ -112,10 +143,12 @@ end
 
 -- Manejadores base ------------------------------------------------------------------------------
 
--- WELCOME <version>
+-- WELCOME <version> <rango: 0 jugador, 1 GM>
 EventWow_RegisterHandler("WELCOME", function(fields)
 	EventWow_Protocol.connected = true;
+	EventWow_Protocol.isGM = tonumber(fields[2]) == 1;
 	EventWow_Debug("conectado (protocolo v"..tostring(fields[1])..")");
+	EventWow_FireListeners("CONNECTED");
 end);
 
 -- ERROR <codigo> [detalle...]
@@ -123,10 +156,16 @@ EventWow_RegisterHandler("ERROR", function(fields)
 	local code = fields[1] or "?";
 	if ( code == "VERSION" ) then
 		EventWow_Protocol.connected = false;
-		DEFAULT_CHAT_FRAME:AddMessage(EVENTWOW_STR_PROTOCOL_VERSION, 1, 0.2, 0.2);
-	else
-		DEFAULT_CHAT_FRAME:AddMessage(format(EVENTWOW_STR_PROTOCOL_ERROR, table.concat(fields, " ")), 1, 0.2, 0.2);
 	end
+
+	local text = EVENTWOW_ERROR_TEXTS[code];
+	if ( text ) then
+		text = format(text, tostring(fields[2] or ""));
+	else
+		text = format(EVENTWOW_STR_PROTOCOL_ERROR, table.concat(fields, " "));
+	end
+	DEFAULT_CHAT_FRAME:AddMessage(text, 1, 0.2, 0.2);
+	UIErrorsFrame:AddMessage(text, 1, 0.2, 0.2, 1.0);
 end);
 
 -- GAMES <n> (<id> <icono> <min> <max> <nombre> <descripcion>) x n
@@ -145,12 +184,8 @@ EventWow_RegisterHandler("GAMES", function(fields)
 		});
 	end
 	EventWow_Protocol.games = games;
-
-	EventWow_Debug(count.." minijuego(s):");
-	for _, game in ipairs(games) do
-		EventWow_Debug("  ["..tostring(game.id).."] "..tostring(game.name).." ("..tostring(game.minPlayers)
-			.."-"..tostring(game.maxPlayers)..") - "..tostring(game.description));
-	end
+	EventWow_Debug(count.." minijuego(s) recibido(s)");
+	EventWow_FireListeners("GAMES");
 end);
 
 -- Eventos ---------------------------------------------------------------------------------------

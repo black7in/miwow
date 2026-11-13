@@ -3,6 +3,7 @@
 
 #include "Define.h"
 #include <string>
+#include <string_view>
 #include <vector>
 
 // Catalogo de minijuegos que el panel del cliente muestra (el cliente no conoce ninguno de antemano).
@@ -22,6 +23,7 @@ public:
     static EventWowGames& Instance();
 
     void Register(EventWowGameInfo info);
+    EventWowGameInfo const* GetGame(std::string_view id) const;
     std::vector<EventWowGameInfo> const& GetAll() const { return _games; }
 
 private:

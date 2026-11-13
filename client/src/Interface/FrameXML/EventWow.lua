@@ -194,8 +194,10 @@ function EventWow_SetLobbyMode(enabled)
 		end
 		CloseAllBags();
 		EventWowWorldCover:Show();
+		EventWowPanel:Show();
 	else
 		EventWowWorldCover:Hide();
+		EventWowPanel:Hide();
 	end
 end
 

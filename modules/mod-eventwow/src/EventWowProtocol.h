@@ -19,16 +19,31 @@ class Player;
 //   - flag: '=' mensaje completo, '+' fragmento (siguen mas), '.' ultimo fragmento.
 //     Los addon messages se limitan a 255 caracteres (ChatHandler.cpp), por eso se fragmenta.
 // Payload: "<OP>\t<campo>\t<campo>..." (los campos no pueden contener '\t').
+//
+// Conexion: el cliente manda HELLO <version> al entrar al mundo (y tras /reload). Si la version
+// coincide, el jugador pasa a "conectado" (recibe WELCOME y los broadcasts) y se avisa a los
+// ConnectListener, que le envian su estado (catalogo, historial de chat, cola...).
 namespace EventWowProtocol
 {
     constexpr std::string_view Prefix = "EWOW";
     constexpr uint32 Version = 1;
 
+    // Campos del mensaje sin el opcode. Apuntan al mensaje recibido: solo validos durante la llamada.
     using Args = std::vector<std::string_view>;
     using Handler = std::function<void(Player* player, Args const& args)>;
+    using PlayerListener = std::function<void(Player* player)>;
 
-    // Registra el manejador de un opcode recibido del cliente (args = campos sin el opcode)
+    // Manejador de un opcode recibido del cliente (solo se llama si el jugador esta conectado,
+    // salvo HELLO, que gestiona el propio protocolo)
     void RegisterHandler(std::string_view op, Handler handler);
+
+    // Tras cada HELLO valido (tambien al reconectar con /reload)
+    void RegisterConnectListener(PlayerListener listener);
+    // Al hacer logout un jugador conectado (ya no cuenta en GetConnectedCount)
+    void RegisterDisconnectListener(PlayerListener listener);
+
+    std::size_t GetConnectedCount();
+    void ForEachConnected(std::function<void(Player* player)> const& func);
 }
 
 class EventWowMessage
@@ -47,6 +62,8 @@ public:
     std::string const& GetPayload() const { return _payload; }
 
     void Send(Player* player) const;
+    // A todos los jugadores conectados
+    void Broadcast() const;
 
 private:
     std::string _payload;
