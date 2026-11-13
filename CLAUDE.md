@@ -160,7 +160,15 @@ Datos clave de la API Glue:
 - Amigos v1 (probado por el usuario 2026-11-13; mejorable): seccion social con pestanas [Grupo] [Amigos] (`EventWowSocial.lua`,
   `EventWowFriends.lua`; lista nativa: conectados primero, estado, invitar, quitar, susurrar, anadir). Servidor:
   `OnPlayerNotVisibleGloballyFor` en `EventWowLobby.cpp` (sin el, los amigos del lobby salian desconectados).
-- Siguiente (orden acordado): carrera con fases.
+- **SIGUIENTE SESION: personajes por juego ("disfraz")** - ver decision 2026-11-13 abajo. Orden:
+  1. Cambiar el contenedor a **elfo de la noche druida** (no existe humano druida en 3.3.5) y nivel fijo (propuesto 80,
+     sin confirmar): `EventWow.Character.Race/Class` (4/11), RaceMask 1783, ClassMask 511, `StartPlayerLevel`
+     (override), `EVENTWOW_CONFIG` del cliente (fileStrings NightElf/DRUID), SQL `playercreateinfo` de raza 4 clase 11
+     al lobby. Hay que borrar los personajes de prueba (humano guerrero).
+  2. Prototipo de disfraz en el juego de prueba (morph, vida/mana fijos, 2-3 hechizos existentes, barra en el HUD;
+     comprobar que no queda nada al salir/desconectar/morir).
+  3. Prototipo de vehiculo con una criatura-vehiculo existente.
+  Despues: carrera con fases.
 - Corte vertical pasos 6-7 (compilado y probado por el usuario 2026-11-13):
   - Core (commit `71970693a`): hooks `OnPlayerOverrideInstanceDestination` / `OnPlayerOverrideInstanceEnter`.
   - Servidor: `EventWowMatchMgr.*` (sustituye a `EventWowQueue.cpp`: cola por juego, emparejamiento con
@@ -254,6 +262,25 @@ Despues: grupos/emparejamiento multijugador, minijuegos reales, lobby definitivo
   un jugador (asi prueba el producto). NO afecta a login ni reglas de cuenta (todos entran al lobby/panel,
   un personaje, raza/clase fijas; modo dev desactivado en cada login).
 
+- **Personajes por juego (decidido con el usuario, sin implementar)**: cada juego declara sus personajes jugables
+  (pocos hechizos cada uno, nunca los de clase). Dos modos, ambos aceptados:
+  - **Disfraz** (por defecto): el propio personaje con morph/escala, hechizos temporales (`learnSpell(id, true)`, no se
+    guardan) y **barra de habilidades propia en el HUD** (la barra nativa se guarda en `character_action`: no usarla).
+  - **Vehiculo**: subirlo a una criatura-vehiculo (`creature_template`: modelo, stats, hechizos 1-8, barra nativa de
+    vehiculo); para juegos de montura/maquina (p. ej. la carrera).
+  - Descartados: posesion (cuerpo abandonado en el mapa); aura OVERRIDE_SPELLS (293) sin probar en el cliente.
+  - Contenedor = druida (mana nativo; ira/energia con `setPowerType`, como las formas).
+  - **Stats exactas por personaje**: hooks del core al final del calculo, por referencia
+    (`OnPlayerAfterUpdateMaxHealth`, `OnPlayerAfterUpdateMaxPower`, `OnPlayerAfterUpdateAttackPowerAndDamage`) ->
+    se fuerza el valor del personaje mientras va disfrazado; stats primarias con `HandleStatFlatModifier`
+    (diferencia hasta el objetivo, se deshace al quitar); velocidad con multiplicador; dano en los hechizos
+    (`SpellScript`). Al quitar: `UpdateAllStats`. Nada se guarda (las stats se recalculan al cargar).
+  - Ficha prevista `EventWowCharacterInfo` (Id, Name, Description, Icon, Mode, DisplayId, Scale, VehicleEntry, Health,
+    PowerType, MaxPower, Stats[5], Speed, Spells); se envia al panel por el protocolo como los juegos.
+  - Hechizos: primero existentes; propios = `spell_dbc` (servidor) + `Spell.dbc` parcheado en patch-4.MPQ (cliente).
+
 ### Decisiones abiertas
+- Nivel fijo del contenedor (propuesto 80).
+- Cuando se elige el personaje: en el panel antes de buscar, al empezar la partida o asignado por el juego.
 - Login: cuenta+contrasena (actual) vs launcher/solo nombre.
 - Lobby definitivo (mapa propio) - de momento Isla de los GM.
