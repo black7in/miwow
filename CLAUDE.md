@@ -30,6 +30,8 @@ EventWow/
     data/sql/db-{world,characters,auth}/   SQL que el updater de AC aplica al arrancar
   docs/
     despliegue.md             checklist de infraestructura por entorno
+    core-changes.md           registro de cambios al core + procedimiento de rebase
+    protocolo.md              protocolo cliente<->servidor (addon messages): transporte, fragmentacion, mensajes
   tools/
     Merge-Interface.ps1       consolida Interface de los MPQ extraidos respetando el orden de carga
     Build-Patch.ps1           copia client/src -> client/patches/patch-4.MPQ
@@ -124,6 +126,11 @@ Datos clave de la API Glue:
     se cierran al abrirse, Esc sin "Macros". De momento siempre en modo lobby; el chat se mantiene.
   - SQL `data/sql/db-auth/2026_11_13_00_rbac_instant_logout.sql`: RBAC 195 -> permiso 1 (logout sin 20 s).
   - Pendiente: el personaje sigue pudiendo moverse con el teclado (invisible); enraizar en servidor si molesta.
+- Corte vertical paso 4 (compilado y probado por el usuario 2026-11-13): protocolo por addon messages, ver `docs/protocolo.md`.
+  - Servidor: `EventWowProtocol.h/.cpp` (transporte, fragmentacion, `RegisterHandler`, `EventWowMessage`),
+    `EventWowGames.h/.cpp` (catalogo `sEventWowGames` + handlers `HELLO`/`LIST`; juego provisional `test`).
+  - Cliente: `FrameXML/EventWowProtocol.lua` (`EventWow_Send`, `EventWow_RegisterHandler`, `EventWow_Protocol.games`;
+    `EVENTWOW_PROTOCOL.DEBUG` imprime en el chat). HELLO automatico al entrar al mundo.
 - Subir ambos repos a un remoto privado.
 
 ## Hoja de ruta

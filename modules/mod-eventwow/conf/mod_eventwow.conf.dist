@@ -83,3 +83,10 @@ CharacterCreating.Disabled.ClassMask = 1534
 #        Motivo: el personaje nunca debe verse; sin cinematica de introduccion.
 
 SkipCinematics = 2
+
+#
+#    AddonChannel
+#        Motivo: el panel de minijuegos habla con el servidor por addon messages (EventWowProtocol).
+#                Ya es 1 por defecto; se fija aqui para que nadie lo desactive en worldserver.conf.
+
+AddonChannel = 1

@@ -1,0 +1,171 @@
+-- EventWow: protocolo cliente <-> servidor sobre addon messages (ver docs/protocolo.md).
+-- Contraparte en el servidor: modules/mod-eventwow/src/EventWowProtocol.cpp
+--
+-- Transporte: SendAddonMessage("EWOW", <flag><payload>, "WHISPER", <propio nombre>).
+-- El servidor lo intercepta (nunca lo reenvia) y responde con un whisper de addon cuyo emisor
+-- es el propio jugador. flag: "=" completo, "+" fragmento (siguen mas), "." ultimo fragmento.
+-- Payload: "<OP>\t<campo>\t<campo>..." (los campos no pueden contener "\t").
+
+EVENTWOW_PROTOCOL = {
+	PREFIX = "EWOW",
+	VERSION = 1,
+	-- 255 (limite del core) - "EWOW\t" - flag, con margen
+	MAX_CHUNK = 240,
+	DEBUG = true,
+};
+
+EVENTWOW_STR_PROTOCOL_VERSION = "Version del cliente incompatible con el servidor. Actualiza el parche.";
+EVENTWOW_STR_PROTOCOL_ERROR = "Error del servidor: %s";
+
+EventWow_Protocol = {
+	handlers = {},
+	buffer = nil,
+	helloSent = false,
+	connected = false,
+	-- Catalogo recibido (GAMES): { id, icon, minPlayers, maxPlayers, name, description }
+	games = {},
+};
+
+function EventWow_Debug(text)
+	if ( EVENTWOW_PROTOCOL.DEBUG ) then
+		DEFAULT_CHAT_FRAME:AddMessage("|cff33ccffEventWow:|r "..text);
+	end
+end
+
+function EventWow_RegisterHandler(op, func)
+	EventWow_Protocol.handlers[op] = func;
+end
+
+local function EventWow_IsUTF8Continuation(text, index)
+	local byte = string.byte(text, index);
+	return byte and byte >= 128 and byte < 192;
+end
+
+local function EventWow_SendChunk(flag, chunk)
+	SendAddonMessage(EVENTWOW_PROTOCOL.PREFIX, flag..chunk, "WHISPER", UnitName("player"));
+end
+
+-- EventWow_Send("OP", campo1, campo2, ...)
+function EventWow_Send(op, ...)
+	local payload = op;
+	for i = 1, select("#", ...) do
+		local field = tostring((select(i, ...)));
+		payload = payload.."\t"..(string.gsub(field, "\t", " "));
+	end
+
+	local length = string.len(payload);
+	local maxChunk = EVENTWOW_PROTOCOL.MAX_CHUNK;
+	if ( length <= maxChunk ) then
+		EventWow_SendChunk("=", payload);
+		return;
+	end
+
+	local first = 1;
+	while ( first <= length ) do
+		local last = first + maxChunk - 1;
+		if ( last >= length ) then
+			last = length;
+		else
+			-- No partir un caracter UTF-8 entre dos fragmentos
+			while ( last > first and EventWow_IsUTF8Continuation(payload, last + 1) ) do
+				last = last - 1;
+			end
+		end
+		EventWow_SendChunk((last == length) and "." or "+", string.sub(payload, first, last));
+		first = last + 1;
+	end
+end
+
+local function EventWow_Dispatch(payload)
+	local fields = { strsplit("\t", payload) };
+	local op = table.remove(fields, 1);
+	local handler = op and EventWow_Protocol.handlers[op];
+	if ( not handler ) then
+		EventWow_Debug("opcode desconocido: "..tostring(op));
+		return;
+	end
+	handler(fields);
+end
+
+local function EventWow_OnAddonMessage(prefix, message, distribution, sender)
+	if ( prefix ~= EVENTWOW_PROTOCOL.PREFIX ) then
+		return;
+	end
+	-- Solo el servidor habla asi (whisper "de uno mismo"); el servidor descarta EWOW de otros jugadores
+	if ( distribution ~= "WHISPER" or sender ~= UnitName("player") ) then
+		return;
+	end
+
+	local flag = string.sub(message, 1, 1);
+	local data = string.sub(message, 2);
+	if ( flag == "=" ) then
+		EventWow_Protocol.buffer = nil;
+		EventWow_Dispatch(data);
+	elseif ( flag == "+" ) then
+		EventWow_Protocol.buffer = (EventWow_Protocol.buffer or "")..data;
+	elseif ( flag == "." ) then
+		local complete = (EventWow_Protocol.buffer or "")..data;
+		EventWow_Protocol.buffer = nil;
+		EventWow_Dispatch(complete);
+	end
+end
+
+-- Manejadores base ------------------------------------------------------------------------------
+
+-- WELCOME <version>
+EventWow_RegisterHandler("WELCOME", function(fields)
+	EventWow_Protocol.connected = true;
+	EventWow_Debug("conectado (protocolo v"..tostring(fields[1])..")");
+end);
+
+-- ERROR <codigo> [detalle...]
+EventWow_RegisterHandler("ERROR", function(fields)
+	local code = fields[1] or "?";
+	if ( code == "VERSION" ) then
+		EventWow_Protocol.connected = false;
+		DEFAULT_CHAT_FRAME:AddMessage(EVENTWOW_STR_PROTOCOL_VERSION, 1, 0.2, 0.2);
+	else
+		DEFAULT_CHAT_FRAME:AddMessage(format(EVENTWOW_STR_PROTOCOL_ERROR, table.concat(fields, " ")), 1, 0.2, 0.2);
+	end
+end);
+
+-- GAMES <n> (<id> <icono> <min> <max> <nombre> <descripcion>) x n
+EventWow_RegisterHandler("GAMES", function(fields)
+	local count = tonumber(fields[1]) or 0;
+	local games = {};
+	for i = 1, count do
+		local base = 1 + (i - 1) * 6;
+		tinsert(games, {
+			id = fields[base + 1],
+			icon = fields[base + 2],
+			minPlayers = tonumber(fields[base + 3]),
+			maxPlayers = tonumber(fields[base + 4]),
+			name = fields[base + 5],
+			description = fields[base + 6],
+		});
+	end
+	EventWow_Protocol.games = games;
+
+	EventWow_Debug(count.." minijuego(s):");
+	for _, game in ipairs(games) do
+		EventWow_Debug("  ["..tostring(game.id).."] "..tostring(game.name).." ("..tostring(game.minPlayers)
+			.."-"..tostring(game.maxPlayers)..") - "..tostring(game.description));
+	end
+end);
+
+-- Eventos ---------------------------------------------------------------------------------------
+
+local eventFrame = CreateFrame("Frame", "EventWowProtocolFrame");
+eventFrame:RegisterEvent("CHAT_MSG_ADDON");
+eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD");
+eventFrame:SetScript("OnEvent", function(self, event, ...)
+	if ( event == "CHAT_MSG_ADDON" ) then
+		EventWow_OnAddonMessage(...);
+	elseif ( event == "PLAYER_ENTERING_WORLD" ) then
+		-- Una vez por carga del Lua (entrar al mundo o /reload), no en cada teleport
+		if ( not EventWow_Protocol.helloSent ) then
+			EventWow_Protocol.helloSent = true;
+			EventWow_Send("HELLO", EVENTWOW_PROTOCOL.VERSION);
+		end
+	end
+end);
