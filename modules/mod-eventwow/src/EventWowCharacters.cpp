@@ -25,10 +25,12 @@ void EventWowCharacters::Load()
 {
     _characters.clear();
     _gameCharacters.clear();
+    _pickCreatures.clear();
 
-    //                                                 0     1       2              3       4            5        6         7            8           9
+    //                                                 0     1       2              3       4            5        6         7            8
     if (QueryResult result = WorldDatabase.Query("SELECT `Id`, `Name`, `Description`, `Icon`, `DisplayId`, `Scale`, `Health`, `PowerType`, `MaxPower`, "
-        "`VehicleEntry` FROM `eventwow_character`"))
+        // 9               10                11               12
+        "`VehicleEntry`, `WeaponMainHand`, `WeaponOffHand`, `PickCreature` FROM `eventwow_character`"))
     {
         do
         {
@@ -44,6 +46,35 @@ void EventWowCharacters::Load()
             info.PowerType = fields[7].Get<uint8>();
             info.MaxPower = fields[8].Get<uint32>();
             info.VehicleEntry = fields[9].Get<uint32>();
+            info.WeaponMainHand = fields[10].Get<uint32>();
+            info.WeaponOffHand = fields[11].Get<uint32>();
+            info.PickCreature = fields[12].Get<uint32>();
+
+            for (uint32* weapon : { &info.WeaponMainHand, &info.WeaponOffHand })
+            {
+                if (*weapon && !sObjectMgr->GetItemTemplate(*weapon))
+                {
+                    LOG_ERROR("module.eventwow", "EventWow: personaje {} ({}): el arma {} no existe en item_template, se ignora",
+                        info.Id, info.Name, *weapon);
+                    *weapon = 0;
+                }
+            }
+
+            if (info.PickCreature)
+            {
+                if (!sObjectMgr->GetCreatureTemplate(info.PickCreature))
+                {
+                    LOG_ERROR("module.eventwow", "EventWow: personaje {} ({}): PickCreature {} no existe, no se puede elegir en el mundo",
+                        info.Id, info.Name, info.PickCreature);
+                    info.PickCreature = 0;
+                }
+                else if (!_pickCreatures.emplace(info.PickCreature, info.Id).second)
+                {
+                    LOG_ERROR("module.eventwow", "EventWow: personaje {} ({}): PickCreature {} ya es de otro personaje, se ignora",
+                        info.Id, info.Name, info.PickCreature);
+                    info.PickCreature = 0;
+                }
+            }
 
             if (info.VehicleEntry)
             {
@@ -172,6 +203,12 @@ std::vector<uint32> const& EventWowCharacters::GetForGame(std::string_view gameI
     static std::vector<uint32> const empty;
     auto itr = _gameCharacters.find(std::string(gameId));
     return itr != _gameCharacters.end() ? itr->second : empty;
+}
+
+EventWowCharacterInfo const* EventWowCharacters::GetByPickCreature(uint32 creatureEntry) const
+{
+    auto itr = _pickCreatures.find(creatureEntry);
+    return itr != _pickCreatures.end() ? Get(itr->second) : nullptr;
 }
 
 class EventWow_CharactersWorldScript : public WorldScript

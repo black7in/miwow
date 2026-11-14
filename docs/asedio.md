@@ -114,7 +114,7 @@ Derrota: si muere el castillo.
 
 | Nombre actual | Funcion real |
 |---|---|
-| `Inicio` | circulo de seleccion de heroes (lo reemplaza nuestra fase de eleccion) |
+| `Inicio` | circulo de seleccion de heroes: los heroes (PNJ) esperan en circulo y se eligen hablando con ellos (eleccion en el mundo, 2026-11-14) |
 | `Cruce_Centro` | **castillo** (objetivo de todos los enemigos) |
 | `Cruce_Suroeste` | aparicion/reaparicion de heroes |
 | `Cruce_Oeste/Norte/Este/Sur` | entrada de las oleadas grandes |

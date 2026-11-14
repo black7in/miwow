@@ -19,6 +19,9 @@ donde sale cada una cuando se sabe; si no, probarlas.
 Armas = `creature_equip_template` del PNJ que usa ese display (ItemID1 / ItemID2 / ItemID3 = mano derecha / izquierda /
 distancia). Son objetos "Monster - ..." que ya estan en el Item.dbc del cliente (los PNJ los muestran).
 
+Fichas: `eventwow_character` 30-44 (SQL `2026_11_14_05`, columnas `WeaponMainHand/WeaponOffHand` = armas visibles,
+`PickCreature` 9500300-9500314 = su PNJ de eleccion). Escalas: Kel'Thuzad 0.24 y Archimonde 0.08 (ajustadas por el usuario), Jokkum 0.4.
+
 | Heroe | Display | PNJ de origen | Mano derecha | Mano izquierda | Distancia | Notas |
 |---|---|---|---|---|---|---|
 | Arthas (principe) | 24949 | 26499 | 37579 maza de Arthas | | | |

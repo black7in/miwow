@@ -29,6 +29,13 @@ struct EventWowCharacterInfo
     // Bonificaciones de stats del personaje (eventwow_character_stat), como las de un objeto: se suman a las
     // nativas del contenedor y el motor calcula lo derivado (EventWowStats.h)
     std::vector<std::pair<EventWowStat, int32>> Stats;
+    // Armas visibles (item_template, solo el aspecto: ni stats ni habilidad; EventWowWeapons.h). 0 = sin arma.
+    // No hay ranura de distancia: el cliente no la dibuja (los arcos van en la mano derecha).
+    uint32 WeaponMainHand = 0;
+    uint32 WeaponOffHand = 0;
+    // PNJ (creature_template) que lo representa en la eleccion en el mundo (EventWowMatch::GetPickPositions).
+    // Solo pone nombre y dialogo: modelo, escala y armas salen de esta ficha. 0 = no se puede elegir en el mundo.
+    uint32 PickCreature = 0;
 
     bool HasSpell(uint32 spellId) const;
 };
@@ -44,10 +51,13 @@ public:
     EventWowCharacterInfo const* Get(uint32 id) const;
     // Personajes que ofrece un juego (eventwow_game_character), por orden. Vacio = el juego no disfraza.
     std::vector<uint32> const& GetForGame(std::string_view gameId) const;
+    // Personaje cuyo PNJ de eleccion es esa criatura (nullptr = ninguno)
+    EventWowCharacterInfo const* GetByPickCreature(uint32 creatureEntry) const;
 
 private:
     std::unordered_map<uint32, EventWowCharacterInfo> _characters;
     std::unordered_map<std::string, std::vector<uint32>> _gameCharacters;
+    std::unordered_map<uint32, uint32> _pickCreatures; // criatura -> personaje
 };
 
 #define sEventWowCharacters EventWowCharacters::Instance()

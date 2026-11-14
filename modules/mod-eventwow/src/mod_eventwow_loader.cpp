@@ -16,6 +16,7 @@ void AddSC_eventwow_stats();
 void AddSC_eventwow_shop();
 void AddSC_eventwow_inventory();
 void AddSC_eventwow_weapons();
+void AddSC_eventwow_pick_creature();
 
 // Minijuegos (games/). Se registran antes que las maquetas: el orden es el del panel.
 void AddSC_eventwow_game_siege();
@@ -40,4 +41,5 @@ void Addmod_eventwowScripts()
     AddSC_eventwow_shop();
     AddSC_eventwow_inventory();
     AddSC_eventwow_weapons();
+    AddSC_eventwow_pick_creature();
 }

@@ -374,7 +374,17 @@ Datos clave de la API Glue:
   transformado, la Z envaina/desenvaina; `sheath` no hace nada (el cliente controla el envainado propio; quitarlo) y
   la ranura de distancia no se dibuja (arcos en la mano derecha). Armas visuales propias 9500200-9500299 (SQL
   `2026_11_14_03`, 9500200 = arco de Sylvanas visible envainado). Siguiente: armas en la ficha (`eventwow_character`)
-  aplicadas por el disfraz. Despues: base de niveles (paso 1 de `docs/heroes.md`, requiere compilar).
+  aplicadas por el disfraz.
+  **Eleccion estilo Warcraft 3 (decidida con el usuario 2026-11-14, probada: "todo bien"; tamanos a ajustar por el usuario)**: en el Asedio los heroes son PNJ en
+  circulo (radio 16) alrededor de la region Inicio (el jugador entra en el centro); se elige hablando con uno (dialogo + confirmacion, definitiva) y su
+  PNJ desaparece. Tiempo 60 s; al acabar, al azar a quien no eligio. La ventana `EventWowPick.lua` se mantiene para otros
+  juegos (`GetPickPositions()` vacio = ventana). Framework: `EventWowMatch::GetPickPositions/MakePickCircle/CanPick`,
+  `UpdatePickCreatures` (aspecto de la ficha: modelo, escala, armas con `SetVirtualItem`); `EventWowPickCreature.cpp`
+  (`npc_eventwow_pick`). Ficha: `WeaponMainHand/WeaponOffHand` (el disfraz las pone con `EventWowWeapons`, hook
+  `OnPlayerAfterSetVisibleItemSlot` las repone) y `PickCreature` (SQL `_04`). SQL `_05`: 15 heroes (fichas 30-44, sin
+  habilidades), PNJ 9500300-9500317 generados desde las fichas (+ `npc_text` mismo ID = descripcion), Asedio = heroes +
+  probadores 19-21 (los 10-13 fuera). `_04`/`_05` aplicados a mano en la BD de desarrollo.
+  Despues: base de niveles (paso 1 de `docs/heroes.md`, requiere compilar).
 - Mapas propios desde Warcraft 3 (ver `docs/mapas.md`). Decision del usuario: los mapas los disena el (y un amigo) en
   el World Editor de WC3 1.26 (no usa Noggit) y se convierten. Diseno PROPIO: no se replican mapas de terceros
   (p. ej. X Hero Siege); el usuario y su amigo hicieron uno inspirado en el genero.

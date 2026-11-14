@@ -6,6 +6,7 @@
 #include "EventWowDevMode.h"
 #include "EventWowProtocol.h"
 #include "EventWowStats.h"
+#include "EventWowWeapons.h"
 #include "Log.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
@@ -76,6 +77,13 @@ namespace
         return player->CustomData.Get<DisguiseSlot>(DisguiseKey);
     }
 
+    void ApplyWeapons(Player* player, EventWowCharacterInfo const& character)
+    {
+        EventWowWeapons::SetVisible(player, EQUIPMENT_SLOT_MAINHAND, character.WeaponMainHand);
+        EventWowWeapons::SetVisible(player, EQUIPMENT_SLOT_OFFHAND, character.WeaponOffHand);
+        EventWowWeapons::SetVisible(player, EQUIPMENT_SLOT_RANGED, 0);
+    }
+
     Powers GetClassPowerType(Player const* player)
     {
         ChrClassesEntry const* entry = sChrClassesStore.LookupEntry(player->getClass());
@@ -104,6 +112,7 @@ void EventWowDisguise::Apply(Player* player, EventWowCharacterInfo const& charac
     }
 
     player->SetObjectScale(character.Scale);
+    ApplyWeapons(player, character);
 
     Powers const power = Powers(character.PowerType);
     if (player->getPowerType() != power)
@@ -167,6 +176,7 @@ void EventWowDisguise::Remove(Player* player)
     player->InitDisplayIds();
     player->RestoreDisplayId();
     player->SetObjectScale(1.0f);
+    EventWowWeapons::RestoreEquipped(player);
 
     Powers const disguisePower = player->getPowerType();
     Powers const classPower = GetClassPowerType(player);
@@ -231,8 +241,19 @@ class EventWow_DisguisePlayerScript : public PlayerScript
 public:
     EventWow_DisguisePlayerScript() : PlayerScript("EventWow_DisguisePlayerScript", {
         PLAYERHOOK_ON_AFTER_UPDATE_MAX_HEALTH,
-        PLAYERHOOK_ON_AFTER_UPDATE_MAX_POWER
+        PLAYERHOOK_ON_AFTER_UPDATE_MAX_POWER,
+        PLAYERHOOK_ON_AFTER_SET_VISIBLE_ITEM_SLOT
     }) { }
+
+    // Si el core vuelve a escribir una ranura de armas (equipar/desequipar), se repone la del disfraz
+    void OnPlayerAfterSetVisibleItemSlot(Player* player, uint8 slot, Item* /*item*/) override
+    {
+        if (slot != EQUIPMENT_SLOT_MAINHAND && slot != EQUIPMENT_SLOT_OFFHAND && slot != EQUIPMENT_SLOT_RANGED)
+            return;
+
+        if (EventWowCharacterInfo const* character = EventWowDisguise::Get(player))
+            ApplyWeapons(player, *character);
+    }
 
     // Vida maxima = vida base del personaje + lo que el motor sume sobre el contenedor sin disfraz
     // (Aguante y vida de las stats, auras...). Asi Health es la base y las stats la suben de forma nativa.

@@ -6,11 +6,14 @@
 #include "EventWowInventory.h"
 #include "EventWowMatchMgr.h"
 #include "EventWowProtocol.h"
+#include "Log.h"
 #include "Map.h"
 #include "MapMgr.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
 #include "Random.h"
+#include "TemporarySummon.h"
+#include <cmath>
 #include <algorithm>
 
 namespace
@@ -127,6 +130,7 @@ void EventWowMatch::Update(Milliseconds diff)
             if (UsesPicking())
             {
                 SetState(EventWowMatchState::Picking, GetPickTime());
+                UpdatePickCreatures();
                 ForEachPlayer([this](Player* player) { SendPick(player); });
             }
             else
@@ -179,6 +183,120 @@ bool EventWowMatch::UsesPicking() const
     return GetPickTime() > 0s && sEventWowCharacters.GetForGame(_game->Id).size() >= 2;
 }
 
+bool EventWowMatch::UsesWorldPick() const
+{
+    return UsesPicking() && !GetPickPositions().empty();
+}
+
+bool EventWowMatch::CanPick(Player* player, uint32 characterId) const
+{
+    ObjectGuid const guid = player->GetGUID();
+    if (_state != EventWowMatchState::Picking || !HasPlayer(guid) || _picks.count(guid))
+        return false;
+
+    std::vector<uint32> const& characters = sEventWowCharacters.GetForGame(_game->Id);
+    return std::find(characters.begin(), characters.end(), characterId) != characters.end()
+        && !IsCharacterTaken(characterId, guid);
+}
+
+std::vector<Position> EventWowMatch::MakePickCircle(Position const& center, float radius, std::size_t count)
+{
+    std::vector<Position> positions;
+    for (std::size_t i = 0; i < count; ++i)
+    {
+        float const angle = 2.0f * float(M_PI) * float(i) / float(count);
+        Position pos(center.GetPositionX() + radius * std::cos(angle), center.GetPositionY() + radius * std::sin(angle),
+            center.GetPositionZ());
+        pos.SetOrientation(pos.GetAbsoluteAngle(&center));
+        positions.push_back(pos);
+    }
+
+    return positions;
+}
+
+std::size_t EventWowMatch::CountPickCreatures() const
+{
+    std::size_t count = 0;
+    for (uint32 id : sEventWowCharacters.GetForGame(_game->Id))
+        if (EventWowCharacterInfo const* character = sEventWowCharacters.Get(id))
+            if (character->PickCreature)
+                ++count;
+
+    return count;
+}
+
+void EventWowMatch::UpdatePickCreatures()
+{
+    InstanceMap* map = GetMap();
+    if (!map || _state != EventWowMatchState::Picking || !UsesWorldPick())
+        return;
+
+    std::vector<Position> const positions = GetPickPositions();
+    std::size_t next = 0;
+    for (uint32 id : sEventWowCharacters.GetForGame(_game->Id))
+    {
+        EventWowCharacterInfo const* character = sEventWowCharacters.Get(id);
+        if (!character || !character->PickCreature)
+            continue;
+
+        if (next >= positions.size())
+        {
+            LOG_ERROR("module.eventwow", "EventWow: juego '{}': mas personajes con PNJ de eleccion que posiciones ({})",
+                _game->Id, positions.size());
+            break;
+        }
+
+        Position spawn = positions[next++];
+        auto itr = _pickCreatures.find(id);
+        Creature* creature = itr != _pickCreatures.end() ? map->GetCreature(itr->second) : nullptr;
+
+        // Elegido (eleccion unica): fuera su PNJ
+        if (IsCharacterTaken(id, ObjectGuid::Empty))
+        {
+            if (creature)
+                creature->DespawnOrUnsummon();
+            _pickCreatures.erase(id);
+            continue;
+        }
+
+        if (creature)
+            continue;
+
+        float const ground = map->GetHeight(spawn.GetPositionX(), spawn.GetPositionY(), spawn.GetPositionZ() + 5.0f);
+        if (ground > INVALID_HEIGHT)
+            spawn.m_positionZ = ground;
+
+        TempSummon* summon = map->SummonCreature(character->PickCreature, spawn);
+        if (!summon)
+        {
+            LOG_ERROR("module.eventwow", "EventWow: no se pudo invocar el PNJ de eleccion {} ({})", character->PickCreature, character->Name);
+            continue;
+        }
+
+        // El PNJ solo pone nombre y dialogo: el aspecto es el de la ficha
+        if (character->DisplayId)
+        {
+            summon->SetNativeDisplayId(character->DisplayId);
+            summon->SetDisplayId(character->DisplayId);
+        }
+        summon->SetObjectScale(character->Scale);
+        summon->SetVirtualItem(0, character->WeaponMainHand);
+        summon->SetVirtualItem(1, character->WeaponOffHand);
+        summon->SetVirtualItem(2, 0);
+        _pickCreatures[id] = summon->GetGUID();
+    }
+}
+
+void EventWowMatch::DespawnPickCreatures()
+{
+    if (InstanceMap* map = GetMap())
+        for (auto const& [id, guid] : _pickCreatures)
+            if (Creature* creature = map->GetCreature(guid))
+                creature->DespawnOrUnsummon();
+
+    _pickCreatures.clear();
+}
+
 bool EventWowMatch::IsCharacterTaken(uint32 characterId, ObjectGuid except) const
 {
     if (!IsPickUnique())
@@ -216,6 +334,7 @@ void EventWowMatch::HandlePick(Player* player, uint32 characterId)
 
     _picks[guid] = characterId;
     BroadcastPicks();
+    UpdatePickCreatures();
 
     // Todos han elegido: no hace falta esperar al tiempo
     if (std::all_of(_players.begin(), _players.end(), [this](ObjectGuid const& g) { return _picks.count(g) > 0; }))
@@ -247,6 +366,7 @@ void EventWowMatch::FinishPicking()
     });
 
     BroadcastPicks();
+    DespawnPickCreatures();
     SetState(EventWowMatchState::Countdown, GetCountdown());
 }
 
@@ -255,6 +375,13 @@ void EventWowMatch::SendPick(Player* player) const
 {
     if (_state != EventWowMatchState::Picking)
         return;
+
+    // Eleccion en el mundo: sin ventana (el cliente solo la abre con MATCH_PICK); el HUD muestra el tiempo
+    if (UsesWorldPick())
+    {
+        SendPicks(player);
+        return;
+    }
 
     std::vector<uint32> const& characters = sEventWowCharacters.GetForGame(_game->Id);
     EventWowMessage message("MATCH_PICK");
@@ -334,7 +461,11 @@ void EventWowMatch::HandlePlayerLeft(ObjectGuid guid)
         if (std::all_of(_players.begin(), _players.end(), [this](ObjectGuid const& g) { return _picks.count(g) > 0; }))
             FinishPicking();
         else
+        {
             BroadcastPicks();
+            // Lo que habia elegido vuelve a estar libre
+            UpdatePickCreatures();
+        }
     }
 }
 
