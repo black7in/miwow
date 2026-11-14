@@ -198,6 +198,16 @@ EventWowCharacterInfo const* EventWowCharacters::Get(uint32 id) const
     return itr != _characters.end() ? &itr->second : nullptr;
 }
 
+std::vector<uint32> EventWowCharacters::GetIds() const
+{
+    std::vector<uint32> ids;
+    for (auto const& [id, character] : _characters)
+        ids.push_back(id);
+
+    std::sort(ids.begin(), ids.end());
+    return ids;
+}
+
 std::vector<uint32> const& EventWowCharacters::GetForGame(std::string_view gameId) const
 {
     static std::vector<uint32> const empty;

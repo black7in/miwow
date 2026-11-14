@@ -1,0 +1,158 @@
+# EventWow: Arthas, caballero de la Muerte (ficha 31, docs/heroes.md). Primer heroe completo.
+# Generar el SQL:  py -I tools/spellgen/spellgen.py build   (despues Build-Patch para el cliente)
+# Numeros PROVISIONALES (vida base de la ficha 6000, mana 5000): se ajustan probando.
+#
+# Rango de IDs de esta ficha: 9500100-9500199.
+#   9500100-103 Golpe de Escarcha      9500104-107 Espiral de la Muerte    9500108-111 Muerte y Descomposicion
+#   9500112-115 Aura de Escarcha       9500116-118 Levantar necrofago      9500120-121 Fuerza del necrofago (aura)
+#   9500122     Furia de la Agonia de Escarcha (suprema)                   9500123     Escarcha de Arthas (ralentizar)
+
+# --- Basica 1: golpe cuerpo a cuerpo de Escarcha que ralentiza. Base: Golpe de Escarcha (55268, sin poder runico).
+# Efecto 1 = dano de Escarcha fijo, efecto 2 = % del dano de arma (sin arma: el dano base del heroe), efecto 3 =
+# ralentizar (dispara 9500123).
+[[spell]]
+id = 9500100
+base = 55268
+ranks = 4
+name = "Golpe de Escarcha"
+description = "Golpea al enemigo con un $s2% del daño de arma más $s1 de daño de Escarcha y lo ralentiza durante $9500123d."
+power = "mana"
+cost = [120, 140, 160, 180]
+cooldown = 5
+[spell.effect1]
+value = [200, 350, 500, 650]
+[spell.effect2]
+value = [60, 70, 80, 90]
+[spell.effect3]
+type = "TRIGGER_SPELL"
+target = "UNIT_TARGET_ENEMY"
+trigger = 9500123
+
+# --- Basica 2: dana a un enemigo o sana a un aliado. Base: Espiral de la muerte (49895). El script del modulo
+# (EventWowHeroSpells.cpp) lanza el dano (47632, proyectil) o la sanacion (47633) con el valor del efecto 1.
+[[spell]]
+id = 9500104
+base = 49895
+ranks = 4
+name = "Espiral de la Muerte"
+description = "Lanza una oleada de energía profana que inflige $s1 de daño de las Sombras a un enemigo o sana $s1 a un aliado."
+script = "spell_eventwow_death_coil"
+power = "mana"
+cost = [200, 230, 260, 290]
+cooldown = 6
+range = 30
+[spell.effect1]
+value = [400, 650, 900, 1150]
+
+# --- Basica 3: zona en el suelo que dana cada segundo. Base: Muerte y descomposicion (49938); su dano iba por
+# script (PERIODIC_DUMMY): aqui es dano periodico directo.
+[[spell]]
+id = 9500108
+base = 49938
+ranks = 4
+name = "Muerte y Descomposición"
+description = "Corrompe el suelo: inflige $s1 de daño de las Sombras cada segundo a los enemigos de la zona durante $d."
+power = "mana"
+cost = [250, 300, 350, 400]
+cooldown = 15
+duration = 10
+range = 30
+ap_dot_coefficient = 0.05
+[spell.effect1]
+aura = "PERIODIC_DAMAGE"
+value = [60, 100, 140, 180]
+period = 1
+radius = 8
+
+# --- Basica 4 (pasiva, aura estilo WC3): armadura para los aliados cercanos (y para Arthas) y quien golpea a
+# Arthas cuerpo a cuerpo queda ralentizado. Base: Armadura de Escarcha de PNJ (12556: armadura + "al recibir un
+# golpe cuerpo a cuerpo, dispara"); el efecto 1 pasa a aura de grupo.
+[[spell]]
+id = 9500112
+base = 12556
+ranks = 4
+name = "Aura de Escarcha"
+description = "Aura: los aliados en un radio de $a1 m ganan $s1 de armadura. Quien golpee a Arthas cuerpo a cuerpo queda ralentizado."
+aura_description = "Armadura aumentada en $s1."
+icon = "Spell_Frost_FrostArmor02"
+attributes_remove = 0x80         # SPELL_ATTR0_DO_NOT_DISPLAY: la base (de PNJ) iba oculta
+[spell.effect1]
+type = "APPLY_AREA_AURA_PARTY"
+value = [300, 600, 900, 1200]
+radius = 30
+[spell.effect2]
+trigger = 9500123
+
+# --- Definitiva: necrofago CONTROLABLE (barra de mascota) PERMANENTE (hasta que muere; no se guarda en BD).
+# Se puede volver a invocar (reutilizacion corta): el nuevo sustituye al anterior (EventWowHeroSpells.cpp). Base: Espiritu feral (51533, SUMMON),
+# aspecto de Levantar a muerto (52150). Necrofago 26125 (nivel = el del heroe, pet_levelstats); el modulo le pone
+# las auras de escala de caballero de la Muerte y, en los rangos 2-3, la de `trigger` (EventWowHeroSpells.cpp).
+[[spell]]
+id = 9500116
+base = 51533
+ranks = 3
+name = "Levantar a un muerto"
+description = "Levanta a un necrófago que obedece tus órdenes hasta que muere. Hereda parte de la fuerza y el aguante de Arthas. Invocar otro sustituye al anterior."
+icon = "Spell_Shadow_AnimateDead"
+visual = 9311                     # SpellVisual de Levantar a muerto (52150)
+cost = 400
+cooldown = 30
+duration = -1                    # permanente
+[spell.effect1]
+value = 1
+misc = 26125
+misc_b = 1561                    # SummonProperties: categoria PET -> controlable
+trigger = [0, 9500120, 9500121]
+
+# Mejora del necrofago por rango (pasiva en el necrofago): +dano y +vida. No se aprende.
+[[spell]]
+id = 9500120
+base = 12556
+ranks = 2
+chain = false
+name = "Fuerza del necrófago"
+description = "Daño y vida aumentados un $s1%."
+aura_description = "Daño y vida aumentados un $s1%."
+icon = "Spell_Shadow_AnimateDead"
+attributes_remove = 0x80
+[spell.effect1]
+aura = "MOD_DAMAGE_PERCENT_DONE"
+misc = 127                       # todas las escuelas
+value = [40, 80]
+[spell.effect2]
+aura = "MOD_INCREASE_HEALTH_PERCENT"
+value = [40, 80]
+trigger = 0
+
+# --- Suprema (nivel 30, automatica): mucho dano en area alrededor de Arthas. Base: Furia de la Agonia de Escarcha
+# (70063, el golpe del Rey Exanime en la Ciudadela; el original mata a todos).
+[[spell]]
+id = 9500122
+base = 70063
+name = "Furia de la Agonía de Escarcha"
+description = "Desata la furia de Agonía de Escarcha: inflige $s1 de daño de las Sombras a todos los enemigos en un radio de $a1 m."
+icon = "achievement_dungeon_icecrown_frostmourne"
+cast_time = 1.5
+cooldown = 120
+cost = 800
+ap_coefficient = 0.5
+[spell.effect1]
+value = 3000
+radius = 15
+[spell.effect2]
+type = "NONE"                    # aura de marca del original
+
+# Ralentizar de Golpe de Escarcha y del Aura de Escarcha. Base: Enfriado (6136). No se aprende.
+[[spell]]
+id = 9500123
+base = 6136
+name = "Escarcha de Arthas"
+description = "Velocidad de movimiento reducida un $s1% y tiempo entre ataques aumentado un $s2%."
+aura_description = "Ralentizado."
+duration = 4
+[spell.effect1]
+value = -30
+[spell.effect2]
+value = -20
+[spell.effect3]
+type = "NONE"

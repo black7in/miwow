@@ -234,6 +234,44 @@ local function EventWow_WrapBlockedFunctions()
 	end
 end
 
+-- Barra de mascota nativa (PetActionBarFrame, hija de MainMenuBar): en partida MainMenuBar esta oculta, asi que
+-- se cuelga de un marco propio centrado encima de la barra de habilidades (invocaciones controlables, p. ej. el
+-- necrofago de Arthas). La barra se coloca sola en TOPLEFT de su padre + (PETACTIONBAR_XPOS, PETACTIONBAR_YPOS).
+EVENTWOW_PET_BAR = {
+	WIDTH = 509,  -- tamano de PetActionBarFrame (PetActionBarFrame.xml)
+	HEIGHT = 43,
+	GAP = 20,     -- encima de la barra de habilidades (deja sitio al nombre del personaje)
+};
+
+local function EventWow_AnchorPetBarHolder()
+	local holder = EventWowPetBarHolder;
+	holder:ClearAllPoints();
+	holder:SetPoint("BOTTOMLEFT", EventWowAbilityBar, "TOP",
+		-EVENTWOW_PET_BAR.WIDTH / 2 - PETACTIONBAR_XPOS,
+		EVENTWOW_PET_BAR.GAP + EVENTWOW_PET_BAR.HEIGHT - PETACTIONBAR_YPOS);
+end
+
+local function EventWow_CreatePetBarHolder()
+	local holder = CreateFrame("Frame", "EventWowPetBarHolder", UIParent);
+	holder:SetSize(1, 1);
+	EventWow_AnchorPetBarHolder();
+	-- PETACTIONBAR_XPOS cambia con las formas/barras: se recoloca
+	hooksecurefunc("PetActionBar_UpdatePositionValues", EventWow_AnchorPetBarHolder);
+end
+
+local function EventWow_ApplyPetBar(match)
+	-- Contiene botones seguros: no se puede reparentar en combate (el modo cambia fuera de combate)
+	if ( InCombatLockdown() ) then
+		return;
+	end
+	local parent = match and EventWowPetBarHolder or MainMenuBar;
+	if ( PetActionBarFrame:GetParent() ~= parent ) then
+		PetActionBarFrame:SetParent(parent);
+		PetActionBarFrame:ClearAllPoints();
+		PetActionBarFrame:SetPoint("TOPLEFT", parent, "BOTTOMLEFT", PETACTIONBAR_XPOS, PETACTIONBAR_YPOS);
+	end
+end
+
 local function EventWow_SetupGameMenu()
 	-- Sin "Macros": "Desconectar" sube a su hueco
 	GameMenuButtonMacros:Hide();
@@ -279,6 +317,8 @@ local function EventWow_ApplyMode()
 		EventWowWorldCover:Hide();
 		EventWowPanel:Hide();
 	end
+
+	EventWow_ApplyPetBar(mode == "match" and not dev);
 
 	EventWowChat_SetNativeVisible(dev);
 	if ( dev ) then
@@ -392,6 +432,7 @@ EventWow_SetupUnitNames();
 EventWow_DisableTutorials();
 EventWow_CreateWorldCover();
 EventWow_CreateDevButton();
+EventWow_CreatePetBarHolder();
 EventWow_WrapBlockedFunctions();
 EventWow_SetupGameMenu();
 

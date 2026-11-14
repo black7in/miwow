@@ -44,3 +44,4 @@ INSERT INTO `spell_bonus_data` (`entry`, `direct_bonus`, `dot_bonus`, `ap_bonus`
 (9500023, 0.3, 0.0, 0.0, 0.0, 'EventWow: Trueno de prueba 1'),
 (9500024, 0.5, 0.0, 0.0, 0.0, 'EventWow: Cadena de prueba 1'),
 (9500025, 0.0, 0.2, 0.0, 0.0, 'EventWow: Tortura de prueba 1');
+DELETE FROM `spell_script_names` WHERE `spell_id` IN (9500000, 9500001, 9500002, 9500003, 9500010, 9500011, 9500012, 9500013, 9500014, 9500015, 9500016, 9500017, 9500018, 9500019, 9500020, 9500021, 9500022, 9500023, 9500024, 9500025, 9500026, 9500027, 9500028, 9500029);

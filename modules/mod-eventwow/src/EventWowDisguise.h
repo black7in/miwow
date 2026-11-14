@@ -16,6 +16,7 @@ struct EventWowCharacterInfo;
 //  - Hechizos temporales (learnSpell temporal: no se guardan). Mientras va disfrazado (salvo modo dev)
 //    solo puede lanzar esos (OnSpellCheckCast); los desencadenados y los de objetos no cuentan. Los de un vehiculo los lanza
 //    la criatura, no el jugador: no les afecta.
+//  - Las invocaciones de sus hechizos (p. ej. el necrofago de Arthas) desaparecen al quitar el disfraz.
 //  - Vehiculo (opcional): se invoca la criatura junto a el y se le sube al asiento 0. Update() le vuelve a
 //    subir si se baja, y si el vehiculo muere o queda lejos (p. ej. tras reaparecer) invoca otro. Al quitar
 //    el disfraz se le baja y el vehiculo desaparece.

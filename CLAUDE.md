@@ -384,6 +384,11 @@ Datos clave de la API Glue:
   `OnPlayerAfterSetVisibleItemSlot` las repone) y `PickCreature` (SQL `_04`). SQL `_05`: 15 heroes (fichas 30-44, sin
   habilidades), PNJ 9500300-9500317 generados desde las fichas (+ `npc_text` mismo ID = descripcion), Asedio = heroes +
   probadores 19-21 (los 10-13 fuera). `_04`/`_05` aplicados a mano en la BD de desarrollo.
+  Esquema de habilidades ampliado (2026-11-14): 4 basicas x 4 + definitiva x 3 + suprema (sola a nivel 30) + 11 de
+  atributos (`docs/heroes.md`). `.eventwow hero <id>|off|list` (EventWowDisguise.cpp): probar un heroe sin partida.
+  **Arthas caballero de la Muerte (ficha 31), probado por el usuario 2026-11-14 ("todos los hechizos probados")**: `data/spells/arthas.toml` (spellgen: clave nueva
+  `script`), `EventWowHeroSpells.cpp` (Espiral de la Muerte, invocaciones), SQL `_06` (rango 1 de cada habilidad),
+  barra de mascota nativa en partida (`EventWow_ApplyPetBar`, EventWow.lua). SQL aplicados a mano en la BD de desarrollo.
   Despues: base de niveles (paso 1 de `docs/heroes.md`, requiere compilar).
 - Mapas propios desde Warcraft 3 (ver `docs/mapas.md`). Decision del usuario: los mapas los disena el (y un amigo) en
   el World Editor de WC3 1.26 (no usa Noggit) y se convierten. Diseno PROPIO: no se replican mapas de terceros

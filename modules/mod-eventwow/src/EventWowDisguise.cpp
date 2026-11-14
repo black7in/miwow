@@ -1,4 +1,6 @@
 #include "EventWowDisguise.h"
+#include "Chat.h"
+#include "CommandScript.h"
 #include "DBCStores.h"
 #include "DataMap.h"
 #include "EventWowCharacters.h"
@@ -12,6 +14,8 @@
 #include "Player.h"
 #include "TemporarySummon.h"
 #include <algorithm>
+#include <cstdlib>
+#include <vector>
 #include "ScriptMgr.h"
 #include "Spell.h"
 #include "SpellInfo.h"
@@ -70,6 +74,18 @@ namespace
 
         if (Creature* vehicle = ObjectAccessor::GetCreature(*player, vehicleGuid))
             vehicle->DespawnOrUnsummon();
+    }
+
+    // Invocaciones de los hechizos del heroe (propios, >= 9500000): se van con el disfraz
+    void DismissSummons(Player* player)
+    {
+        std::vector<TempSummon*> summons;
+        for (Unit* controlled : player->m_Controlled)
+            if (controlled->IsSummon() && controlled->GetUInt32Value(UNIT_CREATED_BY_SPELL) >= 9500000)
+                summons.push_back(controlled->ToTempSummon());
+
+        for (TempSummon* summon : summons)
+            summon->UnSummon();
     }
 
     DisguiseSlot* GetSlot(Player const* player)
@@ -163,6 +179,7 @@ void EventWowDisguise::Remove(Player* player)
     player->CustomData.Erase(DisguiseKey);
 
     DismissVehicle(player, vehicleGuid);
+    DismissSummons(player);
 
     // Solo las stats del personaje; las de la partida (libros...) las quita EventWowStats::Reset
     if (character)
@@ -299,10 +316,72 @@ public:
     }
 };
 
+// Probar un personaje sin partida (GM), sobre el jugador seleccionado o uno mismo:
+//   .eventwow hero <id>    disfraza con esa ficha (modelo, armas, stats, hechizos y barra del HUD)
+//   .eventwow hero off     quita el disfraz
+//   .eventwow hero list    fichas cargadas
+// Fuera de partida nada lo quita salvo "off", entrar en una partida o el logout (no se guarda nada).
+// Con .dev on se puede lanzar todo; sin modo dev, solo los hechizos de la ficha.
+using namespace Acore::ChatCommands;
+
+class EventWow_DisguiseCommandScript : public CommandScript
+{
+public:
+    EventWow_DisguiseCommandScript() : CommandScript("EventWow_DisguiseCommandScript") { }
+
+    ChatCommandTable GetCommands() const override
+    {
+        static ChatCommandTable eventwowTable =
+        {
+            { "hero", HandleHero, SEC_GAMEMASTER, Console::No }
+        };
+        static ChatCommandTable commandTable =
+        {
+            { "eventwow", eventwowTable }
+        };
+        return commandTable;
+    }
+
+    static bool HandleHero(ChatHandler* handler, std::string arg)
+    {
+        if (arg == "list")
+        {
+            for (uint32 id : sEventWowCharacters.GetIds())
+                if (EventWowCharacterInfo const* character = sEventWowCharacters.Get(id))
+                    handler->PSendSysMessage("{} - {} ({} hechizos)", character->Id, character->Name, character->Spells.size());
+            return true;
+        }
+
+        Player* target = handler->getSelectedPlayerOrSelf();
+        if (!target)
+            return false;
+
+        if (arg == "off")
+        {
+            EventWowDisguise::Remove(target);
+            handler->PSendSysMessage("EventWow: {} sin disfraz", target->GetName());
+            return true;
+        }
+
+        uint32 const id = uint32(std::strtoul(arg.c_str(), nullptr, 10));
+        EventWowCharacterInfo const* character = id ? sEventWowCharacters.Get(id) : nullptr;
+        if (!character)
+        {
+            handler->SendErrorMessage("EventWow: uso .eventwow hero <id> | off | list (personaje '{}' no existe)", arg);
+            return false;
+        }
+
+        EventWowDisguise::Apply(target, *character);
+        handler->PSendSysMessage("EventWow: {} disfrazado de {} ({})", target->GetName(), character->Name, character->Id);
+        return true;
+    }
+};
+
 void AddSC_eventwow_disguise()
 {
     new EventWow_DisguisePlayerScript();
     new EventWow_DisguiseSpellScript();
+    new EventWow_DisguiseCommandScript();
 
     // Tras /reload el cliente pierde la barra: se reenvia
     EventWowProtocol::RegisterConnectListener([](Player* player)

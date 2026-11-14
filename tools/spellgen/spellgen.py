@@ -5,7 +5,8 @@
   py -I tools/spellgen/spellgen.py find <texto>     busca hechizos por nombre (esES)
   py -I tools/spellgen/spellgen.py icon <texto>     busca iconos (SpellIcon.dbc)
 
-Cada ficha genera data/sql/db-world/eventwow_spells_<ficha>.sql (spell_dbc + spell_ranks + spell_bonus_data),
+Cada ficha genera data/sql/db-world/eventwow_spells_<ficha>.sql (spell_dbc + spell_ranks + spell_bonus_data +
+spell_script_names),
 idempotente. El updater de AzerothCore la vuelve a aplicar si cambia. Build-Patch lleva las filas al cliente.
 
 Fuentes (sin BD): client/DBCs/DBCesES (Spell.dbc y auxiliares), esquema de spell_dbc del core
@@ -396,7 +397,7 @@ def build_file(path, spells, enums, indexes):
     if not entries:
         raise SpellError(f"{path.name}: no hay [[spell]]")
 
-    rows, ranks_sql, bonus_sql, used = [], [], [], {}
+    rows, ranks_sql, bonus_sql, script_sql, used = [], [], [], [], {}
     for spec in entries:
         for key in ("id", "base", "name"):
             if key not in spec:
@@ -412,6 +413,9 @@ def build_file(path, spells, enums, indexes):
                 raise SpellError(f"{where}: id {sid} repetido (ya lo usa {used[sid]})")
             used[sid] = spec["name"]
             rows.append(build_rank(spells, spec, rank, ranks, (enums, indexes, where)))
+            if "script" in spec:
+                # SpellScript del modulo (C++), por ID: lo que los efectos solos no pueden hacer
+                script_sql.append(f"({sid}, '{spec['script']}')")
             if ranks > 1 and spec.get("chain", True):
                 ranks_sql.append(f"({first}, {sid}, {rank + 1})")
             if any(k in spec for k in ("coefficient", "dot_coefficient", "ap_coefficient", "ap_dot_coefficient")):
@@ -436,6 +440,11 @@ def build_file(path, spells, enums, indexes):
     if bonus_sql:
         out.append("INSERT INTO `spell_bonus_data` (`entry`, `direct_bonus`, `dot_bonus`, `ap_bonus`, `ap_dot_bonus`, "
                    "`comments`) VALUES\n" + ",\n".join(bonus_sql) + ";")
+
+    out.append(f"DELETE FROM `spell_script_names` WHERE `spell_id` IN ({id_list});")
+    if script_sql:
+        out.append("INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES" + chr(10)
+                   + ("," + chr(10)).join(script_sql) + ";")
 
     target = SQL_DIR / f"eventwow_spells_{path.stem}.sql"
     target.write_text("\n".join(out) + "\n", encoding="utf-8", newline="\n")

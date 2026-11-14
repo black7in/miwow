@@ -42,17 +42,16 @@ Leido de `war3mapMisc.txt`, `war3map.w3u` (heroes) y `war3map.w3a` (habilidades)
 - Al tener puntos, la barra de habilidades muestra un **"+"** en las que se pueden mejorar; al pulsarlo el
   servidor valida (puntos libres, nivel de heroe requerido, maximo de la habilidad), cambia el hechizo de la
   casilla por el del siguiente nivel y el tooltip lo refleja.
-- **La definitiva se desbloquea a nivel 6.**
+- **La definitiva se desbloquea a nivel 6.** **La suprema se gana sola a nivel 30** (sin punto).
 
-### Esquema (decidido con el usuario 2026-11-14)
+### Esquema (decidido con el usuario 2026-11-14; ampliado el mismo dia a 4 basicas + suprema)
 
 | Casilla | Rangos | Nivel de heroe para cada rango | Puntos |
 |---|---|---|---|
-| Habilidad 1 | 4 | 1, 3, 5, 7 | 4 |
-| Habilidad 2 | 4 | 1, 3, 5, 7 | 4 |
-| Habilidad 3 | 4 | 1, 3, 5, 7 | 4 |
+| Basicas 1-4 | 4 cada una | 1, 3, 5, 7 | 16 |
 | Definitiva | 3 | 6, 12, 18 | 3 |
-| Atributos | 15 | desde nivel 2 (sin mas limite que los puntos) | 15 |
+| Suprema | 1 | 30 (automatica, premio del nivel maximo) | 0 |
+| Atributos | 11 | desde nivel 2 (sin mas limite que los puntos) | 11 |
 | **Total** | | | **30** = un punto por nivel |
 
 - **Regla de las basicas**: el rango maximo sube cada 2 niveles: rango maximo = (nivel + 1) / 2 (entero),
@@ -60,11 +59,36 @@ Leido de `war3mapMisc.txt`, `war3map.w3u` (heroes) y `war3map.w3a` (habilidades)
 - **Definitiva**: rango maximo 1 a nivel 6, 2 a nivel 12, 3 a nivel 18.
 - **Atributos** (como en Dota): cada rango da stats que no dependen del nivel (vida, poder de ataque o con
   hechizos, armadura...; cantidades por heroe en BD). No son hechizos: no hacen falta entradas en `spell_dbc`.
-  Sin ellos, del nivel 19 al 30 no habria nada en que gastar (las habilidades estan al maximo a nivel 18).
-- **15 hechizos propios por heroe** (3 x 4 + 3).
+  Sin ellos, del nivel 20 al 30 no habria nada en que gastar.
+- **20 hechizos propios por heroe** (4 x 4 + 3 + 1).
+- Con 4 basicas, a nivel 7 hay 7 puntos para 16 rangos: hay que elegir que subir; todo al maximo hacia nivel 19.
+- **La XP debe permitir llegar a 30 en la fase final** (antes del jefe): si no, la suprema casi no se ve.
 - Los puntos se acumulan si no se gastan; no se pueden redistribuir en la partida.
-- Barra: casillas 1-3 basicas, 4 definitiva; "Atributos" como boton aparte (no se lanza). Las de rango 0 en gris
-  con el "+".
+- Barra: teclas 1-4 basicas, 5 definitiva, 6 suprema; "Atributos" como boton aparte (no se lanza). Las de rango 0
+  en gris con el "+".
+- **Probar un heroe sin partida** (GM): `.eventwow hero <id>` | `off` | `list` (EventWowDisguise.cpp). Con `.dev on`
+  + "Ocultar panel" se ve el mundo; enemigos: `.npc add temp 31144` (muneco) / 28104 (esqueleto 80).
+
+### Arthas, caballero de la Muerte (ficha 31) - primer heroe completo (diseno aprobado 2026-11-14)
+
+| Casilla | Habilidad | Que hace | Base (Spell.dbc) |
+|---|---|---|---|
+| 1 | Golpe de Escarcha | golpe cuerpo a cuerpo con dano de escarcha que ralentiza | 55268 (+ ralentizar propio 9500123, de 6136) |
+| 2 | Espiral de la Muerte | proyectil: dana a un enemigo o cura a un aliado | 49895 + script `spell_eventwow_death_coil` (lanza 47632/47633) |
+| 3 | Muerte y Descomposicion | zona en el suelo que dana con el tiempo | 49938 (su dano iba por script: aqui PERIODIC_DAMAGE) |
+| 4 | Aura de Escarcha | pasiva: armadura a los aliados cercanos, ralentiza a quien le pega | 12556 (armadura de Escarcha de PNJ, efecto 1 -> aura de grupo) |
+| Definitiva | Levantar a un muerto | necrofago CONTROLABLE y PERMANENTE (hasta que muere; volver a invocarlo sustituye al anterior); mas fuerte en cada rango | 51533 (SUMMON, SummonProperties 1561) + visual de 52150 / necrofago 26125 |
+| Suprema | Furia de la Agonia de Escarcha | mucho dano en area alrededor de Arthas | 70063 (Rey Exanime, ICC; visual 14798) |
+
+Hechizos: `data/spells/arthas.toml` (9500100-9500123). En la ficha 31 (SQL `2026_11_14_06`), de momento el rango 1 de
+cada una, hasta el sistema de niveles. `EventWowHeroSpells.cpp`: script de la Espiral y regla de nuestras invocaciones
+(sustituir la anterior, escalas de necrofago, aura `trigger` del efecto de invocacion = mejora por rango).
+
+Necrofago: el motor ya lo escala con su dueno. Nivel = el del heroe (`pet_levelstats` de 26125, niveles 1-80) y las
+auras nativas de escala de mascota de caballero de la Muerte (`spell_dk_pet_scaling`, 54566/51996/61697) le pasan
+el 70 % de la fuerza y el 30 % del aguante del dueno: los libros/objetos/nivel del heroe le suben solos. Por comprobar
+con el contenedor druida (los scripts miran al dueno, no su clase). Rangos: necrofago mas fuerte (aura propia o
+entrada distinta por rango). Ojo: en modo partida falta mostrar la barra y el retrato de mascota (ver `docs/hechizos.md`).
 
 ## 4. Escala de stats: las puntuaciones dependen del nivel
 

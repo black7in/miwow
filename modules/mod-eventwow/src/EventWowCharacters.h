@@ -49,6 +49,8 @@ public:
     void Load();
 
     EventWowCharacterInfo const* Get(uint32 id) const;
+    // Todos los personajes cargados, por Id
+    std::vector<uint32> GetIds() const;
     // Personajes que ofrece un juego (eventwow_game_character), por orden. Vacio = el juego no disfraza.
     std::vector<uint32> const& GetForGame(std::string_view gameId) const;
     // Personaje cuyo PNJ de eleccion es esa criatura (nullptr = ninguno)
