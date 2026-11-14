@@ -76,6 +76,9 @@ texto e icono. Lo bueno: el aspecto (visual, sonido, animacion) viene hecho. Cui
   defecto segun el tiempo de lanzamiento (`CalculateDefaultCoefficient`). Pondremos los nuestros en esa tabla.
 - Nivel del hechizo (`SpellLevel/BaseLevel/MaxLevel`, `RealPointsPerLevel`): a 0 o fijos, para que el valor no
   cambie con el nivel del heroe (los rangos ya lo suben).
+- **Hechizos ocultos**: muchas bases (talentos, hechizos disparados) llevan `SPELL_ATTR0_DO_NOT_DISPLAY` (0x80): no salen
+  en el libro ni en la barra de auras. Para una pasiva visible: `attributes_remove = 0x80` (probado con la Pasiva de
+  prueba). Los hechizos disparados (el golpe de un aura) conviene dejarlos ocultos.
 - **Rangos**: `spell_ranks` encadena los niveles (Nivel 1 -> 2 -> 3...) para que el motor sepa que son el mismo.
 
 ### Trampa encontrada: los idiomas en `spell_dbc`
@@ -166,6 +169,7 @@ lista = una por rango):
 | `ranks`, `rank_text`, `chain` | numero de rangos (1), texto de rango ("Nivel {n}"), cadena en `spell_ranks` (true) |
 | `description`, `aura_description` | tooltip (por defecto, el de la base) |
 | `icon` | textura (`Spell_Holy_SealOfMight`), busca el ID en SpellIcon.dbc |
+| `visual` | `SpellVisualID` (aspecto) de otro hechizo; ver con `dump` |
 | `cast_time`, `cooldown`, `gcd`, `duration` | segundos (duracion -1 = permanente) |
 | `range`, `speed` | alcance en metros, velocidad del proyectil |
 | `power`, `cost`, `cost_pct` | mana/rage/energy, coste fijo o % del mana base |
@@ -174,7 +178,7 @@ lista = una por rango):
 | `coefficient`, `dot_coefficient`, `ap_coefficient`, `ap_dot_coefficient` | `spell_bonus_data` (<= 0 = calculo por defecto del core) |
 | `[spell.effectN]` | `type` (SPELL_EFFECT_*, sin prefijo; NONE lo borra), `aura`, `value` o `min`/`max`, `target`, `target_b`, `radius`, `period`, `chain`, `misc`, `misc_b`, `trigger`, `mechanic` |
 
-Lo que el generador limpia siempre de la base: categoria de reutilizacion, nivel del hechizo (0: sin penalizacion de
+Lo que el generador limpia siempre de la base: categoria de reutilizacion, requisitos/exclusiones por aura de otro hechizo, nivel del hechizo (0: sin penalizacion de
 coeficiente ni escalado por nivel, `Unit::CalculateLevelPenalty`), reactivos, totems, arma requerida, formas,
 familia/mascara de clase, variables de descripcion y escalado por punto de nivel/combo.
 Valor de un efecto = `EffectBasePoints` + 1..`EffectDieSides` (`SpellEffectInfo::CalcValue`): `value = 150` escribe

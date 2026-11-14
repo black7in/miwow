@@ -356,6 +356,14 @@ Datos clave de la API Glue:
   Paso 1 hecho (2026-11-14, probado por el usuario: "hechizos funcionando"): `tools/spellgen/spellgen.py` (build/dump/find/icon), ficha
   `data/spells/prueba.toml` -> `eventwow_spells_prueba.sql` (Martillo de prueba 9500000-9500003), personaje 19
   "Probador de hechizos" en el Asedio (SQL `_14_01`). Ambos SQL aplicados a mano en la BD de desarrollo; parche regenerado.
+  Paso 2 (2026-11-14, probado por el usuario: "funciona"): bateria de recetas en `prueba.toml` (9500010-9500027: lanzamiento 2 s, area, suelo,
+  DoT, HoT, curacion 1,5 s, escudo, mejora de grupo, aura de grupo, aura de inmolacion (aura + hechizo disparado),
+  nova/raiz, carga, empujar, cadena, canalizado, disparo automatico sin arma, pasiva). Personajes 20 "Probador ofensivo"
+  y 21 "Probador de apoyo" (SQL `_14_02`). spellgen: claves `visual`, `type = "NONE"`, limpia `*AuraSpell`.
+  Invocaciones 9500028 (lobo controlable: SummonProperties 1561, categoria PET -> barra de mascota) y 9500029 (2 arboles
+  guardianes no controlables: SummonProperties 61). En modo partida la barra/retrato de mascota no se muestran (anadirlos
+  si un heroe invoca). Pasiva: la base llevaba DO_NOT_DISPLAY (0x80), quitado.
+  Enemigos para probar: `.dev on` + `/eventwow` (chat nativo) + `.npc add temp 28104` (Enraged Skeleton 80) / 31144 (muneco).
 - Mapas propios desde Warcraft 3 (ver `docs/mapas.md`). Decision del usuario: los mapas los disena el (y un amigo) en
   el World Editor de WC3 1.26 (no usa Noggit) y se convierten. Diseno PROPIO: no se replican mapas de terceros
   (p. ej. X Hero Siege); el usuario y su amigo hicieron uno inspirado en el genero.

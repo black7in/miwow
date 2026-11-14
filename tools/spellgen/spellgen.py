@@ -222,6 +222,8 @@ def enum_value(enums, prefix, value, what):
     key = str(value).upper()
     if key.startswith(prefix):
         key = key[len(prefix):]
+    if key == "NONE":
+        return 0
     if key not in enums[prefix]:
         options = [k for k in enums[prefix] if key in k][:8]
         raise SpellError(f"{what}: '{value}' no existe ({prefix}*)" + (f"; parecidos: {', '.join(options)}" if options else ""))
@@ -309,6 +311,9 @@ def build_rank(spells, spec, rank, ranks, ctx):
     row["Totem_1"] = row["Totem_2"] = 0
     row["RequiredTotemCategoryID_1"] = row["RequiredTotemCategoryID_2"] = 0
     row["RequiresSpellFocus"] = 0
+    # Requisitos/exclusiones por aura de otro hechizo (p. ej. "Alma debilitada" del escudo del sacerdote)
+    for key in ("CasterAuraSpell", "TargetAuraSpell", "ExcludeCasterAuraSpell", "ExcludeTargetAuraSpell"):
+        row[key] = 0
     row["RuneCostID"] = 0
     row["ShapeshiftMask"] = row["ShapeshiftExclude"] = 0
     row["EquippedItemClass"] = -1           # sin arma (no equipamos objetos)
@@ -331,6 +336,9 @@ def build_rank(spells, spec, rank, ranks, ctx):
 
     if (v := opt("icon")) is not None:
         row["SpellIconID"] = indexes.icon_id(v)
+    if (v := opt("visual")) is not None:
+        row["SpellVisualID_1"] = int(v)
+        row["SpellVisualID_2"] = 0
     if (v := opt("cast_time")) is not None:
         row["CastingTimeIndex"] = indexes.cast_index(v)
     if (v := opt("cooldown")) is not None:
