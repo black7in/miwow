@@ -80,6 +80,27 @@ class TileData:
         self.layers = {}
         self.water = np.zeros((128, 128), dtype=bool)
         self.water_height = np.zeros((129, 129))
+        self.area_id = 0        # AreaTable (zona del mapa); 0 = sin zona
+        self.models = []        # rutas M2 (MMDX)
+        self.doodads = []       # Doodad: colocaciones (MDDF), incluidas las de modelos que solo rozan este ADT
+
+
+class Doodad:
+    """Modelo M2 colocado. x, y, z del mundo; angle = hacia donde apunta el +X del M2 (radianes, como la
+    orientacion de WoW: 0 = norte, pi/2 = oeste); radius = radio en planta para saber que chunks toca."""
+
+    def __init__(self, model, unique_id, x, y, z, angle, scale, radius):
+        self.model, self.unique_id = model, unique_id
+        self.x, self.y, self.z = x, y, z
+        self.angle, self.scale, self.radius = angle, scale, radius
+
+    def mddf(self):
+        # Posicion en coordenadas de colocacion (ZERO - Y, altura, ZERO - X). Giro: rot[1] = guinada en grados y
+        # el +X del M2 apunta a rot[1] + 180 (comprobado con las 4 esquinas SC_Wall_02_Cap de Northrend_28_20
+        # y con el extractor de vmaps, que gira en coordenadas (ZERO - X, ZERO - Y)).
+        yaw = (np.degrees(self.angle) - 180.0) % 360.0
+        return struct.pack('<II3f3fHH', self.model, self.unique_id, ZERO - self.y, self.z, ZERO - self.x,
+                           0.0, yaw, 0.0, int(round(self.scale * 1024)), 0)
 
 
 def _mh2o(tile):
@@ -140,21 +161,28 @@ def _mcnk(tile, cr, cc):
             mcly += struct.pack('<4I', texture, 0x100, len(mcal), 0)
             mcal += _pack_alpha4(alpha)
 
+    # MCRF: modelos cuyo circulo toca el chunk (el cliente solo dibuja los referenciados por chunks visibles)
+    cx0, cy0 = tile_origin(tile.tx, tile.ty)
+    cx0, cy0 = cx0 - cr * CHUNK, cy0 - cc * CHUNK
+    refs = [i for i, d in enumerate(tile.doodads)
+            if cx0 - CHUNK - d.radius <= d.x <= cx0 + d.radius and cy0 - CHUNK - d.radius <= d.y <= cy0 + d.radius]
+    mcrf = struct.pack('<%dI' % len(refs), *refs)
+
     sub = bytearray()
     offsets = {}
     header_size = 8 + 128
     for magic, data, pad in (('MCVT', mcvt, b''), ('MCNR', mcnr, bytes(13)), ('MCLY', bytes(mcly), b''),
-                             ('MCRF', b'', b''), ('MCAL', bytes(mcal), b''), ('MCSE', b'', b'')):
+                             ('MCRF', mcrf, b''), ('MCAL', bytes(mcal), b''), ('MCSE', b'', b'')):
         offsets[magic] = header_size + len(sub)
         sub += chunk(magic, data) + pad
 
     x, y = tile_origin(tile.tx, tile.ty)
     header = struct.pack(
         '<16I4I6I3f3I',
-        0x8000, cc, cr, len(layers), 0,
+        0x8000, cc, cr, len(layers), len(refs),
         offsets['MCVT'], offsets['MCNR'], offsets['MCLY'], offsets['MCRF'], offsets['MCAL'], 8 + len(mcal),
         0, 0,                       # MCSH
-        0, 0, 0,                    # area, objetos de mapa, agujeros
+        tile.area_id, 0, 0,         # area, objetos de mapa, agujeros
         0, 0, 0, 0,                 # textura de baja calidad
         0, 0, offsets['MCSE'], 0, 0, 0,
         x - cr * CHUNK, y - cc * CHUNK, base,
@@ -166,7 +194,13 @@ def _mcnk(tile, cr, cc):
 def build_adt(tile):
     mver = chunk('MVER', struct.pack('<I', 18))
     mtex = chunk('MTEX', b''.join(t.encode('ascii') + b'\0' for t in tile.textures))
-    empties = [chunk(m) for m in ('MMDX', 'MMID', 'MWMO', 'MWID', 'MDDF', 'MODF')]
+    mmdx = b''
+    mmid = []
+    for name in tile.models:
+        mmid.append(len(mmdx))
+        mmdx += name.encode('ascii') + b'\0'
+    empties = [chunk('MMDX', mmdx), chunk('MMID', struct.pack('<%dI' % len(mmid), *mmid)), chunk('MWMO'),
+               chunk('MWID'), chunk('MDDF', b''.join(d.mddf() for d in tile.doodads)), chunk('MODF')]
     mh2o = chunk('MH2O', _mh2o(tile)) if tile.water.any() else b''
     mcnks = [_mcnk(tile, cr, cc) for cr in range(16) for cc in range(16)]
 
@@ -200,7 +234,8 @@ def build_adt(tile):
 # --- .map del servidor -----------------------------------------------------------------------------------------
 
 def build_server_map(tile, build=12340):
-    area = b'AREA' + struct.pack('<HH', MAP_AREA_NO_AREA, 0)
+    # Una sola area por ADT: sin rejilla por celda, gridArea = area (igual que el extractor si todas coinciden)
+    area = b'AREA' + struct.pack('<HH', MAP_AREA_NO_AREA, tile.area_id)
 
     v9 = tile.heights_outer.astype(np.float32)
     v8 = tile.heights_inner.astype(np.float32)
@@ -247,3 +282,45 @@ def build_server_map(tile, build=12340):
     header = b'MAPS' + struct.pack('<10I', 9, build, area_ofs, len(area), height_ofs, len(height),
                                    liquid_ofs, len(liquid), 0, 0)
     return header + area + height + liquid
+
+
+# --- Minimapa --------------------------------------------------------------------------------------------------
+# Textures\Minimap\<archivo>.blp: BLP2 DXT1 de 256x256 sin mipmaps (igual que los del cliente). El cliente los
+# encuentra por Textures\Minimap\md5translate.trs ("dir: <Mapa>" + "<Mapa>\mapX_Y.blp<TAB><archivo>.blp", CRLF).
+
+def _to565(rgb):
+    r, g, b = (np.clip(np.rint(rgb[..., i] * s), 0, s) for i, s in ((0, 31), (1, 63), (2, 31)))
+    return (r.astype(np.uint32) << 11) | (g.astype(np.uint32) << 5) | b.astype(np.uint32)
+
+
+def _from565(c):
+    return np.stack([((c >> 11) & 31) / 31.0, ((c >> 5) & 63) / 63.0, (c & 31) / 31.0], axis=-1)
+
+
+def encode_dxt1(image):
+    """image: [h, w, 3] en 0..1 (h, w multiplos de 4) -> bloques DXT1. Extremos = caja de color de cada bloque."""
+    h, w, _ = image.shape
+    blocks = image.reshape(h // 4, 4, w // 4, 4, 3).transpose(0, 2, 1, 3, 4).reshape(-1, 16, 3)
+    c0 = _to565(blocks.max(axis=1))
+    c1 = _to565(blocks.min(axis=1))
+    swap = c0 < c1
+    c0, c1 = np.where(swap, c1, c0), np.where(swap, c0, c1)
+    a, b = _from565(c0), _from565(c1)
+    palette = np.stack([a, b, (2 * a + b) / 3, (a + 2 * b) / 3], axis=1)               # [n, 4, 3]
+    dist = ((blocks[:, :, None, :] - palette[:, None, :, :]) ** 2).sum(axis=-1)       # [n, 16, 4]
+    index = np.argmin(dist, axis=-1).astype(np.uint32)
+    index = np.where((c0 == c1)[:, None], 0, index)                                  # bloque liso
+    bits = (index << (2 * np.arange(16, dtype=np.uint32))).sum(axis=1).astype(np.uint32)
+    out = np.zeros(len(blocks), dtype=[('c0', '<u2'), ('c1', '<u2'), ('bits', '<u4')])
+    out['c0'], out['c1'], out['bits'] = c0, c1, bits
+    return out.tobytes()
+
+
+def build_minimap_blp(image):
+    """image: [256, 256, 3] en 0..1, fila 0 = norte (X mayor), columna 0 = oeste (Y mayor)."""
+    h, w, _ = image.shape
+    data = encode_dxt1(image)
+    header = b'BLP2' + struct.pack('<IBBBBII', 1, 2, 0, 0, 0, w, h)
+    offsets = [1172] + [0] * 15
+    sizes = [len(data)] + [0] * 15
+    return header + struct.pack('<16I', *offsets) + struct.pack('<16I', *sizes) + bytes(1024) + data

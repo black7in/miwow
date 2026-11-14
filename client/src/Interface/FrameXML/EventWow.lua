@@ -45,12 +45,27 @@ EVENTWOW_LOBBY_HIDDEN_FRAMES = {
 	"CastingBarFrame",
 };
 
--- De los anteriores, los que se ven durante una partida (las barras de accion llegaran con el "disfraz")
+-- Botones del minimapa que no se usan en EventWow: ocultos siempre (salvo con el panel oculto en modo dev).
+-- Se reparentan porque algunos se muestran solos (correo, cola de BG/mazmorra). Se dejan el zoom y el nombre de zona.
+EVENTWOW_MINIMAP_HIDDEN_BUTTONS = {
+	"MiniMapTracking",
+	"GameTimeFrame",
+	"MiniMapMailFrame",
+	"MiniMapLFGFrame",
+	"MiniMapBattlefieldFrame",
+	"MiniMapWorldMapButton",
+	"MiniMapVoiceChatFrame",
+	"MiniMapInstanceDifficulty",
+};
+
+-- De EVENTWOW_LOBBY_HIDDEN_FRAMES, los que se ven durante una partida (las barras de accion llegaran con el "disfraz")
 EVENTWOW_MATCH_VISIBLE_FRAMES = {
 	PlayerFrame = true,
 	TargetFrame = true,
 	BuffFrame = true,
 	CastingBarFrame = true,
+	-- Minimapa y nombre de la zona (mapas propios: AreaTable + minimapas de tools/mapgen); sin sus botones
+	MinimapCluster = true,
 	-- Barra nativa de vehiculo (personajes con vehiculo; el motor la muestra solo al montar). Sin boton de bajarse.
 	VehicleMenuBar = true,
 	-- Marcos de grupo nativos (solo se ven con grupo)
@@ -252,6 +267,14 @@ local function EventWow_ApplyMode()
 
 	for _, name in ipairs(EVENTWOW_LOBBY_HIDDEN_FRAMES) do
 		if ( dev or (mode == "match" and EVENTWOW_MATCH_VISIBLE_FRAMES[name]) ) then
+			EventWow_RestoreFrame(name);
+		else
+			EventWow_HideFrame(name);
+		end
+	end
+
+	for _, name in ipairs(EVENTWOW_MINIMAP_HIDDEN_BUTTONS) do
+		if ( dev ) then
 			EventWow_RestoreFrame(name);
 		else
 			EventWow_HideFrame(name);

@@ -10,6 +10,9 @@
 # DBC originales del cliente (Blizzard): base de tools/Build-Dbc.ps1. DBCesES = cliente esES, DBCenEN = ingles
 /client/DBCs/
 
+# md5translate.trs original del cliente (Blizzard): base del de tools/mapgen (minimapas). Ver docs/mapas.md
+/client/Minimap/
+
 # Salida generada por tools/Build-Patch.ps1
 /client/patches/
 

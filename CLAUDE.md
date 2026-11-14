@@ -171,7 +171,7 @@ Datos clave de la API Glue:
 - Amigos v1 (probado por el usuario 2026-11-13; mejorable): seccion social con pestanas [Grupo] [Amigos] (`EventWowSocial.lua`,
   `EventWowFriends.lua`; lista nativa: conectados primero, estado, invitar, quitar, susurrar, anadir). Servidor:
   `OnPlayerNotVisibleGloballyFor` en `EventWowLobby.cpp` (sin el, los amigos del lobby salian desconectados).
-- **SIGUIENTE SESION: personajes por juego ("disfraz")** - ver decision 2026-11-13 abajo. Orden:
+- Personajes por juego ("disfraz") - ver decision 2026-11-13 abajo. Orden:
   1. HECHO (probado por el usuario 2026-11-13): contenedor = **elfo de la noche druida nivel 80**: `EventWow.Character.Race/Class`
      4/11, RaceMask 1783, ClassMask 511, override `StartPlayerLevel = 80`, `EVENTWOW_CONFIG` NIGHTELF/DRUID, SQL
      `2026_11_13_00_lobby_playercreateinfo_druid.sql` (druida al lobby, humano guerrero de vuelta a Villadorada).
@@ -241,6 +241,42 @@ Datos clave de la API Glue:
        9500100 "Mercader" (copia de Kixxle 8305, faccion 35) con los libros + Pocion de sanacion runica (33447).
        Arregla tambien los iconos de `eventwow_character` (`'\I'` en MySQL pierde la barra: escribir `\\`).
      - Juego `test_shop` (`EventWowGameTestShop`, 180 s, Piromano): 200 oro al empezar e invoca al vendedor junto al inicio.
+  6. Inventario de partida + HUD inferior (compilado y probado por el usuario 2026-11-13: la interfaz se ve "decente pero
+     mejorable"; SIN COMMIT hasta resolver lo pendiente). PENDIENTE de la prueba:
+     - La pocion (33447) no se puede usar: falta el mensaje de error exacto. Sospechas: vida al maximo (las pociones de
+       sanacion no se usan con vida llena), o "Accion bloqueada" por llamar a `UseContainerItem` desde el boton (pasar a
+       botones seguros), o el filtro `OnSpellCheckCast` del disfraz.
+     - La espada (9500004) no se puede comprar: el druida no tiene la habilidad de espadas. Opciones: aprender las
+       habilidades de armas al contenedor (hechizos de habilidad + `skillraceclassinfo_dbc`, que el servidor fusiona
+       con su DBC) o saltarse la comprobacion en la compra (los objetos nunca se equipan). Ver primero donde se rechaza.
+     - Las casillas no muestran el tooltip del objeto al pasar el raton (en el vendedor si). Causa probable:
+       `EventWowInventory.lua` OnEnter hace `if GameTooltip:SetBagItem(...) then Show() else Hide()`, pero en 3.3.5
+       SetBagItem devuelve (hasCooldown, repairCost), no "hay objeto": casi siempre nil -> Hide. Comprobar con
+       GetContainerItemLink y llamar Show() siempre.
+     - En partida no se ven los errores del juego ("No tienes suficiente mana", "No puedes usar eso..."; los pinta
+       `UIErrorsFrame` con UI_ERROR_MESSAGE). Revisado: nuestro codigo no oculta ni reparenta `UIErrorsFrame`, no le
+       quita eventos y el HUD de partida no lo tapa (HUD de -24 a -108, errores en -122 con strata HIGH). Probar en partida
+       `/run UIErrorsFrame:AddMessage("prueba", 1, 0, 0)`: si sale, el marco funciona y el problema es que el evento no
+       llega o la accion no se envia. Puede estar ligado a la pocion: si `GetItemSpell(link)` devuelve nil, el clic
+       no hace nada y tampoco hay error.
+     - Al volver al lobby se ven en el chat los mensajes de objetos recibidos (CHAT_MSG_LOOT/MONEY de la partida):
+       filtrarlos y valorar chat de grupo / decir (/say) dentro de las partidas.
+  Decisiones del usuario (inventario):
+     estilo Dota, 6 casillas, los objetos NO se equipan (llevarlos ya da sus efectos), panel de stats fijo y compacto,
+     teclas para objetos: no por ahora (solo clic; quiza un panel de teclas configurable por jugador mas adelante).
+     Interfaz del vendedor propia: mas adelante.
+     - `EventWowInventory.*`: casillas = N primeras ranuras de la mochila (`EventWowGameInfo::InventorySlots`, sustituye a
+       `Inventory`; GAMES envia el numero, protocolo v6). `Update` cada 250 ms desde `EventWowMatch::Update`: stats de
+       item_template + hechizos "Equipar:" como aura (sin acumular el mismo hechizo; vuelve tras morir). "Uso:" nativo.
+       Sin dano de arma. Compra bloqueada si no cabe en las casillas (`OnPlayerBeforeBuyItemFromVendor`, "Inventario
+       lleno"); equipar bloqueado (`OnPlayerCanEquipItem`). `Clear` antes de `EventWowStats::Reset`.
+       `EventWowStats::FromItemMod` (compartido con la tienda).
+     - Cliente: `EventWowStats.lua` (panel 2x5 a la izquierda de la barra de habilidades, tooltip con todo; API nativa,
+       sin protocolo; oculto en vehiculo) y `EventWowInventory.lua` (casillas 3x2 + oro a la derecha; clic = usar o
+       vender con el vendedor abierto; arrastrar = mover/vender/destruir; API de contenedores directa). Bolsas nativas
+       bloqueadas siempre en partida (tambien `OpenBackpack` del vendedor). Barra de habilidades bajada (offset 24).
+       Avisos internos nuevos: `MATCH`, `CHARACTER`.
+     - SQL `_09`: 9500004 "Espada de prueba" (copia de Grieving Spellblade 39200: Aguante, Intelecto, pasiva 48626).
   Despues: carrera con fases.
 - Corte vertical pasos 6-7 (compilado y probado por el usuario 2026-11-13):
   - Core (commit `71970693a`): hooks `OnPlayerOverrideInstanceDestination` / `OnPlayerOverrideInstanceEnter`.
@@ -274,19 +310,52 @@ Datos clave de la API Glue:
   - Observacion pendiente: reinicios de instancia del core. Mazmorras 5 normal no tienen reinicio programado
     (seguro). Bandas (semanal) / heroicos (diario) si: una partida en esos mapas se cortaria a la hora del reinicio.
     Opcion propuesta: que `Validate()` rechace mapas con `MapDifficulty.resetTime` != 0. Sin decidir.
-- Mapas propios desde Warcraft 3 (probado por el usuario 2026-11-13: el mapa 750 sale como su mapa de WC3; ver `docs/mapas.md`). Decision del usuario: los mapas los
-  disena el (y un amigo) en el World Editor de WC3 1.26 (no usa Noggit) y se convierten. Diseno PROPIO: no se
-  replican mapas de terceros (p. ej. X Hero Siege); el usuario y su amigo hacen uno inspirado en el genero.
-  - `tools/mapgen` (mpq.py, wc3.py, wowfiles.py, mapgen.py, inspect_adt.py): terreno (alturas, acantilados = muros,
-    rampas aproximadas), texturas, agua, borde = muro, puntos de inicio y regiones -> coordenadas. Integrado en
-    `Build-Patch` (escribe tambien el `.map` en `server\bin\RelWithDebInfo\data\maps`). Falta: decoracion (doo),
-    vmaps, sombras, zona.
-  - IDs de mapa 750-799 (`Build-Dbc` exporta `map_dbc` en ese rango). Mapa de prueba 750 `EventWowTest` (SQL `_10`,
-    aplicado a mano en la BD de desarrollo para generar Map.dbc; el updater lo reaplica, es idempotente).
-  - Juego `test_map` (EventWowGameTest.cpp, 1-5 jugadores, 5 min) en el mapa 750.
-  - Pendiente del usuario: compilar con `TOOLS_BUILD` y `mmaps_generator 750` (sin mmaps funciona salvo PNJ).
-  - Siguiente: el mapa del minijuego que esta terminando el amigo del usuario (diseno propio; las criaturas de WC3
-    se ignoran, salvo puntos de inicio). Despues: conversion de decoracion (doo), regiones/rampas con un mapa real.
+- **Mapa del asedio (751): modelos de muralla HECHOS y probados por el usuario (2026-11-13: "perfecto").** `wallModels` en `maps.json` (ver "Modelos de muro" en
+  `docs/mapas.md`), `SC_Wall_01.M2` (muralla de la Plaga) por las caras de los muros (contorno simplificado: diagonales
+  reales). v1 (escala 1, 993 modelos en las dos caras) probada por el usuario: los muros salen, pero pequenos/
+  "chatos" y se notaba el relieve del terreno; pidio el doble de alto y ~50% mas de ancho. v2 (probada: tamano bien): escala 2
+  (uniforme: 24 x 18.6 x 12.8), 378 modelos centrados en los muros finos (salta caras ya tapadas), muro de terreno = huella
+  de los modelos a suelo + 8, borde exterior a 11.7 (sin roca detras); pero el muro de terreno asomaba en "dientes" de
+  roca por las caras (triangulos de la malla). v3 (huella encogida 3 yardas, `terrainInset`): mucho mejor, aun asomaba
+  algo. v4 (probada, "perfecto"): `terrainInset` 5 y `terrainHeight` 5 en maps.json. Despues el usuario encontro pasos
+  entre salas: centro de los cruces en "+"/"T" sin modelo (Sala Sur 1 <-> otras) y cuellos diagonales (Sala Sur 2/3 <->
+  Cruce_Punto_Suroeste/Sureste). v5 (el usuario: "satisfecho con el mapa, por el momento lo dejamos aqui"): pasada de relleno (39 modelos a 0/90 grados en cruces y cuellos, sin pisar
+  puntos de region), 468 modelos; comunicacion entre regiones = WC3 (comprobado por script). Parche y `.map` regenerados.
+  Vista previa (no versionada): `tools/mapgen/_work/muros_751*.png`. Familia por si hace falta: SC_Wall_01_Cap 5.0x9.4x6.4 (remate), SC_Wall_01_Ramp,
+  SC_Wall_02..06, SC_Wall_Decoration_01/02 (carpeta `World\Expansion02\Doodads\Generic\Scourge`; ninguna esta suelta en
+  los ADT de Rasganorte, solo dentro de WMO). Posibles mejoras: remates (Cap) en extremos libres.
+  Zona + minimapa (el usuario: "perfecto", 2026-11-13; decision del usuario: un solo nombre de zona para todo el mapa, es una mazmorra de
+  evento): SQL `_12` (`areatable_dbc` 5000 "Prueba WC3" / 5001 "Asedio", `map_dbc.AreaTableID`; aplicado a mano en la
+  BD de desarrollo), `areaId` en maps.json (MCNK + `.map`), minimapas generados por mapgen + `md5translate.trs`
+  (original en `client/Minimap/`, no versionado), `MinimapCluster` visible en partida sin botones. Ver `docs/mapas.md`.
+  vmaps + mmaps (dados por buenos por el usuario 2026-11-13; LoS en el juego aun sin PNJ que lo pongan a prueba): `tools/mapgen/vmaps.py` escribe `751.vmtree`, `751_<tx>_<ty>.vmtile` y
+  `Sc_Wall_01.m2.vmo` en `data\vmaps` (el extractor de AC no lee nuestro parche-carpeta). Validado: `.vmo` identico al
+  oficial (probado con SC_Wall_01_Cap), nombres de tile como los oficiales, linea de vision simulada bloqueada por muros.
+  Despues: funcion de cada region con el amigo (renombrar en `regionNames`), minijuego de oleadas.
+  Pendiente tambien: paso 6 (inventario + HUD), SIN COMMIT, ver arriba.
+- Mapas propios desde Warcraft 3 (ver `docs/mapas.md`). Decision del usuario: los mapas los disena el (y un amigo) en
+  el World Editor de WC3 1.26 (no usa Noggit) y se convierten. Diseno PROPIO: no se replican mapas de terceros
+  (p. ej. X Hero Siege); el usuario y su amigo hicieron uno inspirado en el genero.
+  - `tools/mapgen` (mpq.py, wc3.py, wowfiles.py, mapgen.py, inspect_adt.py): terreno, texturas por tileset (L, N, I),
+    agua, rampas, borde = muro, puntos de inicio y regiones -> coordenadas de WoW. Integrado en `Build-Patch` (escribe
+    tambien el `.map` y los vmaps (vmaps.py) en `server\bin\RelWithDebInfo\data`; tras regenerar: reiniciar el
+    worldserver y copiar el parche). Unidades, decoracion y objetos de WC3 se ignoran a proposito (puertas etc. iran
+    como objetos del juego). Falta: sombras, musica de zona.
+  - IDs de mapa 750-799 (`Build-Dbc` exporta `map_dbc` en ese rango). SQL `_10` (750) y `_11` (751) aplicados a mano en
+    la BD de desarrollo para generar Map.dbc (el updater los reaplica, son idempotentes).
+  - 750 `EventWowTest` (`Maps/Warcraft/test.w3m`, juego `test_map`): probado, COMMIT `28f1693`.
+  - 751 `EventWowAsedio` (`Maps/Warcraft/Mi_Mapa_XHero.w3x`, tileset Corona de Hielo, 96x224 casillas -> 2x2 ADT, juego
+    `test_siege_map`, inicio = punto del jugador 1). Probado por el usuario: estructura igual a su mapa. Pero los muros
+    (nivel 4) parecian relieve de tierra blanca ("es una ciudad, las divisiones deberian ser muros"): anadido
+    `wallLayer: 4` (caras verticales + texturas `wallTop` IC_Vrykul_PaverRubbleB / `wallFace` IG_DarkRockA), SIN PROBAR.
+    48 regiones renombradas por POSICION en `maps.json` `regionNames` (plano: `tools/mapgen/_work/regiones_751.png`,
+    regenerable); su funcion real (oleadas, teletransportes...) la sabe el amigo.
+  - SIN COMMIT (no probado del todo): mapgen.py (wallLayer, rampas exactas, borde interior, agua, texturas I,
+    regionNames), wc3.py (unidades/decoracion opcionales), maps.json, mapa 751 + SQL `_11`, `test_siege_map` en
+    EventWowGameTest.cpp (mezclado con el paso 6 en ese archivo: separar al commitear), docs/mapas.md.
+  - mmaps 750/751 GENERADOS (2026-11-13; herramientas compiladas por el usuario con `TOOLS_BUILD`): desde `data\`,
+    `..\mmaps_generator.exe --config ..\mmaps-config.yaml <id> < nul` (al final espera una tecla). Comprobado leyendo
+    los .mmtile: las zonas comunicadas andando en el navmesh = las 16 de WC3. Repetir tras cada cambio del mapa.
 - Subir ambos repos a un remoto privado.
 
 ## Hoja de ruta

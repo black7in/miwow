@@ -16,7 +16,9 @@ param(
     [string]$Locale = "esES",
     [switch]$SkipDbc,
     [switch]$SkipMaps,
-    [string]$ServerDataDir = ""
+    [string]$ServerDataDir = "",
+    # Data\ del cliente (MPQ originales): colision de los modelos de muro para los vmaps del servidor
+    [string]$WowDataDir = "D:\Clientes de Wow\Wow - copia\Data"
 )
 
 $ErrorActionPreference = "Stop"
@@ -43,8 +45,17 @@ if (-not $SkipMaps)
 {
     if (-not $ServerDataDir) { $ServerDataDir = Join-Path $root "server\bin\RelWithDebInfo\data" }
     $mapArgs = @((Join-Path $PSScriptRoot "mapgen\mapgen.py"), "--client", $out)
-    if (Test-Path $ServerDataDir) { $mapArgs += @("--server", $ServerDataDir) }
+    if (Test-Path $ServerDataDir)
+    {
+        $mapArgs += @("--server", $ServerDataDir)
+        if (Test-Path $WowDataDir) { $mapArgs += @("--wow-data", $WowDataDir) }
+        else { Write-Warning "No existe $WowDataDir (parametro -WowDataDir): sin vmaps de los mapas propios" }
+    }
     else { Write-Warning "No existe $ServerDataDir (parametro -ServerDataDir): solo se generan los mapas del cliente" }
+    # Minimapas: necesitan el md5translate.trs original del cliente (no versionado, ver docs/mapas.md)
+    $trs = Join-Path $root "client\Minimap\md5translate.trs"
+    if (Test-Path $trs) { $mapArgs += @("--minimap-trs", $trs) }
+    else { Write-Warning "No existe ${trs}: sin minimapas (extraerlo de patch-3.MPQ, ver docs/mapas.md)" }
     & py -I -B @mapArgs
     if ($LASTEXITCODE -ne 0) { throw "mapgen fallo (codigo $LASTEXITCODE)" }
 }

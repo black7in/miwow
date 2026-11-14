@@ -32,7 +32,10 @@ param(
 $ErrorActionPreference = "Stop"
 
 # Tablas con un rango de IDs propio ademas de MinId+ (condicion SQL sobre la primera columna)
-$ExtraRanges = @{ "map_dbc" = "BETWEEN 750 AND 799" }
+$ExtraRanges = @{
+    "map_dbc" = "BETWEEN 750 AND 799"
+    "areatable_dbc" = "BETWEEN 5000 AND 5099"     # zonas de los mapas propios (ver SQL *_eventwow_map_areas)
+}
 
 function Get-IdFilter([string]$table, [string]$id)
 {

@@ -184,14 +184,25 @@ def read_doodads(data):
     return doodads
 
 
+def _optional(archive, name, reader):
+    if not archive.has(name):
+        return []
+    try:
+        return reader(archive.read(name))
+    except Exception as error:  # noqa: BLE001 - formato de otra version del editor
+        print('AVISO: %s no se pudo leer (%s); se ignora' % (name, error))
+        return []
+
+
 class Wc3Map:
     def __init__(self, path):
         archive = MPQ(path)
         try:
             self.terrain = Terrain(archive.read('war3map.w3e'))
             self.regions = read_regions(archive.read('war3map.w3r')) if archive.has('war3map.w3r') else []
-            self.units = read_units(archive.read('war3mapUnits.doo')) if archive.has('war3mapUnits.doo') else []
-            self.doodads = read_doodads(archive.read('war3map.doo')) if archive.has('war3map.doo') else []
+            # Unidades y decoracion son opcionales: si el formato no se reconoce se avisa y se sigue con el terreno
+            self.units = _optional(archive, 'war3mapUnits.doo', read_units)
+            self.doodads = _optional(archive, 'war3map.doo', read_doodads)
         finally:
             archive.close()
 

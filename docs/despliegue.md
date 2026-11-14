@@ -24,7 +24,7 @@ p.ej. `AC_LOGIN_DATABASE_INFO`):
 | `LoginDatabaseInfo` | conexion a acore_auth | | |
 | `WorldDatabaseInfo` | conexion a acore_world | | |
 | `CharacterDatabaseInfo` | conexion a acore_characters | | |
-| `DataDir` | carpeta con dbc/maps/vmaps/mmaps | | |
+| `DataDir` | carpeta con dbc/maps/vmaps/mmaps (+ los de los mapas propios 750-799: `Build-Patch` + `mmaps_generator`, ver `docs/mapas.md`) | | |
 | `LogsDir` | carpeta de logs | | |
 | `RealmID` | id del reino en acore_auth.realmlist | | |
 | `WorldServerPort` | puerto del mundo (8085) | | |
