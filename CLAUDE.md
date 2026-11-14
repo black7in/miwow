@@ -368,7 +368,13 @@ Datos clave de la API Glue:
   Sylvanas...). Lista de modelos en `docs/heroes-modelos.md` (displays de la BD + arma de cada PNJ). El usuario los esta
   probando con `.morph` y pasara SU LISTA de heroes con el modelo elegido; despues: definir habilidades de cada uno
   (`docs/heroes.md`: 3 basicas x 4 + definitiva x 3 + atributos; fichas con spellgen) e investigar armas visibles sin
-  equipar (las armas no son parte del modelo). Despues: base de niveles (paso 1 de `docs/heroes.md`, requiere compilar).
+  equipar (las armas no son parte del modelo). Lista inicial de 15 heroes con modelo y armas HECHA (2026-11-14, tabla
+  "Lista inicial" en `docs/heroes-modelos.md`). Armas sin equipar: prototipo `EventWowWeapons.cpp` (comando
+  `.eventwow weapon set/sheath/clear`, escribe `PLAYER_VISIBLE_ITEM_*`), probado por el usuario: se ven sobre el modelo
+  transformado, la Z envaina/desenvaina; `sheath` no hace nada (el cliente controla el envainado propio; quitarlo) y
+  la ranura de distancia no se dibuja (arcos en la mano derecha). Armas visuales propias 9500200-9500299 (SQL
+  `2026_11_14_03`, 9500200 = arco de Sylvanas visible envainado). Siguiente: armas en la ficha (`eventwow_character`)
+  aplicadas por el disfraz. Despues: base de niveles (paso 1 de `docs/heroes.md`, requiere compilar).
 - Mapas propios desde Warcraft 3 (ver `docs/mapas.md`). Decision del usuario: los mapas los disena el (y un amigo) en
   el World Editor de WC3 1.26 (no usa Noggit) y se convierten. Diseno PROPIO: no se replican mapas de terceros
   (p. ej. X Hero Siege); el usuario y su amigo hicieron uno inspirado en el genero.

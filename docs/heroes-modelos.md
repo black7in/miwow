@@ -14,6 +14,44 @@ personaje sin equiparlas). Las armas de los PNJ estan en la ultima columna (ID d
 Varios ID por personaje = distintas versiones (epoca, armadura, mazmorra). La ultima columna de "Notas" dice de
 donde sale cada una cuando se sabe; si no, probarlas.
 
+## Lista inicial (elegida por el usuario, 2026-11-14)
+
+Armas = `creature_equip_template` del PNJ que usa ese display (ItemID1 / ItemID2 / ItemID3 = mano derecha / izquierda /
+distancia). Son objetos "Monster - ..." que ya estan en el Item.dbc del cliente (los PNJ los muestran).
+
+| Heroe | Display | PNJ de origen | Mano derecha | Mano izquierda | Distancia | Notas |
+|---|---|---|---|---|---|---|
+| Arthas (principe) | 24949 | 26499 | 37579 maza de Arthas | | | |
+| Arthas caballero de la Muerte | 22235 | 24267 (sin armas) | 36942 Agonia de Escarcha | | | decidido (el PNJ no lleva); 49706 = version de ICC (mas brillo), 50840 = rota |
+| Thrall | 4527 | 4949 | 12183 Martillo Maldito | | | |
+| Sylvanas | 28213 | 10181 | 9500200 arco de Sylvanas (copia de 42775 visible envainado) | | | decidido: arco en la mano derecha (la ranura de distancia no se dibuja). Cimitarras (2179, o 30403 x2 con brillo rojo) descartadas por ahora |
+| Jaina | 30863 | 4968 | 2177 baston | | | decidido: solo el baston (el PNJ lleva tambien 12869, libro) |
+| Varian | 28127 | 29611 | 45899 espada de Varian | | | |
+| Tirion | 22209 | 24232 | 13262 Crematoria | | | |
+| Kel'Thuzad | 15945 | 15990 (sin armas) | | | | decidido: sin arma; escala a probar |
+| Gul'dan | 16642 | 17008 | 23450 daga de Gul'dan | | | |
+| Archimonde | 20939 | 17968 (sin armas) | | | | como en WC3, sin arma; escala a probar |
+| Vol'jin | 10357 | 10540 | 53835 guja de Vol'jin | | 14118 arco negro | |
+| Cairne | 4307 | 3057 | 14084 totem de Cairne (2 manos) | | | |
+| Lor'themar | 17122 | 16802 | 14882 guja de 2 hojas | 24038 escudo elfo de sangre | | |
+| Garrosh | 23006 | 25237 | 23428 hacha de Grom | 23428 hacha de Grom | | Gorehowl a dos manos |
+| Rey Jokkum | 26778 | 30105 | 40770 maza de gigante de escarcha | | | modelo enorme: escala a probar |
+
+Probado por el usuario (2026-11-14): las armas salen sobre el modelo transformado, en su sitio, y la tecla Z las
+envaina/desenvaina. `.eventwow weapon sheath` no hace nada (no hace falta). La ranura de distancia NO se ve: el arco
+va en la MANO DERECHA (`set 42775`). Los arcos de PNJ tienen `sheath = 0` (envainados no se dibujan): copias propias
+con otro envainado en el rango 9500200-9500299 (SQL `2026_11_14_03`): **9500200 = arco de Sylvanas, tipo 1 (espalda)**,
+elegido por el usuario frente al tipo 2 (diagonal). Para otros arcos/armas que no se vean envainados: copia igual.
+
+Comandos (`EventWowWeapons.cpp`, GM, sobre el seleccionado o uno mismo):
+
+```
+.morph 22235
+.eventwow weapon set 36942            mano derecha [izquierda] [distancia]; 0 = vacia
+.eventwow weapon sheath 1             0 envainada, 1 cuerpo a cuerpo, 2 distancia
+.eventwow weapon clear
+```
+
 ## Arthas / Rey Exanime
 
 | Personaje | Display | Notas | Arma del PNJ |
