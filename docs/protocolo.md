@@ -1,7 +1,7 @@
 # Protocolo cliente <-> servidor (addon messages)
 
 Implementacion: servidor `modules/mod-eventwow/src/EventWowProtocol.*`, cliente
-`client/src/Interface/FrameXML/EventWowProtocol.lua`. Version actual: **6**
+`client/src/Interface/FrameXML/EventWowProtocol.lua`. Version actual: **8**
 (`EventWowProtocol::Version` / `EVENTWOW_PROTOCOL.VERSION`; cambiarla en ambos lados a la vez).
 
 ## Transporte
@@ -55,6 +55,7 @@ opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `Regi
 | `ACCEPT` | id propuesta | "Aceptar" la partida encontrada | `MATCH_FOUND_STATUS` a todos; si es el ultimo, `MATCH_FOUND_END ACCEPTED` + partida |
 | `DECLINE` | id propuesta | "Rechazar" (tambien `LEAVE`, logout o cambio de grupo con propuesta pendiente) | `MATCH_FOUND_END` a todos (ver "Partida encontrada") |
 | `PICK` | id personaje | "Elegir" en la fase de eleccion (`MATCH_STATE PICKING`); definitiva | disfraz (`MATCH_CHARACTER`) + `MATCH_PICKS` a todos, o `ERROR PICK_TAKEN/PICK_INVALID`. v7 |
+| `UPGRADE` | casilla 0..n-1 / `attr` | "+" de una habilidad o de Atributos (progresion de heroe, `EventWowProgress`) | `MATCH_ABILITIES` si se pudo; si no (sin puntos, nivel insuficiente, rango maximo), nada. v8 |
 
 ### Servidor -> cliente
 
@@ -74,6 +75,7 @@ opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `Regi
 | `MATCH_END` | `WIN`/`LOSE`/`NONE`, texto | resultado del jugador y resumen |
 | `MATCH_RESPAWN` | segundos | has muerto: reapareces en N s (0 = ya has reaparecido). Morir nunca saca de la partida |
 | `MATCH_CHARACTER` | id, nombre, icono, hechizo... / `0` | disfraz del personaje de minijuego (`EventWowDisguise`): al llegar a la instancia, al quitarlo (`0`) y al reconectar. El cliente pinta la barra de habilidades propia (`EventWowAbilities.lua`, teclas 1..0). v4 |
+| `MATCH_ABILITIES` | nivel, nivel max, puntos, atributos, atributos max, atributos mejorable 0/1, stats por punto de atributos `clave:valor,...`, n, luego n x (rango, rango max ahora, rangos totales, mejorable 0/1, hechizo actual, hechizo siguiente) / `0` | progresion del heroe (`EventWowProgress`, docs/heroes.md): al empezar, en cada subida de nivel o mejora, al reconectar; `0` = sin progresion (todo aprendido). Casillas = las de `MATCH_CHARACTER`, en orden; rango 0 = sin aprender (hechizo actual 0). v8 |
 | `MATCH_PICK` | unico 0/1, n, luego n x (id, nombre, icono, descripcion, hechizos `id,id,...`, vehiculo 0/1) | personajes a elegir (al entrar en `PICKING` y al reconectar). unico = cada personaje solo para un jugador. Ventana `EventWowPick.lua`. v7. No se envia si el juego elige en el mundo (`GetPickPositions`, PNJ con dialogo): solo `MATCH_PICKS` |
 | `MATCH_PICKS` | n, luego n x (nombre jugador, id personaje / 0 = eligiendo) | quien ha elegido que (con `MATCH_PICK`, en cada eleccion y al acabar: los que no eligieron reciben uno al azar) |
 | `DEV_MODE` | 0/1 | modo dev (`.gm on` o `.dev on`; se comprueba cada 250 ms). Al conectar y en cada cambio. En modo dev el cliente permite ocultar el panel (solo cliente) |

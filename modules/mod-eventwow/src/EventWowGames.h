@@ -28,6 +28,10 @@ struct EventWowGameInfo
     // Casillas de inventario de partida (EventWowInventory.h, estilo Dota: 6). 0 = el juego no usa objetos.
     // Los libros instantaneos (EventWowShop.h) no ocupan casilla.
     uint8 InventorySlots = 0;
+    // Progresion (EventWowProgress.h): el heroe empieza a nivel 1 y sube con la XP nativa hasta MaxLevel, con
+    // puntos para sus habilidades. 0 = sin niveles (el personaje lleva el rango 1 de todo). XpRate multiplica la XP.
+    uint8 MaxLevel = 0;
+    float XpRate = 1.0f;
 
     // Partida: mapa de mazmorra/banda (con instance_template) donde se crea una instancia por partida,
     // punto de aparicion y factoria de la clase del minijuego (EventWowMatch.h).

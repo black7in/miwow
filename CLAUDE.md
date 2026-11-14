@@ -390,6 +390,16 @@ Datos clave de la API Glue:
   `script`), `EventWowHeroSpells.cpp` (Espiral de la Muerte, invocaciones), SQL `_06` (rango 1 de cada habilidad),
   barra de mascota nativa en partida (`EventWow_ApplyPetBar`, EventWow.lua). SQL aplicados a mano en la BD de desarrollo.
   Despues: base de niveles (paso 1 de `docs/heroes.md`, requiere compilar).
+  **Niveles y puntos de habilidad (pasos 1-2 de `docs/heroes.md`, 2026-11-14, SIN COMPILAR NI PROBAR)**:
+  `EventWowProgress.*` (nivel real 1 -> `EventWowGameInfo::MaxLevel`, XP nativa x `XpRate` con tope, un punto por
+  nivel, rangos = cadena de spell_ranks, atributos de `eventwow_character_attribute`, suprema sola al maximo;
+  talentos/logros/correo de nivel bloqueados; `Stop` desde `EventWowDisguise::Remove` = nivel base; login = nivel
+  base). `EventWowMatch::SetCharacter`: con `MaxLevel` -> nivel 1 antes del disfraz (mide la vida nativa) +
+  `Apply(..., true)` (solo fijas) + `Start`. Asedio `MaxLevel = 30`. SQL `_07` (columna `Kind` + atributos de
+  Arthas; aplicado a mano en la BD de desarrollo). Protocolo v8 (`MATCH_ABILITIES`/`UPGRADE`). Cliente
+  `EventWowAbilities.lua`: rango "n/m", gris sin aprender, "+" (no seguros), boton Atributos, barra de XP, nombre
+  con nivel/puntos; lanza por NOMBRE (rango mas alto aprendido). `EventWow.lua`: barra nativa oculta con disfraz
+  (tambien en modo dev), pet bar mas arriba (GAP 40). Comando `.eventwow hero <id> [nivel]` / `hero level <n>`.
 - Mapas propios desde Warcraft 3 (ver `docs/mapas.md`). Decision del usuario: los mapas los disena el (y un amigo) en
   el World Editor de WC3 1.26 (no usa Noggit) y se convierten. Diseno PROPIO: no se replican mapas de terceros
   (p. ej. X Hero Siege); el usuario y su amigo hicieron uno inspirado en el genero.

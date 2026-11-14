@@ -2,6 +2,7 @@
 #include "EventWowCharacters.h"
 #include "EventWowConfig.h"
 #include "EventWowDisguise.h"
+#include "EventWowProgress.h"
 #include "EventWowGames.h"
 #include "EventWowInventory.h"
 #include "EventWowMatchMgr.h"
@@ -438,6 +439,17 @@ bool EventWowMatch::SetCharacter(Player* player, uint32 characterId)
     EventWowCharacterInfo const* character = sEventWowCharacters.Get(characterId);
     if (!character || !HasPlayer(player->GetGUID()) || player->GetInstanceId() != _instanceId)
         return false;
+
+    // Progresion (nivel 1 -> MaxLevel, puntos de habilidad): el nivel inicial antes del disfraz, que mide la vida y
+    // el poder nativos al aplicarse
+    if (_game->MaxLevel)
+    {
+        EventWowDisguise::Remove(player);
+        EventWowProgress::SetLevel(player, 1);
+        EventWowDisguise::Apply(player, *character, true);
+        EventWowProgress::Start(player, *character, _game->MaxLevel, _game->XpRate);
+        return true;
+    }
 
     EventWowDisguise::Apply(player, *character);
     return true;

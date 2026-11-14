@@ -66,7 +66,8 @@ Leido de `war3mapMisc.txt`, `war3map.w3u` (heroes) y `war3map.w3a` (habilidades)
 - Los puntos se acumulan si no se gastan; no se pueden redistribuir en la partida.
 - Barra: teclas 1-4 basicas, 5 definitiva, 6 suprema; "Atributos" como boton aparte (no se lanza). Las de rango 0
   en gris con el "+".
-- **Probar un heroe sin partida** (GM): `.eventwow hero <id>` | `off` | `list` (EventWowDisguise.cpp). Con `.dev on`
+- **Probar un heroe sin partida** (GM): `.eventwow hero <id> [nivel]` | `level <n>` | `off` | `list`
+  (EventWowDisguise.cpp; con nivel = con progresion hasta 30, tambien vale `.levelup`; sin nivel = todo aprendido). Con `.dev on`
   + "Ocultar panel" se ve el mundo; enemigos: `.npc add temp 31144` (muneco) / 28104 (esqueleto 80).
 
 ### Arthas, caballero de la Muerte (ficha 31) - primer heroe completo (diseno aprobado 2026-11-14)
@@ -157,6 +158,12 @@ Decisiones:
 - Forma de crear los hechizos (herramienta).
 
 ## 7. Orden de implementacion
+
+Pasos 1 y 2 implementados juntos (2026-11-14, SIN COMPILAR): `EventWowProgress.*` (nivel 1 -> `MaxLevel` del juego,
+`XpRate`, puntos, rangos, atributos, talentos/logros/correo de nivel bloqueados, nivel base al salir y en el login),
+`eventwow_character_spell.Kind` (0 fija, 1 basica, 2 definitiva, 3 suprema) y `eventwow_character_attribute` (SQL
+`_07`), protocolo v8 (`MATCH_ABILITIES` / `UPGRADE`), barra con rangos, "+", Atributos y barra de XP
+(`EventWowAbilities.lua`; lanza por nombre = rango mas alto aprendido). Asedio: `MaxLevel = 30`.
 
 1. Nivel 1 en partida, XP nativa con tope 30 y multiplicador, vuelta al nivel base; talentos y logros bloqueados.
 2. Puntos de habilidad: tabla de habilidades por heroe (hechizo por nivel, nivel requerido), protocolo y "+" en

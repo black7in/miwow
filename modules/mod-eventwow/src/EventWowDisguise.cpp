@@ -6,6 +6,7 @@
 #include "EventWowCharacters.h"
 #include "EventWowConfig.h"
 #include "EventWowDevMode.h"
+#include "EventWowProgress.h"
 #include "EventWowProtocol.h"
 #include "EventWowStats.h"
 #include "EventWowWeapons.h"
@@ -113,7 +114,7 @@ EventWowCharacterInfo const* EventWowDisguise::Get(Player const* player)
     return slot ? sEventWowCharacters.Get(slot->CharacterId) : nullptr;
 }
 
-void EventWowDisguise::Apply(Player* player, EventWowCharacterInfo const& character)
+void EventWowDisguise::Apply(Player* player, EventWowCharacterInfo const& character, bool progression)
 {
     if (GetSlot(player))
         Remove(player);
@@ -150,8 +151,12 @@ void EventWowDisguise::Apply(Player* player, EventWowCharacterInfo const& charac
     player->SetFullHealth();
     player->SetPower(power, power == POWER_RAGE ? 0 : player->GetMaxPower(power));
 
-    for (uint32 spellId : character.Spells)
+    for (std::size_t i = 0; i < character.Spells.size(); ++i)
     {
+        uint32 const spellId = character.Spells[i];
+        if (progression && character.SpellKinds[i] != EventWowAbilityKind::Fixed)
+            continue;
+
         if (player->HasSpell(spellId))
             continue;
 
@@ -164,6 +169,29 @@ void EventWowDisguise::Apply(Player* player, EventWowCharacterInfo const& charac
 
     LOG_DEBUG("module.eventwow", "EventWow: {} disfrazado de {} ({})", player->GetName(), character.Name, character.Id);
     SendState(player);
+}
+
+void EventWowDisguise::ReplaceSpell(Player* player, uint32 oldSpell, uint32 newSpell)
+{
+    DisguiseSlot* slot = GetSlot(player);
+    if (!slot)
+        return;
+
+    if (oldSpell)
+    {
+        auto itr = std::find(slot->AddedSpells.begin(), slot->AddedSpells.end(), oldSpell);
+        if (itr != slot->AddedSpells.end())
+        {
+            slot->AddedSpells.erase(itr);
+            player->removeSpell(oldSpell, SPEC_MASK_ALL, true);
+        }
+    }
+
+    if (newSpell && !player->HasSpell(newSpell))
+    {
+        player->learnSpell(newSpell, true);
+        slot->AddedSpells.push_back(newSpell);
+    }
 }
 
 void EventWowDisguise::Remove(Player* player)
@@ -205,6 +233,9 @@ void EventWowDisguise::Remove(Player* player)
 
     player->UpdateMaxHealth();
     player->UpdateMaxPower(classPower);
+
+    // Puntos de atributos y nivel base (si iba con progresion)
+    EventWowProgress::Stop(player);
 
     LOG_DEBUG("module.eventwow", "EventWow: {} sin disfraz", player->GetName());
     SendState(player);
@@ -318,6 +349,8 @@ public:
 
 // Probar un personaje sin partida (GM), sobre el jugador seleccionado o uno mismo:
 //   .eventwow hero <id>    disfraza con esa ficha (modelo, armas, stats, hechizos y barra del HUD)
+//   .eventwow hero <id> <nivel>  igual, con progresion (docs/heroes.md): nivel 1-30 y puntos de habilidad
+//   .eventwow hero level <n>     cambia el nivel con progresion activa (tambien vale .levelup)
 //   .eventwow hero off     quita el disfraz
 //   .eventwow hero list    fichas cargadas
 // Fuera de partida nada lo quita salvo "off", entrar en una partida o el logout (no se guarda nada).
@@ -342,7 +375,9 @@ public:
         return commandTable;
     }
 
-    static bool HandleHero(ChatHandler* handler, std::string arg)
+    static constexpr uint8 TestMaxLevel = 30;
+
+    static bool HandleHero(ChatHandler* handler, std::string arg, Optional<uint32> level)
     {
         if (arg == "list")
         {
@@ -356,6 +391,18 @@ public:
         if (!target)
             return false;
 
+        if (arg == "level")
+        {
+            if (!level || !*level || *level > TestMaxLevel || !EventWowProgress::IsActive(target))
+            {
+                handler->SendErrorMessage("EventWow: uso .eventwow hero level <1-{}> (con un heroe con progresion)", TestMaxLevel);
+                return false;
+            }
+
+            EventWowProgress::SetLevel(target, uint8(*level));
+            return true;
+        }
+
         if (arg == "off")
         {
             EventWowDisguise::Remove(target);
@@ -367,8 +414,28 @@ public:
         EventWowCharacterInfo const* character = id ? sEventWowCharacters.Get(id) : nullptr;
         if (!character)
         {
-            handler->SendErrorMessage("EventWow: uso .eventwow hero <id> | off | list (personaje '{}' no existe)", arg);
+            handler->SendErrorMessage("EventWow: uso .eventwow hero <id> [nivel] | level <n> | off | list (personaje '{}' no existe)", arg);
             return false;
+        }
+
+        if (level)
+        {
+            if (!*level || *level > TestMaxLevel)
+            {
+                handler->SendErrorMessage("EventWow: nivel 1-{}", TestMaxLevel);
+                return false;
+            }
+
+            // Mismo orden que EventWowMatch::SetCharacter, con el nivel pedido
+            EventWowDisguise::Remove(target);
+            EventWowProgress::SetLevel(target, 1);
+            EventWowDisguise::Apply(target, *character, true);
+            EventWowProgress::Start(target, *character, TestMaxLevel, 1.0f);
+            if (*level > 1)
+                EventWowProgress::SetLevel(target, uint8(*level));
+            handler->PSendSysMessage("EventWow: {} disfrazado de {} ({}) con progresion, nivel {}", target->GetName(),
+                character->Name, character->Id, *level);
+            return true;
         }
 
         EventWowDisguise::Apply(target, *character);

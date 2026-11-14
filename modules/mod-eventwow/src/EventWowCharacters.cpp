@@ -12,7 +12,13 @@
 
 bool EventWowCharacterInfo::HasSpell(uint32 spellId) const
 {
-    return std::find(Spells.begin(), Spells.end(), spellId) != Spells.end();
+    // Misma cadena (cualquier rango): la ficha puede llevar un rango nativo cualquiera (fijas) o el primero
+    // (progresion, EventWowProgress sube de rango)
+    uint32 const first = sSpellMgr->GetFirstSpellInChain(spellId);
+    return std::any_of(Spells.begin(), Spells.end(), [first](uint32 spell)
+    {
+        return sSpellMgr->GetFirstSpellInChain(spell) == first;
+    });
 }
 
 EventWowCharacters& EventWowCharacters::Instance()
@@ -108,14 +114,15 @@ void EventWowCharacters::Load()
         } while (result->NextRow());
     }
 
-    //                                                 0              1
-    if (QueryResult result = WorldDatabase.Query("SELECT `CharacterId`, `SpellId` FROM `eventwow_character_spell` ORDER BY `CharacterId`, `Slot`"))
+    //                                                 0              1          2
+    if (QueryResult result = WorldDatabase.Query("SELECT `CharacterId`, `SpellId`, `Kind` FROM `eventwow_character_spell` ORDER BY `CharacterId`, `Slot`"))
     {
         do
         {
             Field* fields = result->Fetch();
             uint32 const characterId = fields[0].Get<uint32>();
             uint32 const spellId = fields[1].Get<uint32>();
+            uint8 kind = fields[2].Get<uint8>();
 
             auto itr = _characters.find(characterId);
             if (itr == _characters.end())
@@ -130,8 +137,23 @@ void EventWowCharacters::Load()
                 continue;
             }
 
+            if (kind > uint8(EventWowAbilityKind::Supreme))
+            {
+                LOG_ERROR("module.eventwow", "EventWow: personaje {} ({}): Kind {} del hechizo {} no existe (0-3), se usa 0",
+                    characterId, itr->second.Name, kind, spellId);
+                kind = 0;
+            }
+
+            // La progresion sube de rango desde el primero; las fijas pueden ser cualquier rango (p. ej. el maximo nativo)
+            if (kind != uint8(EventWowAbilityKind::Fixed) && sSpellMgr->GetFirstSpellInChain(spellId) != spellId)
+                LOG_ERROR("module.eventwow", "EventWow: personaje {} ({}): el hechizo {} (con progresion) no es el primer rango de su cadena",
+                    characterId, itr->second.Name, spellId);
+
             if (!itr->second.HasSpell(spellId))
+            {
                 itr->second.Spells.push_back(spellId);
+                itr->second.SpellKinds.push_back(EventWowAbilityKind(kind));
+            }
         } while (result->NextRow());
     }
 
@@ -161,6 +183,35 @@ void EventWowCharacters::Load()
 
             if (value)
                 itr->second.Stats.emplace_back(*stat, value);
+        } while (result->NextRow());
+    }
+
+    //                                                 0              1       2
+    if (QueryResult result = WorldDatabase.Query("SELECT `CharacterId`, `Stat`, `Value` FROM `eventwow_character_attribute`"))
+    {
+        do
+        {
+            Field* fields = result->Fetch();
+            uint32 const characterId = fields[0].Get<uint32>();
+            std::string const key = fields[1].Get<std::string>();
+            int32 const value = fields[2].Get<int32>();
+
+            auto itr = _characters.find(characterId);
+            if (itr == _characters.end())
+            {
+                LOG_ERROR("module.eventwow", "EventWow: eventwow_character_attribute: el personaje {} no existe", characterId);
+                continue;
+            }
+
+            std::optional<EventWowStat> stat = EventWowStats::FromKey(key);
+            if (!stat)
+            {
+                LOG_ERROR("module.eventwow", "EventWow: personaje {} ({}): stat de atributo desconocida '{}'", characterId, itr->second.Name, key);
+                continue;
+            }
+
+            if (value)
+                itr->second.AttributeStats.emplace_back(*stat, value);
         } while (result->NextRow());
     }
 

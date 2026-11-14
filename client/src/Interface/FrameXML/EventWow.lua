@@ -75,6 +75,14 @@ EVENTWOW_MATCH_VISIBLE_FRAMES = {
 	PartyMemberFrame4 = true,
 };
 
+-- Ocultos SIEMPRE mientras se va disfrazado (EventWow_Character), tambien en modo dev con el panel oculto: tapan la
+-- barra de habilidades del disfraz (EventWowAbilities.lua). La barra de mascota se cuelga entonces de la nuestra.
+EVENTWOW_DISGUISE_HIDDEN_FRAMES = {
+	"MainMenuBar",
+	"MultiBarBottomLeft",
+	"MultiBarBottomRight",
+};
+
 -- Funciones globales (llamadas desde Bindings.xml / micro menu) que no hacen nada en el lobby ni en partida
 EVENTWOW_LOBBY_BLOCKED_FUNCTIONS = {
 	-- Ventanas (las bolsas nativas nunca: el inventario de partida es EventWowInventory.lua; OpenBackpack lo
@@ -240,7 +248,7 @@ end
 EVENTWOW_PET_BAR = {
 	WIDTH = 509,  -- tamano de PetActionBarFrame (PetActionBarFrame.xml)
 	HEIGHT = 43,
-	GAP = 20,     -- encima de la barra de habilidades (deja sitio al nombre del personaje)
+	GAP = 40,     -- encima de la barra de habilidades (deja sitio a la barra de XP y al nombre del personaje)
 };
 
 local function EventWow_AnchorPetBarHolder()
@@ -293,6 +301,13 @@ local function EventWow_ApplyMode()
 		end
 	end
 
+	local disguised = EventWow_Character ~= nil;
+	if ( disguised ) then
+		for _, name in ipairs(EVENTWOW_DISGUISE_HIDDEN_FRAMES) do
+			EventWow_HideFrame(name);
+		end
+	end
+
 	for _, name in ipairs(EVENTWOW_MINIMAP_HIDDEN_BUTTONS) do
 		if ( dev ) then
 			EventWow_RestoreFrame(name);
@@ -318,7 +333,7 @@ local function EventWow_ApplyMode()
 		EventWowPanel:Hide();
 	end
 
-	EventWow_ApplyPetBar(mode == "match" and not dev);
+	EventWow_ApplyPetBar((mode == "match" and not dev) or disguised);
 
 	EventWowChat_SetNativeVisible(dev);
 	if ( dev ) then
@@ -433,6 +448,8 @@ EventWow_DisableTutorials();
 EventWow_CreateWorldCover();
 EventWow_CreateDevButton();
 EventWow_CreatePetBarHolder();
+-- Al ponerse/quitarse un disfraz (MATCH_CHARACTER) cambian la barra nativa y la de mascota
+EventWow_RegisterListener("CHARACTER", EventWow_ApplyMode);
 EventWow_WrapBlockedFunctions();
 EventWow_SetupGameMenu();
 

@@ -8,6 +8,16 @@
 #include <unordered_map>
 #include <vector>
 
+// Tipo de cada hechizo de la ficha (eventwow_character_spell.Kind). Con progresion (EventWowProgress.h) los
+// tipos 1-3 empiezan sin aprender y se mejoran con puntos; sin progresion se aprende el rango 1 de todos.
+enum class EventWowAbilityKind : uint8
+{
+    Fixed    = 0,   // siempre aprendido (juegos sin niveles, ataques basicos...)
+    Basic    = 1,   // rango maximo = (nivel + 1) / 2
+    Ultimate = 2,   // rangos a nivel 6, 12, 18
+    Supreme  = 3    // sola al llegar al nivel maximo (sin punto)
+};
+
 // Personaje jugable de un minijuego: lo que el disfraz (EventWowDisguise.h) aplica al contenedor.
 // Se carga de la BD world (tablas eventwow_character*, SQL del modulo); 0 en un campo = no se cambia.
 struct EventWowCharacterInfo
@@ -22,13 +32,16 @@ struct EventWowCharacterInfo
     uint32 Health = 0;          // vida maxima base
     uint8 PowerType = 0;        // Powers: 0 mana, 1 ira, 3 energia
     uint32 MaxPower = 0;        // maximo base del PowerType (ira/energia en unidades internas: 100 de ira = 1000)
-    std::vector<uint32> Spells; // por orden de ranura (barra del HUD)
+    std::vector<uint32> Spells; // primer rango, por orden de ranura (barra del HUD)
+    std::vector<EventWowAbilityKind> SpellKinds; // uno por hechizo de Spells
     // Vehiculo opcional (creature_template con VehicleId): el disfrazado va siempre montado en el asiento 0.
     // Sus hechizos, velocidad y vida son los de la criatura (barra nativa de vehiculo). 0 = a pie.
     uint32 VehicleEntry = 0;
     // Bonificaciones de stats del personaje (eventwow_character_stat), como las de un objeto: se suman a las
     // nativas del contenedor y el motor calcula lo derivado (EventWowStats.h)
     std::vector<std::pair<EventWowStat, int32>> Stats;
+    // Lo que da cada punto de "Atributos" (eventwow_character_attribute), solo con progresion
+    std::vector<std::pair<EventWowStat, int32>> AttributeStats;
     // Armas visibles (item_template, solo el aspecto: ni stats ni habilidad; EventWowWeapons.h). 0 = sin arma.
     // No hay ranura de distancia: el cliente no la dibuja (los arcos van en la mano derecha).
     uint32 WeaponMainHand = 0;
@@ -37,6 +50,7 @@ struct EventWowCharacterInfo
     // Solo pone nombre y dialogo: modelo, escala y armas salen de esta ficha. 0 = no se puede elegir en el mundo.
     uint32 PickCreature = 0;
 
+    // true si es uno de sus hechizos (cualquier rango)
     bool HasSpell(uint32 spellId) const;
 };
 

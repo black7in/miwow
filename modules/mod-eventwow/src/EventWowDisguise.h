@@ -1,6 +1,8 @@
 #ifndef MOD_EVENTWOW_DISGUISE_H
 #define MOD_EVENTWOW_DISGUISE_H
 
+#include "Define.h"
+
 class Player;
 struct EventWowCharacterInfo;
 
@@ -27,8 +29,11 @@ struct EventWowCharacterInfo;
 // Protocolo: MATCH_CHARACTER <id> <nombre> <icono> <hechizo>... | MATCH_CHARACTER 0 (sin disfraz)
 namespace EventWowDisguise
 {
-    // Sustituye el disfraz actual si lo hay
-    void Apply(Player* player, EventWowCharacterInfo const& character);
+    // Sustituye el disfraz actual si lo hay. progression: solo aprende los hechizos fijos (Kind 0); el resto los
+    // aprende EventWowProgress con puntos (ReplaceSpell).
+    void Apply(Player* player, EventWowCharacterInfo const& character, bool progression = false);
+    // Cambia un hechizo temporal del disfraz por otro (rango siguiente). oldSpell 0 = aprender sin quitar.
+    void ReplaceSpell(Player* player, uint32 oldSpell, uint32 newSpell);
     void Remove(Player* player);
 
     // Personaje con el que va disfrazado (nullptr = ninguno)

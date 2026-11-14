@@ -46,6 +46,7 @@ void AddSC_eventwow_game_siege()
     game.MaxPlayers = 5;
     game.MaxPartySize = 5;
     game.InventorySlots = 6;
+    game.MaxLevel = 30;
     game.MapId = 751;
     // Entrada (y reaparicion por defecto) = centro del circulo de heroes. Antes: punto del jugador 1 de WC3
     // (-731.33, -403.33), fuera del circulo.
