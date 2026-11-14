@@ -1,0 +1,136 @@
+# EventWow: Lor'themar Theron (explorador elfo de sangre; ficha 42). Cuerpo a cuerpo / distancia.
+# docs/heroes-habilidades.md. Numeros PROVISIONALES (vida base 6000, mana 5000).
+#
+# Rango de IDs: 9501300-9501399.
+#   300-303 Disparo Arcano   304-307 Torrente Arcano   308-311 Trampa de Escarcha
+#   312-315 Hoja de Quel'Thalas (pasiva)   316-319 su golpe arcano por rango   320-322 Fenix
+#   323 Fuente del Sol (suprema)
+
+# --- Basica 1: disparo instantaneo de dano arcano, sin arma de distancia. Base: Disparo Arcano (49045).
+[[spell]]
+id = 9501300
+base = 49045
+ranks = 4
+name = "Disparo Arcano"
+description = "Un disparo instantáneo que inflige $s1 de daño Arcano."
+cast_time = 0
+range = 35
+cooldown = 5
+cost = [120, 140, 160, 180]
+ap_coefficient = 0.3
+attributes_remove = 0x2          # sin ranura de arma a distancia
+[spell.effect1]
+value = [300, 500, 700, 900]
+
+# --- Basica 2: silencia a los cercanos, los dana y recupera mana. Base: Torrente Arcano (28730).
+[[spell]]
+id = 9501304
+base = 28730
+ranks = 4
+name = "Torrente Arcano"
+description = "Silencia durante $d a los enemigos en un radio de $a1 m, les inflige $s3 de daño Arcano y recupera un $s2% del maná."
+cooldown = 16
+duration = [2, 2, 3, 3]
+cost = 0
+coefficient = 0.2
+[spell.effect1]
+radius = 8
+[spell.effect3]
+type = "SCHOOL_DAMAGE"
+target = "SRC_CASTER"
+target_b = "UNIT_SRC_AREA_ENEMY"
+value = [150, 250, 350, 450]
+radius = 8
+
+# --- Basica 3: zona de hielo a sus pies que ralentiza mucho. Base: el aura de la Trampa de Escarcha (13810).
+[[spell]]
+id = 9501308
+base = 13810
+ranks = 4
+name = "Trampa de Escarcha"
+description = "Cubre de hielo el suelo alrededor de Lor'themar: los enemigos de la zona se mueven un $s1% más lento durante $d."
+range = 0
+cooldown = 16
+duration = [8, 10, 12, 14]
+cost = [150, 170, 190, 210]
+[spell.effect1]
+target = "DEST_CASTER"
+target_b = "UNIT_DEST_AREA_ENEMY"
+value = [-50, -55, -60, -65]
+radius = 10
+[spell.effect2]
+type = "NONE"
+[spell.effect3]
+type = "NONE"
+
+# --- Basica 4 (pasiva): sus golpes cuerpo a cuerpo pueden infligir dano Arcano extra (25 %). Base: Aluvion (12974,
+# "al golpear, dispara").
+[[spell]]
+id = 9501312
+base = 12974
+ranks = 4
+name = "Hoja de Quel'Thalas"
+description = "Los golpes de Lor'themar tienen un $h% de probabilidad de infligir $9501316s1 de daño Arcano adicional (más en cada nivel)."
+icon = "Spell_Arcane_Arcane04"
+attributes_remove = 0x80
+[spell.fields]
+ProcChance = 25
+[spell.effect1]
+trigger = [9501316, 9501317, 9501318, 9501319]
+
+[[spell]]
+id = 9501316
+base = 49045
+ranks = 4
+chain = false
+name = "Hoja de Quel'Thalas"
+description = "Inflige $s1 de daño Arcano."
+cast_time = 0
+range = 10
+speed = 0
+cost = 0
+ap_coefficient = 0.1
+attributes_remove = 0x2
+[spell.effect1]
+value = [80, 140, 200, 260]
+
+# --- Definitiva: fenix guardian que quema a los enemigos. Base: Fenix (36723); fenix propio 9500401 (copia del de
+# Kael'thas sin su IA de jefe, SQL de los heroes).
+[[spell]]
+id = 9501320
+base = 36723
+ranks = 3
+name = "Fénix"
+description = "Invoca un fénix que lucha a tu lado durante $d."
+icon = "Spell_Fire_Burnout"
+cooldown = 45
+duration = 30
+cost = 400
+[spell.effect1]
+value = 1
+misc = 9500401
+misc_b = 61
+trigger = [0, 9509000, 9509001]
+
+# --- Suprema: zona de luz 10 s que sana a los aliados y dana a los enemigos. Base: Consagracion (48819).
+[[spell]]
+id = 9501323
+base = 48819
+name = "Fuente del Sol"
+description = "Invoca el poder de la Fuente del Sol durante $d: $s1 de daño Sagrado cada segundo a los enemigos y $s2 de sanación cada segundo a los aliados cercanos."
+icon = "Spell_Holy_SummonLightwell"
+cooldown = 120
+duration = 10
+cost = 800
+dot_coefficient = 0.05
+[spell.effect1]
+value = 400
+radius = 12
+[spell.effect2]
+type = "PERSISTENT_AREA_AURA"
+aura = "PERIODIC_HEAL"
+target = "DEST_CASTER"
+target_b = "UNIT_DEST_AREA_ALLY"
+value = 300
+period = 1
+radius = 12

@@ -1,0 +1,145 @@
+# EventWow: Cairne Pezuna de Sangre (tauren; ficha 41). Tanque. docs/heroes-habilidades.md
+# Numeros PROVISIONALES (vida base 6000, mana 5000).
+#
+# Rango de IDs: 9501200-9501299.
+#   200-203 Pisoton de guerra   204-207 Ola de choque   208-211 Espiritu de la tierra   212-215 Aura de resistencia
+#   216-218 Reencarnacion (pasiva, spell_eventwow_reincarnation; agotada = 9509010)   219 Furia de la Madre Tierra
+
+# --- Basica 1: aturde a los cercanos y los dana. Base: Pisoton de guerra (20549).
+[[spell]]
+id = 9501200
+base = 20549
+ranks = 4
+name = "Pisotón de guerra"
+description = "Golpea el suelo: $s2 de daño físico y aturde durante $d a los enemigos en un radio de $a1 m."
+power = "mana"
+cast_time = 0
+cooldown = 14
+duration = [1.5, 2, 2.5, 3]
+cost = [150, 170, 190, 210]
+max_targets = 0
+ap_coefficient = 0.1
+[spell.effect1]
+radius = 8
+[spell.effect2]
+type = "SCHOOL_DAMAGE"
+target = "DEST_CASTER"
+target_b = "UNIT_DEST_AREA_ENEMY"
+value = [150, 250, 350, 450]
+radius = 8
+
+# --- Basica 2: dano en cono delante + ralentizar. Base: Ola de choque (46968; su aturdimiento pasa a ralentizar).
+[[spell]]
+id = 9501204
+base = 46968
+ranks = 4
+name = "Ola de choque"
+description = "Una onda de choque inflige $s2 de daño físico a los enemigos delante de Cairne y los ralentiza un $s1% durante $d."
+power = "mana"
+cooldown = 8
+duration = 4
+cost = [150, 180, 210, 240]
+ap_coefficient = 0.2
+[spell.effect1]
+aura = "MOD_DECREASE_SPEED"
+value = -50
+mechanic = "SNARE"
+[spell.effect2]
+value = [250, 400, 550, 700]
+[spell.effect3]
+type = "NONE"
+
+# --- Basica 3: se sana en el tiempo y gana armadura. Base: Rejuvenecimiento (48441) sobre si mismo.
+[[spell]]
+id = 9501208
+base = 48441
+ranks = 4
+name = "Espíritu de la tierra"
+description = "La tierra protege a Cairne durante $d: recupera $o1 de vida y gana $s2 de armadura."
+aura_description = "Recupera $s1 de vida cada $t1 s. Armadura aumentada en $s2."
+icon = "Spell_Nature_EarthElemental_Totem"
+range = 0
+cooldown = 18
+duration = 10
+cost = [200, 230, 260, 290]
+dot_coefficient = 0.05
+[spell.effect1]
+target = "UNIT_CASTER"
+value = [150, 250, 350, 450]
+period = 2
+[spell.effect2]
+type = "APPLY_AURA"
+aura = "MOD_RESISTANCE"
+target = "UNIT_CASTER"
+misc = 1                         # armadura
+value = [500, 900, 1300, 1700]
+
+# --- Basica 4 (pasiva, aura): velocidad de ataque y de movimiento del grupo. Base: pasiva generica (26023).
+[[spell]]
+id = 9501212
+base = 26023
+ranks = 4
+name = "Aura de resistencia"
+description = "Aura: los aliados en un radio de $a1 m atacan un $s1% más rápido y se mueven un $s3% más rápido."
+aura_description = "Velocidad de ataque y de movimiento aumentadas."
+icon = "Spell_Nature_UnyeildingStamina"
+attributes_remove = 0x80
+[spell.effect1]
+type = "APPLY_AREA_AURA_PARTY"
+aura = "MOD_MELEE_HASTE"
+value = [5, 10, 15, 20]
+radius = 30
+[spell.effect3]
+type = "APPLY_AREA_AURA_PARTY"
+aura = "MOD_INCREASE_SPEED"
+value = [4, 6, 8, 10]
+radius = 30
+
+# --- Definitiva (pasiva): al recibir un golpe mortal renace en el sitio con un % de la vida; despues no puede
+# volver a hacerlo durante un tiempo (9509010). El escudo infinito y la logica son de spell_eventwow_reincarnation.
+[[spell]]
+id = 9501216
+base = 26023
+ranks = 3
+name = "Reencarnación"
+description = "Pasiva: al recibir un golpe mortal, Cairne renace al instante con un $s1% de su vida. No puede volver a renacer durante $s2 s."
+icon = "Spell_Nature_Reincarnation"
+script = "spell_eventwow_reincarnation"
+attributes_remove = 0x80
+[spell.effect1]
+type = "APPLY_AURA"
+aura = "SCHOOL_ABSORB"
+target = "UNIT_CASTER"
+misc = 127
+value = [50, 75, 100]            # % de vida al renacer
+[spell.effect2]
+type = "APPLY_AURA"
+aura = "DUMMY"
+target = "UNIT_CASTER"
+value = [180, 150, 120]          # segundos hasta poder renacer otra vez
+[spell.effect3]
+type = "NONE"
+
+# --- Suprema: pisoton gigante. Base: Pisoton de guerra (20549).
+[[spell]]
+id = 9501219
+base = 20549
+name = "Furia de la Madre Tierra"
+description = "La Madre Tierra ruge: $s2 de daño físico y aturde durante $d a los enemigos en un radio de $a1 m."
+icon = "Spell_Nature_Earthquake"
+visual = 11302
+power = "mana"
+cast_time = 0
+cooldown = 90
+duration = 3
+cost = 800
+max_targets = 0
+ap_coefficient = 0.5
+[spell.effect1]
+radius = 20
+[spell.effect2]
+type = "SCHOOL_DAMAGE"
+target = "DEST_CASTER"
+target_b = "UNIT_DEST_AREA_ENEMY"
+value = 3000
+radius = 20

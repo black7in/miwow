@@ -1,0 +1,123 @@
+# EventWow: Vol'jin (cazador de las sombras; ficha 40). Apoyo. docs/heroes-habilidades.md
+# Numeros PROVISIONALES (vida base 6000, mana 5000).
+#
+# Rango de IDs: 9501100-9501199.
+#   100-103 Maleficio   104-107 Serpientes vudu   108-111 Ola de sanacion   112-115 Espiritus loa
+#   116-118 Gran vudu   119 Abrazo de Bwonsamdi (suprema)
+
+# --- Basica 1: convierte a un enemigo en rana (no puede atacar ni lanzar). Base: Maleficio (51514).
+[[spell]]
+id = 9501100
+base = 51514
+ranks = 4
+name = "Maleficio"
+description = "Convierte al enemigo en una rana durante $d: no puede atacar ni lanzar hechizos. El daño no rompe el efecto."
+cast_time = 1
+range = 30
+cooldown = 18
+duration = [2, 3, 4, 5]
+cost = [150, 170, 190, 210]
+
+# --- Basica 2: serpientes guardianas que muerden a los enemigos. Base: Espiritu feral (51533); serpiente propia
+# 9500400 (copia de la de la Trampa de serpientes sin su script, SQL de los heroes).
+[[spell]]
+id = 9501104
+base = 51533
+ranks = 4
+name = "Serpientes vudú"
+description = "Invoca $s1 serpientes que muerden a los enemigos durante $d."
+icon = "Ability_Hunter_SnakeTrap"
+visual = 9311
+cooldown = 20
+duration = 20
+cost = [200, 240, 280, 320]
+[spell.effect1]
+value = [2, 3, 4, 5]
+misc = 9500400
+misc_b = 61
+
+# --- Basica 3: sanacion que salta entre aliados. Base: Sanacion en cadena (55459).
+[[spell]]
+id = 9501108
+base = 55459
+ranks = 4
+name = "Ola de sanación"
+description = "Sana a un aliado $s1 y salta hasta $x1 aliados cercanos."
+cast_time = 1.5
+range = 40
+cooldown = 4
+cost = [250, 300, 350, 400]
+coefficient = 0.6
+[spell.effect1]
+value = [500, 800, 1100, 1400]
+chain = [3, 4, 5, 6]
+
+# --- Basica 4 (pasiva, aura): regeneracion de vida del grupo. Base: pasiva generica (26023).
+[[spell]]
+id = 9501112
+base = 26023
+ranks = 4
+name = "Espíritus loa"
+description = "Aura: los aliados en un radio de $a1 m recuperan $s1 de vida cada 5 s."
+aura_description = "Recupera $s1 de vida cada 5 s."
+icon = "Spell_Nature_Regenerate"
+attributes_remove = 0x80
+[spell.effect1]
+type = "APPLY_AREA_AURA_PARTY"
+aura = "MOD_REGEN"
+value = [30, 60, 90, 120]
+radius = 30
+[spell.effect3]
+type = "NONE"
+
+# --- Definitiva: los aliados cercanos son inmunes al dano. Base: Escudo divino (642), como aura de grupo.
+[[spell]]
+id = 9501116
+base = 642
+ranks = 3
+name = "Gran vudú"
+description = "Los aliados en un radio de $a2 m son inmunes a todo el daño mientras sigan cerca, durante $d."
+aura_description = "Inmune al daño."
+icon = "Spell_Totem_WardOfDraining"
+cooldown = [90, 80, 70]
+duration = [3, 4, 5]
+cost = 400
+mechanic = "NONE"
+[spell.effect1]
+type = "NONE"
+[spell.effect2]
+type = "APPLY_AREA_AURA_PARTY"
+aura = "SCHOOL_IMMUNITY"
+target = "UNIT_CASTER"
+misc = 127
+radius = 20
+[spell.effect3]
+type = "NONE"
+
+# --- Suprema: zona de sombras 8 s: dana a los enemigos y sana a los aliados. Base: Muerte y descomposicion
+# (49938, punto en el suelo), como la de Arthas.
+[[spell]]
+id = 9501119
+base = 49938
+name = "Abrazo de Bwonsamdi"
+description = "Bwonsamdi reclama la zona durante $d: $s1 de daño de las Sombras cada segundo a los enemigos y $s2 de sanación cada segundo a los aliados."
+icon = "Spell_Shadow_DeathScream"
+power = "mana"
+cost = 800
+cooldown = 120
+duration = 8
+range = 35
+dot_coefficient = 0.05
+[spell.effect1]
+aura = "PERIODIC_DAMAGE"
+value = 400
+period = 1
+radius = 12
+[spell.effect2]
+type = "PERSISTENT_AREA_AURA"
+aura = "PERIODIC_HEAL"
+target = "DEST_DYNOBJ_ALLY"
+target_b = "UNIT_DEST_AREA_ALLY"   # DynObjAura::FillTargetMap elige aliados por el objetivo B
+value = 300
+period = 1
+radius = 12

@@ -177,6 +177,7 @@ lista = una por rango):
 | `attributes[_ex..]`, `*_add`, `*_remove` | atributos: poner, anadir o quitar bits |
 | `coefficient`, `dot_coefficient`, `ap_coefficient`, `ap_dot_coefficient` | `spell_bonus_data` (<= 0 = calculo por defecto del core) |
 | `script` | SpellScript del modulo (`spell_script_names`), p. ej. `spell_eventwow_death_coil` (`EventWowHeroSpells.cpp`) |
+| `[spell.fields]` | columnas sueltas de `spell_dbc` por nombre (p. ej. `ProcChance = 25`, `ProcCharges = 0`), escalar o lista por rango |
 | `[spell.effectN]` | `type` (SPELL_EFFECT_*, sin prefijo; NONE lo borra), `aura`, `value` o `min`/`max`, `target`, `target_b`, `radius`, `period`, `chain`, `misc`, `misc_b`, `trigger`, `mechanic` |
 
 Lo que el generador limpia siempre de la base: categoria de reutilizacion, requisitos/exclusiones por aura de otro hechizo, nivel del hechizo (0: sin penalizacion de

@@ -1,0 +1,145 @@
+# EventWow: Archimonde (senor de la Legion; ficha 39). Lanzador / jefe. docs/heroes-habilidades.md
+# Numeros PROVISIONALES (vida base 6000, mana 5000). Bases del Monte Hyjal cuando son sencillas.
+#
+# Rango de IDs: 9501000-9501099.
+#   000-003 Dedo de la muerte   004-007 Rafaga de aire   008-011 Fuego apocaliptico
+#   012-015 Apreton de la Legion (pasiva)   016-019 su maldicion por rango   020-022 Terror de la Legion
+#   023 Profanacion (suprema)
+
+# --- Basica 1: rayo de dano muy alto (reutilizacion larga). Base: Dedo de la muerte (31984).
+[[spell]]
+id = 9501000
+base = 31984
+ranks = 4
+name = "Dedo de la muerte"
+description = "Señala a un enemigo con el dedo de la muerte: $s1 de daño de las Sombras."
+cast_time = 1
+range = 35
+cooldown = 12
+cost = [250, 300, 350, 400]
+coefficient = 1.0
+[spell.effect1]
+value = [700, 1150, 1600, 2050]
+
+# --- Basica 2: lanza por los aires a los enemigos de una zona. Base: Rafaga de aire (32014).
+[[spell]]
+id = 9501004
+base = 32014
+ranks = 4
+name = "Ráfaga de aire"
+description = "Una ráfaga de aire lanza por los aires a los enemigos en un radio de $a1 m de la zona y les inflige $s1 de daño de Naturaleza."
+cast_time = 0
+range = 35
+cooldown = 14
+cost = [200, 240, 280, 320]
+coefficient = 0.3
+[spell.effect1]
+value = [200, 330, 460, 590]
+radius = 8
+[spell.effect2]
+radius = 8
+[spell.effect3]
+type = "NONE"
+
+# --- Basica 3: fuego en el suelo. Base: Fogonazo (42926, punto en el suelo).
+[[spell]]
+id = 9501008
+base = 42926
+ranks = 4
+name = "Fuego apocalíptico"
+description = "Prende el suelo con fuego vil: $s1 de daño de Fuego al instante y $s2 cada segundo durante $d a los enemigos de la zona."
+icon = "Spell_Fire_Fire"
+cast_time = 0
+cooldown = 10
+duration = 8
+cost = [250, 300, 350, 400]
+coefficient = 0.3
+dot_coefficient = 0.04
+[spell.effect1]
+value = [200, 330, 460, 590]
+radius = 8
+[spell.effect2]
+value = [50, 85, 120, 155]
+period = 1
+radius = 8
+
+# --- Basica 4 (pasiva): quien golpea a Archimonde cuerpo a cuerpo recibe una maldicion de sombras. Base: Armadura
+# de Escarcha de PNJ (12556: "al recibir un golpe cuerpo a cuerpo, dispara"), como el Aura de Escarcha de Arthas.
+[[spell]]
+id = 9501012
+base = 12556
+ranks = 4
+name = "Apretón de la Legión"
+description = "Quien golpee a Archimonde cuerpo a cuerpo sufre $9501016o1 de daño de las Sombras durante $9501016d (más en cada nivel)."
+aura_description = "Maldice a quien te golpee."
+icon = "Spell_Shadow_CurseOfAchimonde"
+attributes_remove = 0x80
+[spell.effect1]
+type = "NONE"
+[spell.effect2]
+trigger = [9501016, 9501017, 9501018, 9501019]
+
+[[spell]]
+id = 9501016
+base = 31972
+ranks = 4
+chain = false
+name = "Apretón de la Legión"
+description = "Inflige $o1 de daño de las Sombras durante $d."
+aura_description = "Sufre $s1 de daño de las Sombras cada $t1 s."
+range = 10
+duration = 6
+dot_coefficient = 0.02
+[spell.effect1]
+value = [30, 50, 70, 90]
+period = 2
+
+# --- Definitiva: miedo en un area grande + dano. Base: Miedo de Archimonde (31970).
+[[spell]]
+id = 9501020
+base = 31970
+ranks = 3
+name = "Terror de la Legión"
+description = "Los enemigos en un radio de $a1 m huyen aterrados durante $d y sufren $s2 de daño de las Sombras."
+cast_time = 0
+cooldown = 40
+duration = [3, 4, 5]
+cost = 400
+coefficient = 0.3
+[spell.effect1]
+radius = 15
+[spell.effect2]
+type = "SCHOOL_DAMAGE"
+target = "SRC_CASTER"
+target_b = "UNIT_SRC_AREA_ENEMY"
+value = [500, 800, 1100]
+radius = 15
+
+# --- Suprema: zona enorme que dana mucho y reduce la sanacion de los enemigos. Base: Fogonazo (42926).
+[[spell]]
+id = 9501023
+base = 42926
+name = "Profanación"
+description = "Profana la tierra: $s1 de daño de Fuego al instante y $s2 cada segundo durante $d; los enemigos de la zona reciben un 50% menos de sanación."
+icon = "Spell_Fire_FelFlameRing"
+cast_time = 0
+range = 35
+cooldown = 120
+duration = 10
+cost = 800
+coefficient = 0.5
+dot_coefficient = 0.05
+[spell.effect1]
+value = 1500
+radius = 15
+[spell.effect2]
+value = 400
+period = 1
+radius = 15
+[spell.effect3]
+type = "PERSISTENT_AREA_AURA"
+aura = "MOD_HEALING_PCT"
+target = "DEST_DYNOBJ_ENEMY"
+misc = 127
+value = -50
+radius = 15

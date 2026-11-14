@@ -400,6 +400,13 @@ Datos clave de la API Glue:
   `EventWowAbilities.lua`: rango "n/m", gris sin aprender, "+" (no seguros), boton Atributos, barra de XP, nombre
   con nivel/puntos; lanza por NOMBRE (rango mas alto aprendido). `EventWow.lua`: barra nativa oculta con disfraz
   (tambien en modo dev), pet bar mas arriba (GAP 40). Comando `.eventwow hero <id> [nivel]` / `hero level <n>`.
+  **Habilidades de los 14 heroes restantes (2026-11-14, SIN COMPILAR NI PROBAR; el usuario lo mandara a probar a
+  otros)**: `docs/heroes-habilidades.md` (diseno, IDs, cambios al implementar). 14 fichas TOML + `comun.toml`
+  (Poder de invocacion 9509000-001, Reencarnacion agotada 9509010), SQL `_08` (habilidades/Kind de las fichas 30 y
+  32-44, atributos por papel, criaturas 9500400 serpiente / 9500401 fenix). `EventWowHeroSpells.cpp`:
+  `spell_eventwow_black_arrow`, `spell_eventwow_reincarnation`; solo las invocaciones controlables sustituyen a la
+  anterior. spellgen: clave `[spell.fields]` (columnas sueltas, p. ej. `ProcChance`). Todo aplicado a mano en la BD
+  de desarrollo y parche regenerado.
 - Mapas propios desde Warcraft 3 (ver `docs/mapas.md`). Decision del usuario: los mapas los disena el (y un amigo) en
   el World Editor de WC3 1.26 (no usa Noggit) y se convierten. Diseno PROPIO: no se replican mapas de terceros
   (p. ej. X Hero Siege); el usuario y su amigo hicieron uno inspirado en el genero.

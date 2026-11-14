@@ -1,0 +1,44 @@
+# EventWow: hechizos compartidos por varios heroes (docs/heroes-habilidades.md). No se aprenden.
+# Generar el SQL:  py -I tools/spellgen/spellgen.py build   (despues Build-Patch para el cliente)
+#
+# Rango de IDs de esta ficha: 9509000-9509099.
+
+# Mejora de las invocaciones por rango (la reciben los invocados por el `trigger` del efecto de invocacion,
+# EventWowHeroSpells.cpp): +dano y +vida. Rango 1 = definitiva rango 2, rango 2 = definitiva rango 3.
+[[spell]]
+id = 9509000
+base = 12556
+ranks = 2
+chain = false
+name = "Poder de invocación"
+description = "Daño y vida aumentados un $s1%."
+aura_description = "Daño y vida aumentados un $s1%."
+icon = "Spell_Shadow_AnimateDead"
+attributes_remove = 0x80
+[spell.effect1]
+aura = "MOD_DAMAGE_PERCENT_DONE"
+misc = 127
+value = [40, 80]
+[spell.effect2]
+aura = "MOD_INCREASE_HEALTH_PERCENT"
+value = [40, 80]
+trigger = 0
+
+# Reencarnacion de Cairne agotada: marca el tiempo de reutilizacion (el script le pone la duracion del rango).
+[[spell]]
+id = 9509010
+base = 26023
+name = "Reencarnación agotada"
+description = "Ha renacido hace poco: no puede volver a hacerlo todavía."
+aura_description = "No puede reencarnarse todavía."
+icon = "Spell_Nature_Reincarnation"
+visual = 344                     # el de Reencarnacion (21169)
+duration = 60                    # la pone el script (spell_eventwow_reincarnation)
+attributes_remove = 0x1C0        # ni pasiva ni oculta: un perjuicio visible
+[spell.effect1]
+type = "APPLY_AURA"
+aura = "DUMMY"
+target = "UNIT_CASTER"
+value = 0
+[spell.effect3]
+type = "NONE"

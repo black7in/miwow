@@ -380,6 +380,12 @@ def build_rank(spells, spec, rank, ranks, ctx):
     for n in (1, 2, 3):
         if f"effect{n}" in spec:
             apply_effect(row, n, spec[f"effect{n}"], rank, ranks, ctx)
+
+    # Columnas sueltas de spell_dbc por nombre (p. ej. ProcChance), escalar o lista por rango
+    for column, value in spec.get("fields", {}).items():
+        if column not in row:
+            raise SpellError(f"{where}.fields: la columna '{column}' no existe en spell_dbc")
+        row[column] = per_rank(value, ranks, f"{where}.fields.{column}")[rank]
     return row
 
 

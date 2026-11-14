@@ -1,0 +1,177 @@
+# EventWow: Rey Jokkum (gigante de escarcha; ficha 44). Tanque. docs/heroes-habilidades.md
+# Numeros PROVISIONALES (vida base 6000, mana 5000).
+#
+# Rango de IDs: 9501500-9501599.
+#   500-503 Lanzar roca   504-507 Tajo de escarcha   508-511 Rugido glacial   512-515 Piel de gigante
+#   516-518 Avalancha (canalizada)   519-521 su impacto por rango   522 Ira de las Cumbres (suprema)
+#   523 Gigantismo (lo da la suprema)
+
+# --- Basica 1: roca a distancia que dana y aturde. Base: Lanzar roca (50843).
+[[spell]]
+id = 9501500
+base = 50843
+ranks = 4
+name = "Lanzar roca"
+description = "Lanza una roca enorme: $s1 de daño físico y aturde al objetivo durante $d."
+power = "mana"
+cast_time = 1
+range = 30
+cooldown = 10
+duration = 1
+cost = [150, 170, 190, 210]
+ap_coefficient = 0.3
+[spell.effect1]
+value = [300, 500, 700, 900]
+[spell.effect2]
+type = "APPLY_AURA"
+aura = "MOD_STUN"
+target = "UNIT_TARGET_ENEMY"
+mechanic = "STUN"
+
+# --- Basica 2: tajo de escarcha que alcanza a varios y ralentiza. Base: Rajar (47520), al instante.
+[[spell]]
+id = 9501504
+base = 47520
+ranks = 4
+name = "Tajo de escarcha"
+description = "Un tajo helado: el daño de arma más $s1 de daño de Escarcha al objetivo y hasta $x1 enemigos, ralentizados un $s2% durante $d."
+icon = "Spell_Frost_FrostBlast"
+school = "frost"
+power = "mana"
+cooldown = 7
+duration = 4
+cost = [120, 140, 160, 180]
+attributes_remove = 0x4
+[spell.effect1]
+value = [150, 250, 350, 450]
+chain = [2, 3, 3, 4]
+[spell.effect2]
+type = "APPLY_AURA"
+aura = "MOD_DECREASE_SPEED"
+target = "UNIT_TARGET_ENEMY"
+value = -40
+chain = [2, 3, 3, 4]
+
+# --- Basica 3: provoca a los cercanos y gana armadura. Base: Grito desafiante (1161).
+[[spell]]
+id = 9501508
+base = 1161
+ranks = 4
+name = "Rugido glacial"
+description = "Un rugido que obliga a los enemigos en un radio de $a1 m a atacar a Jokkum y le da $s2 de armadura durante $d."
+icon = "Spell_Frost_ArcticWinds"
+power = "mana"
+cost = 150
+cooldown = 18
+duration = [3, 4, 5, 6]
+[spell.effect1]
+radius = 12
+[spell.effect2]
+type = "APPLY_AURA"
+aura = "MOD_RESISTANCE"
+target = "UNIT_CASTER"
+misc = 1
+value = [500, 900, 1300, 1700]
+
+# --- Basica 4 (pasiva): mas vida y menos dano recibido. Base: pasiva generica (26023). Vida fija (no %): la vida
+# del heroe es la base de la ficha + lo que suma el motor (EventWowDisguise).
+[[spell]]
+id = 9501512
+base = 26023
+ranks = 4
+name = "Piel de gigante"
+description = "Jokkum gana $s1 de vida máxima y recibe un $s3% menos de daño."
+icon = "Spell_Frost_Wisp"
+attributes_remove = 0x80
+[spell.effect1]
+type = "APPLY_AURA"
+aura = "MOD_INCREASE_HEALTH"
+target = "UNIT_CASTER"
+value = [300, 600, 900, 1200]
+[spell.effect3]
+type = "APPLY_AURA"
+aura = "MOD_DAMAGE_PERCENT_TAKEN"
+target = "UNIT_CASTER"
+misc = 127
+value = [-3, -6, -9, -12]
+
+# --- Definitiva: zona canalizada de rocas y hielo. Base: Ventisca (42940) -> impacto del rango cada segundo.
+[[spell]]
+id = 9501516
+base = 42940
+ranks = 3
+name = "Avalancha"
+description = "Canaliza una avalancha sobre la zona: $9501519s1 de daño de Escarcha cada segundo a los enemigos durante $d (más en cada nivel)."
+icon = "Spell_Frost_Glacier"
+range = 35
+duration = 6
+cooldown = 30
+cost = [400, 450, 500]
+[spell.effect1]
+radius = 10
+[spell.effect2]
+trigger = [9501519, 9501520, 9501521]
+
+[[spell]]
+id = 9501519
+base = 42938
+ranks = 3
+chain = false
+name = "Avalancha"
+description = "Inflige $s1 de daño de Escarcha a los enemigos de la zona."
+ap_coefficient = 0.1
+[spell.effect1]
+value = [250, 400, 550]
+radius = 10
+
+# --- Suprema: terremoto: dana y aturde alrededor; Jokkum crece y pega mas fuerte 15 s (9501523). Base: Pisoton
+# de guerra (20549).
+[[spell]]
+id = 9501522
+base = 20549
+name = "Ira de las Cumbres"
+description = "Jokkum hace temblar la montaña: $s2 de daño físico y aturde durante $d a los enemigos en un radio de $a1 m. Después crece y hace un $9501523s2% más de daño durante $9501523d."
+icon = "Spell_Nature_Earthquake"
+visual = 11302
+power = "mana"
+cast_time = 0
+cooldown = 90
+duration = 3
+cost = 800
+max_targets = 0
+ap_coefficient = 0.5
+[spell.effect1]
+radius = 20
+[spell.effect2]
+type = "SCHOOL_DAMAGE"
+target = "DEST_CASTER"
+target_b = "UNIT_DEST_AREA_ENEMY"
+value = 3000
+radius = 20
+[spell.effect3]
+type = "TRIGGER_SPELL"
+target = "UNIT_CASTER"
+trigger = 9501523
+
+[[spell]]
+id = 9501523
+base = 2825
+name = "Gigantismo"
+description = "Tamaño aumentado un $s1% y daño un $s2% durante $d."
+aura_description = "Tamaño aumentado un $s1% y daño un $s2%."
+duration = 15
+cooldown = 0
+cost = 0
+[spell.effect1]
+type = "APPLY_AURA"
+aura = "MOD_SCALE"
+target = "UNIT_CASTER"
+value = 50
+[spell.effect2]
+type = "APPLY_AURA"
+aura = "MOD_DAMAGE_PERCENT_DONE"
+target = "UNIT_CASTER"
+misc = 127
+value = 30
+[spell.effect3]
+type = "NONE"

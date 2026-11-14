@@ -1,0 +1,138 @@
+# EventWow: Gul'dan (brujo; ficha 38). Lanzador. docs/heroes-habilidades.md
+# Numeros PROVISIONALES (vida base 6000, mana 5000).
+#
+# Rango de IDs: 9500900-9500999.
+#   900-903 Descarga de las Sombras   904-907 Drenar vida   908-911 Lluvia de Fuego (canalizada)
+#   912-915 Lluvia de Fuego: impacto por rango   916-919 Pacto demoniaco   920-922 Invocar guardia vil
+#   923 Inferno (suprema)   924 su impacto
+
+# --- Basica 1: dano alto con lanzamiento. Base: Descarga de las Sombras (47809).
+[[spell]]
+id = 9500900
+base = 47809
+ranks = 4
+name = "Descarga de las Sombras"
+description = "Lanza una descarga de Sombras que inflige $s1 de daño de las Sombras."
+cast_time = 2
+cost = [150, 180, 210, 240]
+coefficient = 0.8
+[spell.effect1]
+value = [450, 700, 950, 1200]
+
+# --- Basica 2: canalizado, dana y cura lo mismo. Base: Drenar vida (47857).
+[[spell]]
+id = 9500904
+base = 47857
+ranks = 4
+name = "Drenar vida"
+description = "Canaliza: absorbe $s1 de vida del objetivo cada segundo durante $d y sana a Gul'dan esa cantidad."
+duration = 5
+cooldown = 10
+cost = [200, 240, 280, 320]
+dot_coefficient = 0.1
+[spell.effect1]
+value = [100, 160, 220, 280]
+period = 1
+
+# --- Basica 3: zona canalizada de fuego. Base: Lluvia de Fuego (47820); cada 2 s lanza el impacto del rango.
+[[spell]]
+id = 9500908
+base = 47820
+ranks = 4
+name = "Lluvia de Fuego"
+description = "Canaliza una lluvia de fuego sobre la zona: $9500912s1 de daño de Fuego cada 2 s a los enemigos durante $d (más en cada nivel)."
+range = 35
+duration = 6
+cooldown = 12
+cost = [300, 350, 400, 450]
+[spell.effect1]
+radius = 8
+[spell.effect2]
+trigger = [9500912, 9500913, 9500914, 9500915]
+
+[[spell]]
+id = 9500912
+base = 47818
+ranks = 4
+chain = false
+name = "Lluvia de Fuego"
+description = "Inflige $s1 de daño de Fuego a los enemigos de la zona."
+coefficient = 0.15
+[spell.effect1]
+value = [180, 290, 400, 510]
+radius = 8
+
+# --- Basica 4 (pasiva, aura): +poder con hechizos del grupo. Base: pasiva generica (26023).
+[[spell]]
+id = 9500916
+base = 26023
+ranks = 4
+name = "Pacto demoníaco"
+description = "Aura: los aliados en un radio de $a1 m ganan $s1 de poder con hechizos."
+aura_description = "Poder con hechizos aumentado en $s1."
+icon = "Spell_Shadow_DemonicPact"
+attributes_remove = 0x80
+[spell.effect1]
+type = "APPLY_AREA_AURA_PARTY"
+aura = "MOD_DAMAGE_DONE"
+misc = 126                       # todas las escuelas magicas
+value = [40, 80, 120, 160]
+radius = 30
+[spell.effect3]
+type = "APPLY_AREA_AURA_PARTY"
+aura = "MOD_HEALING_DONE"
+misc = 126
+value = [40, 80, 120, 160]
+radius = 30
+
+# --- Definitiva: guardia vil CONTROLABLE y permanente (hasta que muere; invocar otro sustituye al anterior).
+# Base: Espiritu feral (51533) con el aspecto de Invocar guardia vil (30146). Guardia vil 17252.
+[[spell]]
+id = 9500920
+base = 51533
+ranks = 3
+name = "Invocar guardia vil"
+description = "Invoca a un guardia vil que obedece tus órdenes hasta que muere. Invocar otro sustituye al anterior."
+icon = "Spell_Shadow_SummonFelGuard"
+visual = 8360
+cast_time = 1.5
+cooldown = 30
+duration = -1
+cost = 400
+[spell.effect1]
+value = 1
+misc = 17252
+misc_b = 1561
+trigger = [0, 9509000, 9509001]
+
+# --- Suprema: cae un infernal: aturde y dana en el punto; el infernal lucha 30 s. Base: Inferno (1122); su
+# impacto (22703) pasa a 9500924.
+[[spell]]
+id = 9500923
+base = 1122
+name = "Inferno"
+description = "Un infernal cae del cielo: $9500924s1 de daño de Fuego y aturde $9500924d a los enemigos de la zona. Luego lucha para Gul'dan durante $d."
+cast_time = 1
+range = 35
+cooldown = 120
+duration = 30
+cost = 800
+[spell.effect1]
+value = 1
+misc_b = 61                      # guardian: no ocupa la mascota (el guardia vil)
+target = "DEST_DEST"
+[spell.effect2]
+trigger = 9500924
+
+[[spell]]
+id = 9500924
+base = 22703
+name = "Inferno"
+description = "Inflige $s1 de daño de Fuego y aturde."
+duration = 2
+coefficient = 0.5
+[spell.effect1]
+value = 2500
+radius = 10
+[spell.effect2]
+radius = 10
