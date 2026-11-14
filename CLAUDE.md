@@ -364,6 +364,11 @@ Datos clave de la API Glue:
   guardianes no controlables: SummonProperties 61). En modo partida la barra/retrato de mascota no se muestran (anadirlos
   si un heroe invoca). Pasiva: la base llevaba DO_NOT_DISPLAY (0x80), quitado.
   Enemigos para probar: `.dev on` + `/eventwow` (chat nativo) + `.npc add temp 28104` (Enraged Skeleton 80) / 31144 (muneco).
+  **DONDE QUEDAMOS (2026-11-14)**: heroes del Asedio = jefes/personajes de WoW (Arthas, Rey Exanime, Thrall,
+  Sylvanas...). Lista de modelos en `docs/heroes-modelos.md` (displays de la BD + arma de cada PNJ). El usuario los esta
+  probando con `.morph` y pasara SU LISTA de heroes con el modelo elegido; despues: definir habilidades de cada uno
+  (`docs/heroes.md`: 3 basicas x 4 + definitiva x 3 + atributos; fichas con spellgen) e investigar armas visibles sin
+  equipar (las armas no son parte del modelo). Despues: base de niveles (paso 1 de `docs/heroes.md`, requiere compilar).
 - Mapas propios desde Warcraft 3 (ver `docs/mapas.md`). Decision del usuario: los mapas los disena el (y un amigo) en
   el World Editor de WC3 1.26 (no usa Noggit) y se convierten. Diseno PROPIO: no se replican mapas de terceros
   (p. ej. X Hero Siege); el usuario y su amigo hicieron uno inspirado en el genero.
