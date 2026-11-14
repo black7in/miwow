@@ -2,6 +2,7 @@
 #include "Chat.h"
 #include "CommandScript.h"
 #include "DataMap.h"
+#include "ItemTemplate.h"
 #include "Player.h"
 #include "StringFormat.h"
 #include <array>
@@ -129,6 +130,36 @@ std::optional<EventWowStat> EventWowStats::FromKey(std::string_view key)
             return EventWowStat(i);
 
     return std::nullopt;
+}
+
+std::optional<EventWowStat> EventWowStats::FromItemMod(uint32 itemMod)
+{
+    switch (itemMod)
+    {
+        case ITEM_MOD_MANA:                    return EventWowStat::Mana;
+        case ITEM_MOD_HEALTH:                  return EventWowStat::Health;
+        case ITEM_MOD_AGILITY:                 return EventWowStat::Agility;
+        case ITEM_MOD_STRENGTH:                return EventWowStat::Strength;
+        case ITEM_MOD_INTELLECT:               return EventWowStat::Intellect;
+        case ITEM_MOD_SPIRIT:                  return EventWowStat::Spirit;
+        case ITEM_MOD_STAMINA:                 return EventWowStat::Stamina;
+        case ITEM_MOD_DODGE_RATING:            return EventWowStat::DodgeRating;
+        case ITEM_MOD_PARRY_RATING:            return EventWowStat::ParryRating;
+        case ITEM_MOD_BLOCK_RATING:            return EventWowStat::BlockRating;
+        case ITEM_MOD_HIT_RATING:              return EventWowStat::HitRating;
+        case ITEM_MOD_CRIT_RATING:             return EventWowStat::CritRating;
+        case ITEM_MOD_RESILIENCE_RATING:       return EventWowStat::ResilienceRating;
+        case ITEM_MOD_HASTE_RATING:            return EventWowStat::HasteRating;
+        case ITEM_MOD_EXPERTISE_RATING:        return EventWowStat::ExpertiseRating;
+        case ITEM_MOD_ATTACK_POWER:            return EventWowStat::AttackPower;
+        case ITEM_MOD_RANGED_ATTACK_POWER:     return EventWowStat::RangedAttackPower;
+        case ITEM_MOD_MANA_REGENERATION:       return EventWowStat::ManaRegen;
+        case ITEM_MOD_ARMOR_PENETRATION_RATING: return EventWowStat::ArmorPenRating;
+        case ITEM_MOD_SPELL_POWER:             return EventWowStat::SpellPower;
+        case ITEM_MOD_HEALTH_REGEN:            return EventWowStat::HealthRegen;
+        case ITEM_MOD_SPELL_PENETRATION:       return EventWowStat::SpellPenetration;
+        default:                               return std::nullopt;
+    }
 }
 
 void EventWowStats::Add(Player* player, EventWowStat stat, int32 amount)

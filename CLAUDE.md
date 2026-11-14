@@ -242,7 +242,7 @@ Datos clave de la API Glue:
        Arregla tambien los iconos de `eventwow_character` (`'\I'` en MySQL pierde la barra: escribir `\\`).
      - Juego `test_shop` (`EventWowGameTestShop`, 180 s, Piromano): 200 oro al empezar e invoca al vendedor junto al inicio.
   6. Inventario de partida + HUD inferior (compilado y probado por el usuario 2026-11-13: la interfaz se ve "decente pero
-     mejorable"; SIN COMMIT hasta resolver lo pendiente). PENDIENTE de la prueba:
+     mejorable"; COMMIT INCOMPLETO a peticion del usuario: se termina en otro commit). PENDIENTE de la prueba:
      - La pocion (33447) no se puede usar: falta el mensaje de error exacto. Sospechas: vida al maximo (las pociones de
        sanacion no se usan con vida llena), o "Accion bloqueada" por llamar a `UseContainerItem` desde el boton (pasar a
        botones seguros), o el filtro `OnSpellCheckCast` del disfraz.
@@ -332,7 +332,7 @@ Datos clave de la API Glue:
   `Sc_Wall_01.m2.vmo` en `data\vmaps` (el extractor de AC no lee nuestro parche-carpeta). Validado: `.vmo` identico al
   oficial (probado con SC_Wall_01_Cap), nombres de tile como los oficiales, linea de vision simulada bloqueada por muros.
   Despues: funcion de cada region con el amigo (renombrar en `regionNames`), minijuego de oleadas.
-  Pendiente tambien: paso 6 (inventario + HUD), SIN COMMIT, ver arriba.
+  Pendiente tambien: completar el paso 6 (inventario + HUD; commit incompleto), ver arriba.
 - Mapas propios desde Warcraft 3 (ver `docs/mapas.md`). Decision del usuario: los mapas los disena el (y un amigo) en
   el World Editor de WC3 1.26 (no usa Noggit) y se convierten. Diseno PROPIO: no se replican mapas de terceros
   (p. ej. X Hero Siege); el usuario y su amigo hicieron uno inspirado en el genero.
@@ -347,12 +347,11 @@ Datos clave de la API Glue:
   - 751 `EventWowAsedio` (`Maps/Warcraft/Mi_Mapa_XHero.w3x`, tileset Corona de Hielo, 96x224 casillas -> 2x2 ADT, juego
     `test_siege_map`, inicio = punto del jugador 1). Probado por el usuario: estructura igual a su mapa. Pero los muros
     (nivel 4) parecian relieve de tierra blanca ("es una ciudad, las divisiones deberian ser muros"): anadido
-    `wallLayer: 4` (caras verticales + texturas `wallTop` IC_Vrykul_PaverRubbleB / `wallFace` IG_DarkRockA), SIN PROBAR.
+    `wallLayer: 4` (caras verticales + texturas `wallTop` IC_Vrykul_PaverRubbleB / `wallFace` IG_DarkRockA) y despues
+    modelos de muro (ver "Mapa del asedio" arriba).
     48 regiones renombradas por POSICION en `maps.json` `regionNames` (plano: `tools/mapgen/_work/regiones_751.png`,
     regenerable); su funcion real (oleadas, teletransportes...) la sabe el amigo.
-  - SIN COMMIT (no probado del todo): mapgen.py (wallLayer, rampas exactas, borde interior, agua, texturas I,
-    regionNames), wc3.py (unidades/decoracion opcionales), maps.json, mapa 751 + SQL `_11`, `test_siege_map` en
-    EventWowGameTest.cpp (mezclado con el paso 6 en ese archivo: separar al commitear), docs/mapas.md.
+  - Mapa 751 completo (muros, zona, minimapa, vmaps): COMMIT `e3cea56`.
   - mmaps 750/751 GENERADOS (2026-11-13; herramientas compiladas por el usuario con `TOOLS_BUILD`): desde `data\`,
     `..\mmaps_generator.exe --config ..\mmaps-config.yaml <id> < nul` (al final espera una tecla). Comprobado leyendo
     los .mmtile: las zonas comunicadas andando en el navmesh = las 16 de WC3. Repetir tras cada cambio del mapa.

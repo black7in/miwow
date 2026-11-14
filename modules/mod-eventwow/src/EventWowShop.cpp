@@ -10,40 +10,6 @@
 #include <algorithm>
 #include <optional>
 
-namespace
-{
-    // Stat de item_template -> EventWowStat (las mismas que aplica Player::_ApplyItemBonuses)
-    std::optional<EventWowStat> FromItemMod(uint32 type)
-    {
-        switch (type)
-        {
-            case ITEM_MOD_MANA:                    return EventWowStat::Mana;
-            case ITEM_MOD_HEALTH:                  return EventWowStat::Health;
-            case ITEM_MOD_AGILITY:                 return EventWowStat::Agility;
-            case ITEM_MOD_STRENGTH:                return EventWowStat::Strength;
-            case ITEM_MOD_INTELLECT:               return EventWowStat::Intellect;
-            case ITEM_MOD_SPIRIT:                  return EventWowStat::Spirit;
-            case ITEM_MOD_STAMINA:                 return EventWowStat::Stamina;
-            case ITEM_MOD_DODGE_RATING:            return EventWowStat::DodgeRating;
-            case ITEM_MOD_PARRY_RATING:            return EventWowStat::ParryRating;
-            case ITEM_MOD_BLOCK_RATING:            return EventWowStat::BlockRating;
-            case ITEM_MOD_HIT_RATING:              return EventWowStat::HitRating;
-            case ITEM_MOD_CRIT_RATING:             return EventWowStat::CritRating;
-            case ITEM_MOD_RESILIENCE_RATING:       return EventWowStat::ResilienceRating;
-            case ITEM_MOD_HASTE_RATING:            return EventWowStat::HasteRating;
-            case ITEM_MOD_EXPERTISE_RATING:        return EventWowStat::ExpertiseRating;
-            case ITEM_MOD_ATTACK_POWER:            return EventWowStat::AttackPower;
-            case ITEM_MOD_RANGED_ATTACK_POWER:     return EventWowStat::RangedAttackPower;
-            case ITEM_MOD_MANA_REGENERATION:       return EventWowStat::ManaRegen;
-            case ITEM_MOD_ARMOR_PENETRATION_RATING: return EventWowStat::ArmorPenRating;
-            case ITEM_MOD_SPELL_POWER:             return EventWowStat::SpellPower;
-            case ITEM_MOD_HEALTH_REGEN:            return EventWowStat::HealthRegen;
-            case ITEM_MOD_SPELL_PENETRATION:       return EventWowStat::SpellPenetration;
-            default:                               return std::nullopt;
-        }
-    }
-}
-
 EventWowShop& EventWowShop::Instance()
 {
     static EventWowShop instance;
@@ -103,7 +69,7 @@ public:
 
         int32 const amount = std::max<int32>(1, count);
         for (uint32 i = 0; i < proto->StatsCount && i < MAX_ITEM_PROTO_STATS; ++i)
-            if (std::optional<EventWowStat> stat = FromItemMod(proto->ItemStat[i].ItemStatType))
+            if (std::optional<EventWowStat> stat = EventWowStats::FromItemMod(proto->ItemStat[i].ItemStatType))
                 EventWowStats::Add(player, *stat, proto->ItemStat[i].ItemStatValue * amount);
 
         if (proto->Armor)

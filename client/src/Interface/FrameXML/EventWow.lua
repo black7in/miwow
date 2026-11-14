@@ -77,8 +77,10 @@ EVENTWOW_MATCH_VISIBLE_FRAMES = {
 
 -- Funciones globales (llamadas desde Bindings.xml / micro menu) que no hacen nada en el lobby ni en partida
 EVENTWOW_LOBBY_BLOCKED_FUNCTIONS = {
-	-- Ventanas
+	-- Ventanas (las bolsas nativas nunca: el inventario de partida es EventWowInventory.lua; OpenBackpack lo
+	-- llama la ventana del vendedor)
 	"ToggleBackpack",
+	"OpenBackpack",
 	"OpenAllBags",
 	"ToggleKeyRing",
 	"ToggleBag",
@@ -199,33 +201,13 @@ local function EventWow_IsVehicleAction(name, id)
 		and type(id) == "number" and id <= VEHICLE_MAX_ACTIONBUTTONS;
 end
 
--- Bolsas en partida si el juego usa inventario (GAMES: tienda con consumibles, equipo...)
-EVENTWOW_INVENTORY_FUNCTIONS = {
-	ToggleBackpack = true,
-	OpenAllBags = true,
-	ToggleBag = true,
-};
-
-local function EventWow_IsInventoryAction(name)
-	if ( not EVENTWOW_INVENTORY_FUNCTIONS[name] or EventWow_UI.mode ~= "match" or not EventWow_Match ) then
-		return false;
-	end
-	for _, game in ipairs(EventWow_Protocol.games) do
-		if ( game.id == EventWow_Match.gameId ) then
-			return game.inventory;
-		end
-	end
-	return false;
-end
-
 local function EventWow_WrapBlockedFunctions()
 	for _, name in ipairs(EVENTWOW_LOBBY_BLOCKED_FUNCTIONS) do
 		local original = _G[name];
 		if ( original ) then
 			local functionName = name;
 			_G[name] = function(...)
-				if ( EventWow_IsRestricted() and not EventWow_IsVehicleAction(functionName, ...)
-					and not EventWow_IsInventoryAction(functionName) ) then
+				if ( EventWow_IsRestricted() and not EventWow_IsVehicleAction(functionName, ...) ) then
 					return;
 				end
 				return original(...);

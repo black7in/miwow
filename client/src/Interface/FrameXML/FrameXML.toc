@@ -154,5 +154,7 @@ EventWowSocial.lua
 EventWowPanel.lua
 EventWowMatch.lua
 EventWowAbilities.lua
+EventWowStats.lua
+EventWowInventory.lua
 EventWowMatchFound.lua
 EventWow.lua

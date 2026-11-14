@@ -207,6 +207,27 @@ local function EventWow_LeaveMatch()
 	EventWowMatchBigTextFrame:SetScript("OnUpdate", nil);
 	EventWow_HideBigText();
 	EventWow_SetMode("lobby");
+	EventWow_FireListeners("MATCH");
+end
+
+-- Juego de la partida actual (catalogo GAMES) o nil
+function EventWowMatch_GetGame()
+	local id = EventWow_Match.gameId;
+	if ( not id ) then
+		return nil;
+	end
+	for _, game in ipairs(EventWow_Protocol.games) do
+		if ( game.id == id ) then
+			return game;
+		end
+	end
+	return nil;
+end
+
+-- En partida con el mundo visible (no en la carga)
+function EventWowMatch_IsActive()
+	local state = EventWow_Match.state;
+	return state ~= nil and state ~= "LOADING";
 end
 
 -- MATCH_STATE NONE | MATCH_STATE <estado> <id juego> <segundos>
@@ -241,6 +262,9 @@ EventWow_RegisterHandler("MATCH_STATE", function(fields)
 
 	EventWow_SetMode("match");
 	EventWowMatchHud:Show();
+	if ( previous ~= state ) then
+		EventWow_FireListeners("MATCH");
+	end
 	if ( state == "RUNNING" and previous == "COUNTDOWN" ) then
 		EventWow_ShowBigText(EVENTWOW_STR_MATCH_GO, nil, 0.2, 1, 0.2);
 		-- Se oculta solo a los 1.5 s (salvo que llegue otro texto antes)

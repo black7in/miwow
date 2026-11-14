@@ -8,7 +8,7 @@
 
 EVENTWOW_PROTOCOL = {
 	PREFIX = "EWOW",
-	VERSION = 5,
+	VERSION = 6,
 	-- 255 (limite del core) - "EWOW\t" - flag, con margen
 	MAX_CHUNK = 240,
 	DEBUG = true,
@@ -49,7 +49,7 @@ EventWow_Protocol = {
 	helloSent = false,
 	connected = false,
 	isGM = false,
-	-- Catalogo recibido (GAMES): { id, icon, minPlayers, maxPlayers, name, description, playable, maxPartySize, inventory }
+	-- Catalogo recibido (GAMES): { id, icon, minPlayers, maxPlayers, name, description, playable, maxPartySize, inventorySlots }
 	games = {},
 };
 
@@ -64,7 +64,8 @@ function EventWow_RegisterHandler(op, func)
 	EventWow_Protocol.handlers[op] = func;
 end
 
--- Avisos internos del cliente (varios por evento): "CONNECTED", "GAMES"
+-- Avisos internos del cliente (varios por evento): "CONNECTED", "GAMES", "MATCH" (entra/sale/cambia de estado),
+-- "CHARACTER" (disfraz), "DEV_MODE"
 function EventWow_RegisterListener(event, func)
 	local list = EventWow_Protocol.listeners[event];
 	if ( not list ) then
@@ -184,7 +185,7 @@ EventWow_RegisterHandler("ERROR", function(fields)
 	UIErrorsFrame:AddMessage(text, 1, 0.2, 0.2, 1.0);
 end);
 
--- GAMES <n> (<id> <icono> <min> <max> <nombre> <descripcion> <jugable 0/1> <grupo max> <bolsas 0/1>) x n
+-- GAMES <n> (<id> <icono> <min> <max> <nombre> <descripcion> <jugable 0/1> <grupo max> <casillas>) x n
 EventWow_RegisterHandler("GAMES", function(fields)
 	local count = tonumber(fields[1]) or 0;
 	local games = {};
@@ -199,7 +200,7 @@ EventWow_RegisterHandler("GAMES", function(fields)
 			description = fields[base + 6],
 			playable = fields[base + 7] == "1",
 			maxPartySize = tonumber(fields[base + 8]) or 1,
-			inventory = fields[base + 9] == "1",
+			inventorySlots = tonumber(fields[base + 9]) or 0,
 		});
 	end
 	EventWow_Protocol.games = games;

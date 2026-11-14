@@ -1,6 +1,7 @@
 #include "EventWowGames.h"
 #include "DBCStores.h"
 #include "EventWowConfig.h"
+#include "EventWowInventory.h"
 #include "EventWowProtocol.h"
 #include "Group.h"
 #include "Log.h"
@@ -38,6 +39,7 @@ void EventWowGames::Validate()
     for (EventWowGameInfo& game : _games)
     {
         game.MaxPartySize = std::clamp<uint8>(game.MaxPartySize, 1, std::max<uint8>(1, std::min<uint8>(game.MaxPlayers, MAXGROUPSIZE)));
+        game.InventorySlots = std::min(game.InventorySlots, EventWowInventory::MaxSlots);
 
         if (!game.IsPlayable())
             continue;
@@ -65,7 +67,7 @@ void EventWowGames::Validate()
 
 namespace
 {
-    // GAMES <n> (<id> <icono> <min> <max> <nombre> <descripcion> <jugable 0/1> <grupo max> <bolsas 0/1>) x n
+    // GAMES <n> (<id> <icono> <min> <max> <nombre> <descripcion> <jugable 0/1> <grupo max> <casillas>) x n
     void SendGameList(Player* player)
     {
         auto const& games = sEventWowGames.GetAll();
@@ -75,7 +77,7 @@ namespace
         for (EventWowGameInfo const& game : games)
             message.Add(game.Id).Add(game.Icon).Add(game.MinPlayers).Add(game.MaxPlayers)
                 .Add(game.Name).Add(game.Description).Add(game.IsPlayable() ? 1 : 0).Add(game.MaxPartySize)
-                .Add(game.Inventory ? 1 : 0);
+                .Add(game.InventorySlots);
 
         message.Send(player);
     }

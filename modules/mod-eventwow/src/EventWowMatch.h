@@ -127,6 +127,8 @@ private:
     std::unordered_map<ObjectGuid, Milliseconds> _respawns;
     // Mantenimiento de los disfraces (volver a subir al vehiculo), cada segundo
     Milliseconds _disguiseTimer = 0ms;
+    // Efectos de las casillas de inventario (EventWowInventory), cada 250 ms
+    Milliseconds _inventoryTimer = 0ms;
 };
 
 #endif

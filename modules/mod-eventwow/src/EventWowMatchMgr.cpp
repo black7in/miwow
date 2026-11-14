@@ -4,6 +4,7 @@
 #include "EventWowDevMode.h"
 #include "EventWowDisguise.h"
 #include "EventWowGames.h"
+#include "EventWowInventory.h"
 #include "EventWowLobby.h"
 #include "EventWowMatch.h"
 #include "EventWowProtocol.h"
@@ -697,6 +698,7 @@ void EventWowMatchMgr::RemovePlayer(EventWowMatch& match, ObjectGuid guid, bool 
 
         // Tambien en modo dev y en el logout: disfraz y bonificaciones son de la partida
         EventWowDisguise::Remove(player);
+        EventWowInventory::Clear(player);
         EventWowStats::Reset(player);
     }
 

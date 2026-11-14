@@ -3,6 +3,7 @@
 #include "EventWowConfig.h"
 #include "EventWowDisguise.h"
 #include "EventWowGames.h"
+#include "EventWowInventory.h"
 #include "EventWowMatchMgr.h"
 #include "EventWowProtocol.h"
 #include "Map.h"
@@ -88,6 +89,18 @@ void EventWowMatch::Update(Milliseconds diff)
                 EventWowDisguise::Update(player);
         });
     }
+
+    _inventoryTimer += diff;
+    if (_game->InventorySlots && _inventoryTimer >= 250ms)
+    {
+        _inventoryTimer = 0ms;
+        ForEachPlayer([this](Player* player)
+        {
+            if (player->GetInstanceId() == _instanceId)
+                EventWowInventory::Update(player, _game->InventorySlots);
+        });
+    }
+
     switch (_state)
     {
         case EventWowMatchState::Loading:

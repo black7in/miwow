@@ -1,6 +1,7 @@
 #include "EventWowLobby.h"
 #include "EventWowConfig.h"
 #include "EventWowDisguise.h"
+#include "EventWowInventory.h"
 #include "EventWowStats.h"
 #include "Player.h"
 #include "ScriptMgr.h"
@@ -33,6 +34,7 @@ void EventWowLobby::RestoreBaseState(Player* player)
     player->CombatStop(true);
     player->RemoveAllAuras();
     EventWowDisguise::Remove(player);
+    EventWowInventory::Clear(player);
     EventWowStats::Reset(player);
     ClearInventory(player);
     player->SetFullHealth();

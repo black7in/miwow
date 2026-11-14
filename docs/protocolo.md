@@ -1,7 +1,7 @@
 # Protocolo cliente <-> servidor (addon messages)
 
 Implementacion: servidor `modules/mod-eventwow/src/EventWowProtocol.*`, cliente
-`client/src/Interface/FrameXML/EventWowProtocol.lua`. Version actual: **5**
+`client/src/Interface/FrameXML/EventWowProtocol.lua`. Version actual: **6**
 (`EventWowProtocol::Version` / `EVENTWOW_PROTOCOL.VERSION`; cambiarla en ambos lados a la vez).
 
 ## Transporte
@@ -61,7 +61,7 @@ opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `Regi
 |---|---|---|
 | `WELCOME` | version, rango (0 jugador, 1 GM) | handshake correcto |
 | `ERROR` | codigo, detalle... | textos en `EVENTWOW_ERROR_TEXTS` (EventWowProtocol.lua); `UNKNOWN_OP <op>` |
-| `GAMES` | n, luego n x (id, icono, min, max, nombre, descripcion, jugable 0/1, grupo max, bolsas 0/1) | catalogo de minijuegos (no jugable = maqueta, "Proximamente"; bolsas = el juego usa inventario: el cliente deja abrir las bolsas en partida, v5) |
+| `GAMES` | n, luego n x (id, icono, min, max, nombre, descripcion, jugable 0/1, grupo max, casillas) | catalogo de minijuegos (no jugable = maqueta, "Proximamente"; casillas = inventario de partida, 0 = sin objetos; v6) |
 | `CHAT` | unix time, rango, nombre, texto | chat global; al conectar llegan los ultimos 50 (historial) |
 | `ONLINE` | n | jugadores conectados (cada vez que alguien conecta/desconecta) |
 | `QUEUE_STATUS` | `QUEUED` id segundos jugadores-de-la-entrada / `NONE` | estado de la cola (tambien al conectar) |

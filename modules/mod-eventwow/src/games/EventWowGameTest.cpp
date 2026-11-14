@@ -30,7 +30,7 @@ private:
 };
 
 // Prototipo de tienda: cada jugador recibe oro al empezar y hay un mercader junto al inicio (EventWowShop.h).
-// Libros = instantaneos (stats al comprarlos); la pocion va a la mochila y se usa (Inventory = true).
+// Libros = instantaneos (stats al comprarlos); la pocion ocupa una de las 6 casillas y se usa.
 class EventWowGameTestShop : public EventWowGameTest
 {
 public:
@@ -94,7 +94,7 @@ void AddSC_eventwow_game_test()
     shop.Description = "Prototipo de tienda en solitario: empiezas con 200 de oro; compra libros de stats y pociones "
         "al mercader durante 3 minutos.";
     shop.Icon = "Interface\\Icons\\INV_Misc_Coin_01";
-    shop.Inventory = true;
+    shop.InventorySlots = 6;
     shop.Factory = []() { return std::make_unique<EventWowGameTestShop>(); };
 
     // Primer mapa propio (750, convertido de Maps/Warcraft/test.w3m con tools/mapgen): inicio = punto de inicio del

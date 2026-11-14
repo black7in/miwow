@@ -48,6 +48,9 @@ namespace EventWowStats
     std::string_view GetKey(EventWowStat stat);
     std::optional<EventWowStat> FromKey(std::string_view key);
 
+    // stat_type de item_template (ITEM_MOD_*) -> EventWowStat (las que aplica Player::_ApplyItemBonuses)
+    std::optional<EventWowStat> FromItemMod(uint32 itemMod);
+
     // Suma (o resta, si es negativo) a la bonificacion acumulada del jugador
     void Add(Player* player, EventWowStat stat, int32 amount);
     int32 Get(Player const* player, EventWowStat stat);

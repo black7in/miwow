@@ -25,9 +25,9 @@ struct EventWowGameInfo
     // Tamano maximo de un grupo (nativo) que puede buscar partida junto. 1 = solo individual.
     // Validate() lo limita a MaxPlayers y al tamano de grupo (MAXGROUPSIZE = 5).
     uint8 MaxPartySize = 1;
-    // El juego usa oro/objetos (tienda con consumibles, equipo...): el cliente deja abrir las bolsas en partida.
-    // Los libros instantaneos (EventWowShop.h) no lo necesitan: nunca se quedan en la mochila.
-    bool Inventory = false;
+    // Casillas de inventario de partida (EventWowInventory.h, estilo Dota: 6). 0 = el juego no usa objetos.
+    // Los libros instantaneos (EventWowShop.h) no ocupan casilla.
+    uint8 InventorySlots = 0;
 
     // Partida: mapa de mazmorra/banda (con instance_template) donde se crea una instancia por partida,
     // punto de aparicion y factoria de la clase del minijuego (EventWowMatch.h).

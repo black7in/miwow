@@ -16,7 +16,7 @@
 EVENTWOW_ABILITY_BAR = {
 	BUTTON_SIZE = 40,  -- ActionButtonTemplate mide 36; se escala
 	SPACING = 8,
-	BOTTOM_OFFSET = 70,
+	BOTTOM_OFFSET = 24,  -- alineada con EventWowStats.lua (izquierda) y EventWowInventory.lua (derecha)
 	KEYS = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "0" },
 };
 
@@ -207,6 +207,7 @@ EventWow_RegisterHandler("MATCH_CHARACTER", function(fields)
 		EventWow_Character = { id = id, name = fields[2], icon = fields[3], spells = spells };
 	end
 	EventWow_ApplyCharacter();
+	EventWow_FireListeners("CHARACTER");
 end);
 
 -- "Has aprendido un nuevo hechizo" / "Has olvidado..." (los manda el motor como CHAT_MSG_SYSTEM): el disfraz
