@@ -17,6 +17,7 @@ struct EventWowGameInfo;
 enum class EventWowMatchState : uint8
 {
     Loading,    // jugadores en camino a la instancia
+    Picking,    // todos dentro: eleccion de personaje (solo si el juego la usa, GetPickTime())
     Countdown,  // todos dentro: cuenta atras
     Running,
     Ended       // resultado en pantalla; al terminar, vuelta al lobby
@@ -33,7 +34,7 @@ enum class EventWowMatchResult : uint8
 // (EventWowGameInfo::Factory) y gestionado por EventWowMatchMgr, que se encarga de la cola, la instancia,
 // los teleports y la vuelta al lobby. El minijuego solo implementa los On*() y usa los helpers protegidos.
 //
-// Ciclo: Loading -> (todos dentro o EventWow.Match.LoadTimeout) -> Countdown -> OnStart() -> Running
+// Ciclo: Loading -> (todos dentro o EventWow.Match.LoadTimeout) -> [Picking] -> Countdown -> OnStart() -> Running
 //        -> End() -> Ended -> (EventWow.Match.ReturnDelay) -> todos al lobby y se destruye.
 // Si no queda nadie, la partida se cierra sola. Todo corre en el hilo del mundo (WorldScript::OnUpdate
 // y manejadores del protocolo): guardar ObjectGuid, no punteros a Player.
@@ -66,6 +67,10 @@ public:
     // MATCH_STATE actual (tambien al reconectar con /reload)
     void SendState(Player* player) const;
     void SendHud(Player* player) const;
+    // MATCH_PICK + MATCH_PICKS si esta en la fase de eleccion (al llegar y al reconectar)
+    void SendPick(Player* player) const;
+    // PICK <id personaje>: eleccion del jugador en la fase Picking (definitiva)
+    void HandlePick(Player* player, uint32 characterId);
 
 protected:
     // --- Para los minijuegos ---
@@ -83,7 +88,14 @@ protected:
     // Personaje (EventWowCharacters.h) con el que se disfraza al llegar a la instancia. 0 = ninguno (el juego
     // lo elegira despues con SetCharacter, p. ej. tras una fase de seleccion). Por defecto: el primero que
     // ofrece el juego en eventwow_game_character (juegos donde todos son iguales, como una carrera).
+    // Con fase de eleccion (GetPickTime() > 0) no se llama: cada uno elige el suyo.
     virtual uint32 GetAssignedCharacter(Player* player) const;
+    // Fase de eleccion de personaje entre los del juego (eventwow_game_character), tras la carga.
+    // 0s = sin fase (personaje asignado). Con menos de 2 personajes no hay nada que elegir: se asigna.
+    // Al acabar el tiempo, los que no han elegido reciben uno al azar.
+    virtual Seconds GetPickTime() const { return 0s; }
+    // true: cada personaje solo puede elegirlo un jugador (si hay mas jugadores que personajes, se repiten)
+    virtual bool IsPickUnique() const { return true; }
 
     // Disfraza al jugador (sustituye el disfraz anterior). Se quita solo al salir de la partida.
     bool SetCharacter(Player* player, uint32 characterId);
@@ -110,6 +122,12 @@ private:
     void UpdateRespawns(Milliseconds diff);
     void DoRespawn(Player* player);
     void BroadcastState() const;
+    bool UsesPicking() const;
+    // true si otro jugador (no except) ya lo ha elegido y la eleccion es unica
+    bool IsCharacterTaken(uint32 characterId, ObjectGuid except) const;
+    void FinishPicking();
+    void BroadcastPicks() const;
+    void SendPicks(Player* player) const;
 
     uint32 _id = 0;
     EventWowGameInfo const* _game = nullptr;
@@ -125,6 +143,8 @@ private:
     std::string _hud;
     // Reapariciones pendientes: jugador -> tiempo restante
     std::unordered_map<ObjectGuid, Milliseconds> _respawns;
+    // Fase de eleccion: jugador -> personaje elegido
+    std::unordered_map<ObjectGuid, uint32> _picks;
     // Mantenimiento de los disfraces (volver a subir al vehiculo), cada segundo
     Milliseconds _disguiseTimer = 0ms;
     // Efectos de las casillas de inventario (EventWowInventory), cada 250 ms

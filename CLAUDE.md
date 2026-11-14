@@ -332,7 +332,14 @@ Datos clave de la API Glue:
   `Sc_Wall_01.m2.vmo` en `data\vmaps` (el extractor de AC no lee nuestro parche-carpeta). Validado: `.vmo` identico al
   oficial (probado con SC_Wall_01_Cap), nombres de tile como los oficiales, linea de vision simulada bloqueada por muros.
   Despues: funcion de cada region con el amigo (renombrar en `regionNames`), minijuego de oleadas.
+  Logica del mapa de WC3 analizada (2026-11-13, `temp/Mi X Hero`, script ofuscado): ver `docs/asedio.md` (flujo, funcion
+  de cada region, adaptacion a 1 personaje y plan por pasos; nombres/jefes/objetos propios, no los del mapa de terceros).
   Pendiente tambien: completar el paso 6 (inventario + HUD; commit incompleto), ver arriba.
+  Asedio paso 1 (2026-11-14, compilado y probado por el usuario: "funciona el pick"): fase de eleccion `Picking` en el framework (Loading -> Picking ->
+  Countdown; `GetPickTime()` > 0 y >= 2 personajes; eleccion definitiva, unica por defecto, al azar al acabar el tiempo o
+  todos elegidos antes; protocolo v7 `PICK`/`MATCH_PICK`/`MATCH_PICKS`/estado `PICKING`; cliente `EventWowPick.lua`).
+  Juego `asedio` (`games/EventWowGameSiege.cpp`, sustituye a `test_siege_map`; 1-5 jugadores, 6 casillas) con 4 heroes
+  provisionales (SQL `_14_00`, Id 10-13). Durante la eleccion el jugador puede moverse (sin disfraz).
 - Mapas propios desde Warcraft 3 (ver `docs/mapas.md`). Decision del usuario: los mapas los disena el (y un amigo) en
   el World Editor de WC3 1.26 (no usa Noggit) y se convierten. Diseno PROPIO: no se replican mapas de terceros
   (p. ej. X Hero Siege); el usuario y su amigo hicieron uno inspirado en el genero.
@@ -345,7 +352,7 @@ Datos clave de la API Glue:
     la BD de desarrollo para generar Map.dbc (el updater los reaplica, son idempotentes).
   - 750 `EventWowTest` (`Maps/Warcraft/test.w3m`, juego `test_map`): probado, COMMIT `28f1693`.
   - 751 `EventWowAsedio` (`Maps/Warcraft/Mi_Mapa_XHero.w3x`, tileset Corona de Hielo, 96x224 casillas -> 2x2 ADT, juego
-    `test_siege_map`, inicio = punto del jugador 1). Probado por el usuario: estructura igual a su mapa. Pero los muros
+    `asedio` (antes `test_siege_map`), inicio = punto del jugador 1). Probado por el usuario: estructura igual a su mapa. Pero los muros
     (nivel 4) parecian relieve de tierra blanca ("es una ciudad, las divisiones deberian ser muros"): anadido
     `wallLayer: 4` (caras verticales + texturas `wallTop` IC_Vrykul_PaverRubbleB / `wallFace` IG_DarkRockA) y despues
     modelos de muro (ver "Mapa del asedio" arriba).

@@ -10,6 +10,7 @@
 #include "MapMgr.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
+#include "Random.h"
 #include <algorithm>
 
 namespace
@@ -123,9 +124,19 @@ void EventWowMatch::Update(Milliseconds diff)
                     break;
             }
 
-            SetState(EventWowMatchState::Countdown, GetCountdown());
+            if (UsesPicking())
+            {
+                SetState(EventWowMatchState::Picking, GetPickTime());
+                ForEachPlayer([this](Player* player) { SendPick(player); });
+            }
+            else
+                SetState(EventWowMatchState::Countdown, GetCountdown());
             break;
         }
+        case EventWowMatchState::Picking:
+            if (expired)
+                FinishPicking();
+            break;
         case EventWowMatchState::Countdown:
             if (expired || !_timerActive)
             {
@@ -154,10 +165,137 @@ void EventWowMatch::HandlePlayerArrived(Player* player)
 
     SendState(player);
     SendHud(player);
-    if (uint32 const characterId = GetAssignedCharacter(player))
-        SetCharacter(player, characterId);
+    if (!UsesPicking())
+        if (uint32 const characterId = GetAssignedCharacter(player))
+            SetCharacter(player, characterId);
 
     OnPlayerArrived(player);
+}
+
+// Fase de eleccion --------------------------------------------------------------------------------
+
+bool EventWowMatch::UsesPicking() const
+{
+    return GetPickTime() > 0s && sEventWowCharacters.GetForGame(_game->Id).size() >= 2;
+}
+
+bool EventWowMatch::IsCharacterTaken(uint32 characterId, ObjectGuid except) const
+{
+    if (!IsPickUnique())
+        return false;
+
+    for (auto const& [guid, picked] : _picks)
+        if (picked == characterId && guid != except)
+            return true;
+
+    return false;
+}
+
+void EventWowMatch::HandlePick(Player* player, uint32 characterId)
+{
+    ObjectGuid const guid = player->GetGUID();
+    if (_state != EventWowMatchState::Picking || !HasPlayer(guid) || _picks.count(guid))
+        return;
+
+    std::vector<uint32> const& characters = sEventWowCharacters.GetForGame(_game->Id);
+    if (std::find(characters.begin(), characters.end(), characterId) == characters.end())
+    {
+        EventWowMessage("ERROR").Add("PICK_INVALID").Send(player);
+        return;
+    }
+
+    if (IsCharacterTaken(characterId, guid))
+    {
+        EventWowMessage("ERROR").Add("PICK_TAKEN").Send(player);
+        SendPicks(player);
+        return;
+    }
+
+    if (!SetCharacter(player, characterId))
+        return;
+
+    _picks[guid] = characterId;
+    BroadcastPicks();
+
+    // Todos han elegido: no hace falta esperar al tiempo
+    if (std::all_of(_players.begin(), _players.end(), [this](ObjectGuid const& g) { return _picks.count(g) > 0; }))
+        FinishPicking();
+}
+
+void EventWowMatch::FinishPicking()
+{
+    if (_state != EventWowMatchState::Picking)
+        return;
+
+    // Al azar para los que no han elegido: primero entre los libres; si no queda ninguno, entre todos
+    std::vector<uint32> const& characters = sEventWowCharacters.GetForGame(_game->Id);
+    ForEachPlayer([this, &characters](Player* player)
+    {
+        ObjectGuid const guid = player->GetGUID();
+        if (_picks.count(guid))
+            return;
+
+        std::vector<uint32> free;
+        for (uint32 id : characters)
+            if (!IsCharacterTaken(id, guid))
+                free.push_back(id);
+
+        std::vector<uint32> const& pool = free.empty() ? characters : free;
+        uint32 const characterId = pool[urand(0, static_cast<uint32>(pool.size()) - 1)];
+        if (SetCharacter(player, characterId))
+            _picks[guid] = characterId;
+    });
+
+    BroadcastPicks();
+    SetState(EventWowMatchState::Countdown, GetCountdown());
+}
+
+// MATCH_PICK <unico 0/1> <n> (<id> <nombre> <icono> <descripcion> <hechizos "id,id,..."> <vehiculo 0/1>) x n
+void EventWowMatch::SendPick(Player* player) const
+{
+    if (_state != EventWowMatchState::Picking)
+        return;
+
+    std::vector<uint32> const& characters = sEventWowCharacters.GetForGame(_game->Id);
+    EventWowMessage message("MATCH_PICK");
+    message.Add(IsPickUnique() ? 1 : 0).Add(static_cast<uint32>(characters.size()));
+    for (uint32 id : characters)
+    {
+        EventWowCharacterInfo const* character = sEventWowCharacters.Get(id);
+        std::string spells;
+        for (uint32 spellId : character->Spells)
+        {
+            if (!spells.empty())
+                spells += ',';
+            spells += std::to_string(spellId);
+        }
+
+        message.Add(character->Id).Add(character->Name).Add(character->Icon).Add(character->Description)
+            .Add(spells).Add(character->VehicleEntry ? 1 : 0);
+    }
+
+    message.Send(player);
+    SendPicks(player);
+}
+
+// MATCH_PICKS <n> (<nombre jugador> <id personaje, 0 = sin elegir>) x n
+void EventWowMatch::SendPicks(Player* player) const
+{
+    EventWowMessage message("MATCH_PICKS");
+    message.Add(static_cast<uint32>(_players.size()));
+    for (ObjectGuid const& guid : _players)
+    {
+        Player* member = ObjectAccessor::FindConnectedPlayer(guid);
+        auto itr = _picks.find(guid);
+        message.Add(member ? member->GetName() : std::string("?")).Add(itr != _picks.end() ? itr->second : 0);
+    }
+
+    message.Send(player);
+}
+
+void EventWowMatch::BroadcastPicks() const
+{
+    ForEachPlayer([this](Player* player) { SendPicks(player); });
 }
 
 // Personajes -------------------------------------------------------------------------------------
@@ -188,7 +326,16 @@ void EventWowMatch::HandlePlayerLeft(ObjectGuid guid)
     _arrived.erase(guid);
     _results.erase(guid);
     _respawns.erase(guid);
+    _picks.erase(guid);
     OnPlayerLeft(guid);
+
+    if (_state == EventWowMatchState::Picking && !_players.empty())
+    {
+        if (std::all_of(_players.begin(), _players.end(), [this](ObjectGuid const& g) { return _picks.count(g) > 0; }))
+            FinishPicking();
+        else
+            BroadcastPicks();
+    }
 }
 
 bool EventWowMatch::IsReadyToClose() const
@@ -196,8 +343,9 @@ bool EventWowMatch::IsReadyToClose() const
     return _players.empty() || (_state == EventWowMatchState::Ended && !_timerActive);
 }
 
-// MATCH_STATE <LOADING|WAITING|COUNTDOWN|RUNNING|ENDED> <id juego> <segundos>
+// MATCH_STATE <LOADING|WAITING|PICKING|COUNTDOWN|RUNNING|ENDED> <id juego> <segundos>
 //   LOADING: en camino (sigue en el lobby / pantalla de carga); WAITING: dentro, esperando al resto.
+//   PICKING: eleccion de personaje (MATCH_PICK / MATCH_PICKS).
 //   segundos: lo que queda del estado (cuenta atras, temporizador de juego, vuelta al lobby); 0 = sin tiempo
 void EventWowMatch::SendState(Player* player) const
 {
@@ -206,6 +354,9 @@ void EventWowMatch::SendState(Player* player) const
     {
         case EventWowMatchState::Loading:
             state = _arrived.count(player->GetGUID()) ? "WAITING" : "LOADING";
+            break;
+        case EventWowMatchState::Picking:
+            state = "PICKING";
             break;
         case EventWowMatchState::Countdown:
             state = "COUNTDOWN";

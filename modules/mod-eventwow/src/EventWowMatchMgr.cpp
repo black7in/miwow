@@ -815,6 +815,7 @@ void EventWowMatchMgr::OnPlayerConnected(Player* player)
     {
         match->SendState(player);
         match->SendHud(player);
+        match->SendPick(player);
     }
     else
         SendNoMatch(player);
@@ -913,6 +914,17 @@ namespace
         LOG_DEBUG("module.eventwow", "EventWow: {} abandona la partida {}", player->GetName(), match->GetId());
         sEventWowMatchMgr.RemovePlayer(*match, player->GetGUID(), true);
     }
+
+    // PICK <id personaje>: eleccion en la fase Picking
+    void HandlePick(Player* player, EventWowProtocol::Args const& args)
+    {
+        EventWowMatch* match = sEventWowMatchMgr.GetMatch(player);
+        if (!match || args.empty())
+            return;
+
+        if (Optional<uint32> characterId = Acore::StringTo<uint32>(args[0]))
+            match->HandlePick(player, *characterId);
+    }
 }
 
 class EventWow_MatchPlayerScript : public PlayerScript
@@ -984,6 +996,7 @@ void AddSC_eventwow_matches()
     EventWowProtocol::RegisterHandler("ABANDON", HandleAbandon);
     EventWowProtocol::RegisterHandler("ACCEPT", HandleAccept);
     EventWowProtocol::RegisterHandler("DECLINE", HandleDecline);
+    EventWowProtocol::RegisterHandler("PICK", HandlePick);
     EventWowProtocol::RegisterConnectListener([](Player* player) { sEventWowMatchMgr.OnPlayerConnected(player); });
 
     new EventWow_MatchPlayerScript();

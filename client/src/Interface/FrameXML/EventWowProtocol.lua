@@ -8,7 +8,7 @@
 
 EVENTWOW_PROTOCOL = {
 	PREFIX = "EWOW",
-	VERSION = 6,
+	VERSION = 7,
 	-- 255 (limite del core) - "EWOW\t" - flag, con margen
 	MAX_CHUNK = 240,
 	DEBUG = true,
@@ -40,6 +40,8 @@ EVENTWOW_ERROR_TEXTS = {
 	GROUP_TARGET_IN_MATCH = "%s está en una partida.",
 	MATCH_CREATE_FAILED = "No se pudo crear la partida. Inténtalo de nuevo.",
 	MATCH_TELEPORT_FAILED = "No se pudo entrar en la partida.",
+	PICK_INVALID = "Ese personaje no está disponible en esta partida.",
+	PICK_TAKEN = "Otro jugador ya ha elegido ese personaje.",
 };
 
 EventWow_Protocol = {

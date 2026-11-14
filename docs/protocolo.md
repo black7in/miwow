@@ -54,6 +54,7 @@ opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `Regi
 | `ABANDON` | - | "Abandonar" / "Volver al lobby" en partida | vuelta al lobby y `MATCH_STATE NONE` |
 | `ACCEPT` | id propuesta | "Aceptar" la partida encontrada | `MATCH_FOUND_STATUS` a todos; si es el ultimo, `MATCH_FOUND_END ACCEPTED` + partida |
 | `DECLINE` | id propuesta | "Rechazar" (tambien `LEAVE`, logout o cambio de grupo con propuesta pendiente) | `MATCH_FOUND_END` a todos (ver "Partida encontrada") |
+| `PICK` | id personaje | "Elegir" en la fase de eleccion (`MATCH_STATE PICKING`); definitiva | disfraz (`MATCH_CHARACTER`) + `MATCH_PICKS` a todos, o `ERROR PICK_TAKEN/PICK_INVALID`. v7 |
 
 ### Servidor -> cliente
 
@@ -68,11 +69,13 @@ opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `Regi
 | `MATCH_FOUND` | id, id juego, segundos para aceptar, total, aceptados, tu 0/1 | partida encontrada: aceptar o rechazar (tambien al conectar si sigue pendiente) |
 | `MATCH_FOUND_STATUS` | id, aceptados, total | alguien ha aceptado |
 | `MATCH_FOUND_END` | id, `ACCEPTED`/`REQUEUED`/`REMOVED` | fin de la confirmacion: a la partida / de vuelta a la cola / fuera de la cola |
-| `MATCH_STATE` | `NONE` / estado, id juego, segundos | partida del jugador (al conectar, en cada cambio y al volver al lobby). Estados: `LOADING` (en camino, sigue en modo lobby), `WAITING` (dentro, esperando al resto), `COUNTDOWN`, `RUNNING`, `ENDED` (resultado; luego vuelta al lobby). segundos = lo que queda del estado, 0 = sin tiempo |
+| `MATCH_STATE` | `NONE` / estado, id juego, segundos | partida del jugador (al conectar, en cada cambio y al volver al lobby). Estados: `LOADING` (en camino, sigue en modo lobby), `WAITING` (dentro, esperando al resto), `PICKING` (eleccion de personaje, v7), `COUNTDOWN`, `RUNNING`, `ENDED` (resultado; luego vuelta al lobby). segundos = lo que queda del estado, 0 = sin tiempo |
 | `MATCH_HUD` | texto | objetivo que muestra el HUD (vacio = nada) |
 | `MATCH_END` | `WIN`/`LOSE`/`NONE`, texto | resultado del jugador y resumen |
 | `MATCH_RESPAWN` | segundos | has muerto: reapareces en N s (0 = ya has reaparecido). Morir nunca saca de la partida |
 | `MATCH_CHARACTER` | id, nombre, icono, hechizo... / `0` | disfraz del personaje de minijuego (`EventWowDisguise`): al llegar a la instancia, al quitarlo (`0`) y al reconectar. El cliente pinta la barra de habilidades propia (`EventWowAbilities.lua`, teclas 1..0). v4 |
+| `MATCH_PICK` | unico 0/1, n, luego n x (id, nombre, icono, descripcion, hechizos `id,id,...`, vehiculo 0/1) | personajes a elegir (al entrar en `PICKING` y al reconectar). unico = cada personaje solo para un jugador. Ventana `EventWowPick.lua`. v7 |
+| `MATCH_PICKS` | n, luego n x (nombre jugador, id personaje / 0 = eligiendo) | quien ha elegido que (con `MATCH_PICK`, en cada eleccion y al acabar: los que no eligieron reciben uno al azar) |
 | `DEV_MODE` | 0/1 | modo dev (`.gm on` o `.dev on`; se comprueba cada 250 ms). Al conectar y en cada cambio. En modo dev el cliente permite ocultar el panel (solo cliente) |
 
 ## Susurros y canales (fuera del protocolo)

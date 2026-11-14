@@ -153,6 +153,7 @@ EventWowFriends.lua
 EventWowSocial.lua
 EventWowPanel.lua
 EventWowMatch.lua
+EventWowPick.lua
 EventWowAbilities.lua
 EventWowStats.lua
 EventWowInventory.lua

@@ -110,19 +110,9 @@ void AddSC_eventwow_game_test()
     map.Start.Relocate(-208.67f, -286.67f, 1.0f, 3.14f);
     map.Factory = []() { return std::make_unique<EventWowGameTest>(300s); };
 
-    // Mapa del asedio (751, Maps/Warcraft/Mi_Mapa_XHero.w3x): de momento solo para recorrerlo
-    EventWowGameInfo siege = map;
-    siege.Id = "test_siege_map";
-    siege.Name = "Mapa del asedio";
-    siege.Description = "Recorre el mapa del asedio convertido desde Warcraft 3 durante 5 minutos (sin enemigos).";
-    siege.Icon = "Interface\\Icons\\Spell_Frost_FrostShock";
-    siege.MapId = 751;
-    siege.Start.Relocate(-731.33f, -403.33f, 1.0f, 3.14f);
-
     sEventWowGames.Register(std::move(game));
     sEventWowGames.Register(std::move(group));
     sEventWowGames.Register(std::move(map));
-    sEventWowGames.Register(std::move(siege));
     sEventWowGames.Register(std::move(vehicle));
     sEventWowGames.Register(std::move(shop));
 }
