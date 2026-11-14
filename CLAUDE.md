@@ -390,7 +390,7 @@ Datos clave de la API Glue:
   `script`), `EventWowHeroSpells.cpp` (Espiral de la Muerte, invocaciones), SQL `_06` (rango 1 de cada habilidad),
   barra de mascota nativa en partida (`EventWow_ApplyPetBar`, EventWow.lua). SQL aplicados a mano en la BD de desarrollo.
   Despues: base de niveles (paso 1 de `docs/heroes.md`, requiere compilar).
-  **Niveles y puntos de habilidad (pasos 1-2 de `docs/heroes.md`, 2026-11-14, SIN COMPILAR NI PROBAR)**:
+  **Niveles y puntos de habilidad (pasos 1-2 de `docs/heroes.md`, 2026-11-14, probado por el usuario: "funciona"; interfaz a mejorar mucho, afinar hechizos despues)**:
   `EventWowProgress.*` (nivel real 1 -> `EventWowGameInfo::MaxLevel`, XP nativa x `XpRate` con tope, un punto por
   nivel, rangos = cadena de spell_ranks, atributos de `eventwow_character_attribute`, suprema sola al maximo;
   talentos/logros/correo de nivel bloqueados; `Stop` desde `EventWowDisguise::Remove` = nivel base; login = nivel

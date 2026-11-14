@@ -159,7 +159,7 @@ Decisiones:
 
 ## 7. Orden de implementacion
 
-Pasos 1 y 2 implementados juntos (2026-11-14, SIN COMPILAR): `EventWowProgress.*` (nivel 1 -> `MaxLevel` del juego,
+Pasos 1 y 2 implementados juntos (2026-11-14, probados por el usuario; interfaz a mejorar): `EventWowProgress.*` (nivel 1 -> `MaxLevel` del juego,
 `XpRate`, puntos, rangos, atributos, talentos/logros/correo de nivel bloqueados, nivel base al salir y en el login),
 `eventwow_character_spell.Kind` (0 fija, 1 basica, 2 definitiva, 3 suprema) y `eventwow_character_attribute` (SQL
 `_07`), protocolo v8 (`MATCH_ABILITIES` / `UPGRADE`), barra con rangos, "+", Atributos y barra de XP
