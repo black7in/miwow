@@ -1,0 +1,25 @@
+# EventWow: hechizos de PRUEBA de tools/spellgen (docs/hechizos.md). Se quitan cuando haya heroes reales.
+# Generar el SQL:  py -I tools/spellgen/spellgen.py build   (despues Build-Patch para el cliente)
+#
+# Rango de IDs de esta ficha: 9500000-9500019.
+
+# Aturdir + dano directo, 4 rangos. Base: Martillo de justicia (10308) -> visual, icono, animacion y el aura de
+# aturdir (efecto 1). Se le anade dano Sagrado (efecto 2).
+[[spell]]
+id = 9500000
+base = 10308
+ranks = 4
+chain = false              # prueba: el personaje lleva los 4 rangos a la vez (con cadena, el motor desactiva los bajos)
+name = "Martillo de prueba"
+description = "Aturde al objetivo durante $d y le inflige $s2 de daño Sagrado."
+school = "holy"
+range = 10
+cooldown = [20, 18, 16, 14]
+duration = [2, 3, 4, 5]
+cost = [100, 120, 140, 160]
+coefficient = 0.4
+
+[spell.effect2]
+type = "SCHOOL_DAMAGE"
+target = "UNIT_TARGET_ENEMY"
+value = [150, 250, 350, 450]

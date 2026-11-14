@@ -340,6 +340,22 @@ Datos clave de la API Glue:
   todos elegidos antes; protocolo v7 `PICK`/`MATCH_PICK`/`MATCH_PICKS`/estado `PICKING`; cliente `EventWowPick.lua`).
   Juego `asedio` (`games/EventWowGameSiege.cpp`, sustituye a `test_siege_map`; 1-5 jugadores, 6 casillas) con 4 heroes
   provisionales (SQL `_14_00`, Id 10-13). Durante la eleccion el jugador puede moverse (sin disfraz).
+  Heroes (diseno decidido con el usuario 2026-11-14, SIN IMPLEMENTAR): ver `docs/heroes.md`. Nivel real de WoW 1 -> 30 en
+  partida con la XP nativa de AC (tope y multiplicador con `OnPlayerGiveXP`), oleadas que suben de nivel, talentos y
+  logros bloqueados, un hechizo propio por nivel de habilidad (tooltip correcto; `spell_dbc` + Spell.dbc), un punto por
+  nivel con "+" en la barra, definitiva a nivel 6. Las puntuaciones (critico, celeridad...) valen mucho mas a nivel bajo:
+  crecimiento con stats que no dependen del nivel + stats en porcentaje (`critpct`) convertidas segun el nivel.
+  Esquema: 3 basicas x 4 rangos (rango max = (nivel+1)/2: niveles 1/3/5/7), definitiva x 3 (6/12/18), Atributos x 15
+  (desde nivel 2, stats por rango) = 30 puntos. Agilidad -> velocidad de ataque e intelecto -> celeridad con hechizos
+  (unicas reglas propias, 0,5 %/punto provisional, tope 1 golpe/0,3 s). Ataque basico para todos: cuerpo a cuerpo nativo
+  con dano base por ficha; distancia y lanzadores con disparo automatico propio (sin arma).
+  Hechizos propios (plan 2026-11-14, sin implementar): ver `docs/hechizos.md`. Fichas TOML por heroe -> `tools/spellgen`
+  (copia una base del Spell.dbc del cliente, un hechizo por rango) -> SQL `spell_dbc` + `spell_ranks` +
+  `spell_bonus_data` -> Build-Dbc. Spell Editor de Stoneharry solo como explorador. OJO: texto esES = hueco 6 de cada
+  texto (columna `*_Lang_zhCN` en spell_dbc, los nombres de AC no siguen el orden de 3.3.5).
+  Paso 1 hecho (2026-11-14, probado por el usuario: "hechizos funcionando"): `tools/spellgen/spellgen.py` (build/dump/find/icon), ficha
+  `data/spells/prueba.toml` -> `eventwow_spells_prueba.sql` (Martillo de prueba 9500000-9500003), personaje 19
+  "Probador de hechizos" en el Asedio (SQL `_14_01`). Ambos SQL aplicados a mano en la BD de desarrollo; parche regenerado.
 - Mapas propios desde Warcraft 3 (ver `docs/mapas.md`). Decision del usuario: los mapas los disena el (y un amigo) en
   el World Editor de WC3 1.26 (no usa Noggit) y se convierten. Diseno PROPIO: no se replican mapas de terceros
   (p. ej. X Hero Siege); el usuario y su amigo hicieron uno inspirado en el genero.
