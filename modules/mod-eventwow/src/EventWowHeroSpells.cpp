@@ -193,7 +193,7 @@ public:
                 return;
 
             // Controlable: sustituye a las anteriores del mismo hechizo (mismo primer rango)
-            if (creature->HasUnitTypeMask(UNIT_MASK_CONTROLABLE_GUARDIAN))
+            if (creature->IsControllableGuardian())
             {
                 uint32 const firstSpell = sSpellMgr->GetFirstSpellInChain(spellId);
                 std::vector<TempSummon*> previous;

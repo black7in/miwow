@@ -3,10 +3,13 @@
 #include "DatabaseEnv.h"
 #include "EventWowConfig.h"
 #include "EventWowGames.h"
+#include "EventWowWeapons.h"
 #include "Log.h"
 #include "ObjectMgr.h"
+#include "Player.h"
 #include "ScriptMgr.h"
 #include "SharedDefines.h"
+#include "SpellInfo.h"
 #include "SpellMgr.h"
 #include <algorithm>
 
@@ -35,8 +38,10 @@ void EventWowCharacters::Load()
 
     //                                                 0     1       2              3       4            5        6         7            8
     if (QueryResult result = WorldDatabase.Query("SELECT `Id`, `Name`, `Description`, `Icon`, `DisplayId`, `Scale`, `Health`, `PowerType`, `MaxPower`, "
-        // 9               10                11               12
-        "`VehicleEntry`, `WeaponMainHand`, `WeaponOffHand`, `PickCreature` FROM `eventwow_character`"))
+        // 9               10                11               12              13                 14
+        "`VehicleEntry`, `WeaponMainHand`, `WeaponOffHand`, `PickCreature`, `AutoAttackSpell`, `AttackMin`, "
+        // 15           16                17             18
+        "`AttackMax`, `AttackPerLevel`, `AttackSpeed`, `WeaponRanged` FROM `eventwow_character`"))
     {
         do
         {
@@ -55,14 +60,54 @@ void EventWowCharacters::Load()
             info.WeaponMainHand = fields[10].Get<uint32>();
             info.WeaponOffHand = fields[11].Get<uint32>();
             info.PickCreature = fields[12].Get<uint32>();
+            info.AutoAttackSpell = fields[13].Get<uint32>();
+            info.AttackMin = fields[14].Get<float>();
+            info.AttackMax = fields[15].Get<float>();
+            info.AttackPerLevel = fields[16].Get<float>();
+            info.AttackSpeed = fields[17].Get<uint32>();
+            info.WeaponRanged = fields[18].Get<uint32>();
 
-            for (uint32* weapon : { &info.WeaponMainHand, &info.WeaponOffHand })
+            if (info.AutoAttackSpell)
             {
-                if (*weapon && !sObjectMgr->GetItemTemplate(*weapon))
+                SpellInfo const* attack = sSpellMgr->GetSpellInfo(info.AutoAttackSpell);
+                if (!attack || !attack->HasAttribute(SPELL_ATTR2_AUTO_REPEAT))
                 {
+                    LOG_ERROR("module.eventwow", "EventWow: personaje {} ({}): AutoAttackSpell {} no existe o no se repite solo "
+                        "(SPELL_ATTR2_AUTO_REPEAT), ataca cuerpo a cuerpo", info.Id, info.Name, info.AutoAttackSpell);
+                    info.AutoAttackSpell = 0;
+                }
+            }
+
+            if (info.HasAttack() && info.AttackMax < info.AttackMin)
+                info.AttackMax = info.AttackMin;
+
+            // Se equipan sin las comprobaciones del core: aqui se valida que cada una va en su ranura
+            for (auto [weapon, slot] : { std::pair{ &info.WeaponMainHand, uint8(EQUIPMENT_SLOT_MAINHAND) },
+                std::pair{ &info.WeaponOffHand, uint8(EQUIPMENT_SLOT_OFFHAND) }, std::pair{ &info.WeaponRanged, uint8(EQUIPMENT_SLOT_RANGED) } })
+            {
+                if (!*weapon)
+                    continue;
+
+                ItemTemplate const* proto = sObjectMgr->GetItemTemplate(*weapon);
+                if (!proto)
                     LOG_ERROR("module.eventwow", "EventWow: personaje {} ({}): el arma {} no existe en item_template, se ignora",
                         info.Id, info.Name, *weapon);
-                    *weapon = 0;
+                else if (!EventWowWeapons::FitsSlot(proto, slot))
+                    LOG_ERROR("module.eventwow", "EventWow: personaje {} ({}): el objeto {} (tipo de inventario {}) no va en la ranura {}, se ignora",
+                        info.Id, info.Name, *weapon, proto->InventoryType, slot);
+                else
+                    continue;
+
+                *weapon = 0;
+            }
+
+            if (ItemTemplate const* mainHand = info.WeaponMainHand ? sObjectMgr->GetItemTemplate(info.WeaponMainHand) : nullptr)
+            {
+                if (mainHand->InventoryType == INVTYPE_2HWEAPON && info.WeaponOffHand)
+                {
+                    LOG_ERROR("module.eventwow", "EventWow: personaje {} ({}): arma a dos manos {} con mano izquierda {}, se ignora la izquierda",
+                        info.Id, info.Name, info.WeaponMainHand, info.WeaponOffHand);
+                    info.WeaponOffHand = 0;
                 }
             }
 
@@ -155,6 +200,16 @@ void EventWowCharacters::Load()
                 itr->second.SpellKinds.push_back(EventWowAbilityKind(kind));
             }
         } while (result->NextRow());
+    }
+
+    // El ataque basico va primero en la barra (casilla 1, tecla 1), siempre aprendido
+    for (auto& [id, character] : _characters)
+    {
+        if (!character.HasAttack() || character.HasSpell(character.GetAttackSpell()))
+            continue;
+
+        character.Spells.insert(character.Spells.begin(), character.GetAttackSpell());
+        character.SpellKinds.insert(character.SpellKinds.begin(), EventWowAbilityKind::Fixed);
     }
 
     //                                                 0              1       2

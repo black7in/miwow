@@ -35,6 +35,7 @@ $ErrorActionPreference = "Stop"
 $ExtraRanges = @{
     "map_dbc" = "BETWEEN 750 AND 799"
     "areatable_dbc" = "BETWEEN 5000 AND 5099"     # zonas de los mapas propios (ver SQL *_eventwow_map_areas)
+    "chrclasses_dbc" = "= 11"                     # druida sin reliquia (SQL *_eventwow_druid_no_relic)
 }
 
 function Get-IdFilter([string]$table, [string]$id)

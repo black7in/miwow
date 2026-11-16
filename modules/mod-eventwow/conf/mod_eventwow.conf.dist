@@ -130,6 +130,14 @@ StartPlayerLevel = 80
 AlwaysMaxSkillForLevel = 1
 
 #
+#    PlayerStart.CustomSpells
+#        Motivo: el contenedor (druida) aprende en cada login (Player::LearnCustomSpells) las competencias de TODAS
+#                las armas (playercreateinfo_spell_custom, SQL 2026_11_16_01): los heroes equipan arcos, espadas...
+#                La tabla base de AC esta vacia: solo se aprenden las filas de EventWow.
+
+PlayerStart.CustomSpells = 1
+
+#
 #    SkipCinematics
 #        Motivo: el personaje nunca debe verse; sin cinematica de introduccion.
 

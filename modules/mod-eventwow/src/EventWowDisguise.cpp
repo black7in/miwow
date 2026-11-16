@@ -10,6 +10,7 @@
 #include "EventWowProtocol.h"
 #include "EventWowStats.h"
 #include "EventWowWeapons.h"
+#include "Item.h"
 #include "Log.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
@@ -39,7 +40,16 @@ namespace
         // por encima (stats del personaje, libros, auras) se suma a la vida/poder base del personaje.
         float NativeHealth = 0.0f;
         float NativePower = 0.0f;
+        // Disparo automatico (AutoAttackSpell) pedido con el clic derecho o la casilla 1: el core lo corta al
+        // moverse o al lanzar otro hechizo; se vuelve a lanzar al pararse mientras siga con ese objetivo
+        ObjectGuid AutoAttackTarget;
+        uint32 AutoAttackBusyMs = 0; // > 0: hace poco se movia o lanzaba (si el disparo falta, se reanuda)
+        // Armas equipadas de verdad mientras dura el disfraz (EventWowWeapons::Equip)
+        EventWowWeapons::EquipState Weapons;
     };
+
+    // Margen tras moverse/lanzar en el que un disparo desaparecido se reanuda (el core lo corta en su Update)
+    constexpr uint32 AutoAttackResumeWindow = 600;
 
     // Mas lejos que esto (reaparicion, teleport) se invoca otro vehiculo en vez de subir al antiguo
     constexpr float VehicleMaxDistance = 10.0f;
@@ -94,11 +104,134 @@ namespace
         return player->CustomData.Get<DisguiseSlot>(DisguiseKey);
     }
 
-    void ApplyWeapons(Player* player, EventWowCharacterInfo const& character)
+    // Equipa las armas de la ficha que falten (tambien repone una destruida). true si equipo alguna.
+    bool ApplyWeapons(Player* player, DisguiseSlot* slot, EventWowCharacterInfo const& character)
     {
-        EventWowWeapons::SetVisible(player, EQUIPMENT_SLOT_MAINHAND, character.WeaponMainHand);
-        EventWowWeapons::SetVisible(player, EQUIPMENT_SLOT_OFFHAND, character.WeaponOffHand);
-        EventWowWeapons::SetVisible(player, EQUIPMENT_SLOT_RANGED, 0);
+        return EventWowWeapons::Equip(player, character.WeaponMainHand, character.WeaponOffHand, character.WeaponRanged,
+            slot->Weapons);
+    }
+
+    // Dano por golpe cuerpo a cuerpo de la ficha a su nivel, para un arma de esa velocidad (ms): los numeros de la
+    // ficha son a AttackSpeed y se escalan para dar el mismo dano por segundo (arma lenta = golpes mas fuertes)
+    void GetMeleeDamage(Player const* player, EventWowCharacterInfo const& character, uint32 delay, float& minDamage, float& maxDamage)
+    {
+        float const bonus = character.AttackPerLevel * float(std::max<int32>(0, int32(player->GetLevel()) - 1));
+        float const scale = delay ? float(delay) / float(character.AttackSpeed) : 1.0f;
+        minDamage = (character.AttackMin + bonus) * scale;
+        maxDamage = (character.AttackMax + bonus) * scale;
+    }
+
+    // Ataque basico de la ficha. Sin AttackSpeed no se toca nada. Se repite al cambiar de nivel y al reponer un arma.
+    //  - Disparo automatico: con arma de distancia el intervalo es el suyo (lo pone el core al equiparla); sin ella
+    //    (lanzadores), AttackSpeed. El dano es del hechizo.
+    //  - Cuerpo a cuerpo: dano de la ficha en cada mano con arma (la izquierda con la penalizacion nativa); el
+    //    intervalo es el del arma o, sin arma en la derecha, AttackSpeed.
+    void ApplyAttack(Player* player, EventWowCharacterInfo const& character)
+    {
+        if (!character.HasAttack())
+            return;
+
+        if (character.AutoAttackSpell)
+        {
+            if (!player->GetWeaponForAttack(RANGED_ATTACK))
+                player->SetAttackTime(RANGED_ATTACK, character.AttackSpeed);
+            return;
+        }
+
+        for (WeaponAttackType attackType : { BASE_ATTACK, OFF_ATTACK })
+        {
+            Item const* weapon = player->GetWeaponForAttack(attackType);
+            if (attackType == OFF_ATTACK && !weapon)
+                continue;
+
+            uint32 const delay = weapon ? weapon->GetTemplate()->Delay : character.AttackSpeed;
+            float minDamage = 0.0f;
+            float maxDamage = 0.0f;
+            GetMeleeDamage(player, character, delay, minDamage, maxDamage);
+            player->SetBaseWeaponDamage(attackType, MINDAMAGE, minDamage);
+            player->SetBaseWeaponDamage(attackType, MAXDAMAGE, maxDamage);
+            player->SetAttackTime(attackType, delay);
+            player->UpdateDamagePhysical(attackType);
+        }
+    }
+
+    // Como sin arma (las armas del disfraz ya se destruyeron: EventWowWeapons::Unequip)
+    void RestoreAttack(Player* player, EventWowCharacterInfo const& character)
+    {
+        if (!character.HasAttack())
+            return;
+
+        if (player->GetCurrentSpell(CURRENT_AUTOREPEAT_SPELL))
+            player->InterruptSpell(CURRENT_AUTOREPEAT_SPELL);
+
+        player->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, BASE_MINDAMAGE);
+        player->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, BASE_MAXDAMAGE);
+        player->SetAttackTime(BASE_ATTACK, BASE_ATTACK_TIME);
+        player->SetAttackTime(RANGED_ATTACK, BASE_ATTACK_TIME);
+        player->UpdateDamagePhysical(BASE_ATTACK);
+    }
+
+    // Disparo automatico contra el objetivo (clic derecho o reanudar). true si se lanzo.
+    bool StartAutoAttack(Player* player, DisguiseSlot* slot, EventWowCharacterInfo const& character, Unit* victim)
+    {
+        slot->AutoAttackTarget = victim->GetGUID();
+        slot->AutoAttackBusyMs = 0;
+        if (Spell const* current = player->GetCurrentSpell(CURRENT_AUTOREPEAT_SPELL))
+            if (current->GetSpellInfo()->Id == character.AutoAttackSpell && current->m_targets.GetUnitTargetGUID() == victim->GetGUID())
+                return true;
+
+        return player->CastSpell(victim, character.AutoAttackSpell, false) == SPELL_CAST_OK;
+    }
+
+    // Cada actualizacion del jugador: reanuda el disparo cortado por moverse o por lanzar otro hechizo. Si falta
+    // estando quieto y sin lanzar (lo cancelo el jugador, Esc, objetivo fuera de alcance...) se olvida.
+    void UpdateAutoAttack(Player* player, DisguiseSlot* slot, uint32 diff)
+    {
+        EventWowCharacterInfo const* character = sEventWowCharacters.Get(slot->CharacterId);
+        if (!character || !character->AutoAttackSpell)
+            return;
+
+        bool const busy = player->isMoving() || player->IsNonMeleeSpellCast(false, false, true);
+
+        // El disparo en curso (desde la barra o el clic derecho) marca el objetivo
+        if (Spell const* current = player->GetCurrentSpell(CURRENT_AUTOREPEAT_SPELL))
+        {
+            if (current->GetSpellInfo()->Id == character->AutoAttackSpell)
+            {
+                slot->AutoAttackTarget = current->m_targets.GetUnitTargetGUID();
+                // Moviendose: el core lo corta en esta misma actualizacion
+                slot->AutoAttackBusyMs = busy ? AutoAttackResumeWindow : 0;
+            }
+            else
+                slot->AutoAttackTarget.Clear();
+            return;
+        }
+
+        if (!slot->AutoAttackTarget)
+            return;
+
+        if (!player->IsAlive() || player->GetTarget() != slot->AutoAttackTarget)
+        {
+            slot->AutoAttackTarget.Clear();
+            return;
+        }
+
+        if (busy)
+        {
+            slot->AutoAttackBusyMs = AutoAttackResumeWindow;
+            return;
+        }
+
+        if (!slot->AutoAttackBusyMs)
+        {
+            slot->AutoAttackTarget.Clear();
+            return;
+        }
+
+        slot->AutoAttackBusyMs = diff >= slot->AutoAttackBusyMs ? 0 : slot->AutoAttackBusyMs - diff;
+        Unit* victim = ObjectAccessor::GetUnit(*player, slot->AutoAttackTarget);
+        if (!victim || !victim->IsAlive() || !player->IsValidAttackTarget(victim) || !StartAutoAttack(player, slot, *character, victim))
+            slot->AutoAttackTarget.Clear();
     }
 
     Powers GetClassPowerType(Player const* player)
@@ -129,7 +262,8 @@ void EventWowDisguise::Apply(Player* player, EventWowCharacterInfo const& charac
     }
 
     player->SetObjectScale(character.Scale);
-    ApplyWeapons(player, character);
+    // Antes de medir los maximos nativos (las armas no llevan stats). Su dano lo fija ApplyAttack al final.
+    ApplyWeapons(player, slot, character);
 
     Powers const power = Powers(character.PowerType);
     if (player->getPowerType() != power)
@@ -163,6 +297,8 @@ void EventWowDisguise::Apply(Player* player, EventWowCharacterInfo const& charac
         player->learnSpell(spellId, true);
         slot->AddedSpells.push_back(spellId);
     }
+
+    ApplyAttack(player, character);
 
     if (character.VehicleEntry)
         SummonVehicle(player, slot, character.VehicleEntry);
@@ -202,12 +338,17 @@ void EventWowDisguise::Remove(Player* player)
 
     std::vector<uint32> const spells = slot->AddedSpells;
     ObjectGuid const vehicleGuid = slot->VehicleGuid;
+    EventWowWeapons::EquipState weapons = slot->Weapons;
     EventWowCharacterInfo const* character = sEventWowCharacters.Get(slot->CharacterId);
     // Primero fuera el slot: a partir de aqui los hooks ya no fuerzan nada
     player->CustomData.Erase(DisguiseKey);
 
     DismissVehicle(player, vehicleGuid);
     DismissSummons(player);
+
+    EventWowWeapons::Unequip(player, weapons);
+    if (character)
+        RestoreAttack(player, *character);
 
     // Solo las stats del personaje; las de la partida (libros...) las quita EventWowStats::Reset
     if (character)
@@ -221,7 +362,6 @@ void EventWowDisguise::Remove(Player* player)
     player->InitDisplayIds();
     player->RestoreDisplayId();
     player->SetObjectScale(1.0f);
-    EventWowWeapons::RestoreEquipped(player);
 
     Powers const disguisePower = player->getPowerType();
     Powers const classPower = GetClassPowerType(player);
@@ -244,14 +384,18 @@ void EventWowDisguise::Remove(Player* player)
 void EventWowDisguise::Update(Player* player)
 {
     DisguiseSlot* slot = GetSlot(player);
-    if (!slot || slot->VehicleFailed || player->GetVehicle())
+    if (!slot || !player->IsInWorld() || !player->IsAlive() || player->IsBeingTeleported())
         return;
 
     EventWowCharacterInfo const* character = sEventWowCharacters.Get(slot->CharacterId);
-    if (!character || !character->VehicleEntry)
+    if (!character)
         return;
 
-    if (!player->IsInWorld() || !player->IsAlive() || player->IsBeingTeleported() || EventWowDevMode::IsActive(player))
+    // Un arma que ya no esta (destruida, o el core la quito) se vuelve a equipar
+    if (ApplyWeapons(player, slot, *character))
+        ApplyAttack(player, *character);
+
+    if (!character->VehicleEntry || slot->VehicleFailed || player->GetVehicle() || EventWowDevMode::IsActive(player))
         return;
 
     Creature* vehicle = slot->VehicleGuid ? ObjectAccessor::GetCreature(*player, slot->VehicleGuid) : nullptr;
@@ -290,17 +434,81 @@ public:
     EventWow_DisguisePlayerScript() : PlayerScript("EventWow_DisguisePlayerScript", {
         PLAYERHOOK_ON_AFTER_UPDATE_MAX_HEALTH,
         PLAYERHOOK_ON_AFTER_UPDATE_MAX_POWER,
-        PLAYERHOOK_ON_AFTER_SET_VISIBLE_ITEM_SLOT
+        PLAYERHOOK_ON_APPLY_WEAPON_DAMAGE,
+        PLAYERHOOK_CAN_UNEQUIP_ITEM,
+        PLAYERHOOK_ON_BEFORE_LOGOUT,
+        PLAYERHOOK_ON_LEVEL_CHANGED,
+        PLAYERHOOK_CAN_ATTACK_SWING,
+        PLAYERHOOK_ON_UPDATE
     }) { }
 
-    // Si el core vuelve a escribir una ranura de armas (equipar/desequipar), se repone la del disfraz
-    void OnPlayerAfterSetVisibleItemSlot(Player* player, uint8 slot, Item* /*item*/) override
+    // El dano cuerpo a cuerpo sube con el nivel; la habilidad de arma anadida, tambien (tabla de golpe)
+    void OnPlayerLevelChanged(Player* player, uint8 /*oldLevel*/) override
     {
-        if (slot != EQUIPMENT_SLOT_MAINHAND && slot != EQUIPMENT_SLOT_OFFHAND && slot != EQUIPMENT_SLOT_RANGED)
+        DisguiseSlot* slot = GetSlot(player);
+        EventWowCharacterInfo const* character = slot ? sEventWowCharacters.Get(slot->CharacterId) : nullptr;
+        if (!character)
             return;
 
-        if (EventWowCharacterInfo const* character = EventWowDisguise::Get(player))
-            ApplyWeapons(player, *character);
+        EventWowWeapons::UpdateSkills(player, slot->Weapons);
+        ApplyAttack(player, *character);
+    }
+
+    // Si el core vuelve a aplicar un arma cuerpo a cuerpo (p. ej. al recalcular todas las bonificaciones), su dano
+    // es el de la ficha, no el del objeto. (El intervalo lo vuelve a fijar el core al del arma: es el mismo.)
+    void OnPlayerApplyWeaponDamage(Player* player, uint8 slot, ItemTemplate const* proto, float& minDamage, float& maxDamage,
+        uint8 damageIndex) override
+    {
+        if (slot != EQUIPMENT_SLOT_MAINHAND && slot != EQUIPMENT_SLOT_OFFHAND)
+            return;
+
+        EventWowCharacterInfo const* character = EventWowDisguise::Get(player);
+        if (!character || !character->HasAttack() || character->AutoAttackSpell)
+            return;
+
+        if (damageIndex)
+        {
+            minDamage = maxDamage = 0.0f;
+            return;
+        }
+
+        GetMeleeDamage(player, *character, proto->Delay, minDamage, maxDamage);
+    }
+
+    // El disfraz se quita ANTES de guardar el personaje (OnPlayerLogout llega despues de SaveToDB): si no, las
+    // armas equipadas se guardan y al hacer login el core no las puede cargar (el druida no tiene la habilidad) y
+    // las manda por correo. Vale para partidas (su RemovePlayer de despues ya no encuentra disfraz) y .eventwow hero.
+    void OnPlayerBeforeLogout(Player* player) override
+    {
+        EventWowDisguise::Remove(player);
+    }
+
+    // Las armas del disfraz no se pueden quitar, cambiar ni destruir
+    bool OnPlayerCanUnequipItem(Player* player, uint16 pos, bool /*swap*/) override
+    {
+        DisguiseSlot const* slot = GetSlot(player);
+        if (!slot || (pos >> 8) != INVENTORY_SLOT_BAG_0)
+            return true;
+
+        return !EventWowWeapons::IsEquippedBy(player, slot->Weapons, uint8(pos & 0xFF));
+    }
+
+    // Clic derecho / "Atacar" sobre un enemigo: los heroes a distancia y lanzadores disparan en vez de golpear
+    bool OnPlayerCanAttackSwing(Player* player, Unit* victim) override
+    {
+        DisguiseSlot* slot = GetSlot(player);
+        EventWowCharacterInfo const* character = slot ? sEventWowCharacters.Get(slot->CharacterId) : nullptr;
+        if (!character || !character->AutoAttackSpell || !victim)
+            return true;
+
+        StartAutoAttack(player, slot, *character, victim);
+        return false;
+    }
+
+    void OnPlayerUpdate(Player* player, uint32 diff) override
+    {
+        if (DisguiseSlot* slot = GetSlot(player))
+            UpdateAutoAttack(player, slot, diff);
     }
 
     // Vida maxima = vida base del personaje + lo que el motor sume sobre el contenedor sin disfraz

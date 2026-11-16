@@ -287,8 +287,9 @@ def apply_effect(row, n, spec, rank, ranks, ctx):
         row["EffectTriggerSpell" + sfx] = int(per_rank(spec["trigger"], ranks, what + ".trigger")[rank])
     if "mechanic" in spec:
         row["EffectMechanic" + sfx] = enum_value(enums, "MECHANIC_", spec["mechanic"], what + ".mechanic")
-    # Los valores nunca escalan con el nivel del heroe: para eso estan los rangos
-    row["EffectRealPointsPerLevel" + sfx] = 0.0
+    # Por defecto los valores no escalan con el nivel del heroe (para eso estan los rangos). per_level: se suma
+    # nivel x per_level (SpellLevel/BaseLevel/MaxLevel = 0; lo usan los ataques basicos, que no tienen rangos)
+    row["EffectRealPointsPerLevel" + sfx] = float(per_rank(spec.get("per_level", 0), ranks, what + ".per_level")[rank])
     row["EffectPointsPerCombo" + sfx] = 0.0
 
 

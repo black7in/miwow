@@ -281,7 +281,8 @@ void EventWowMatch::UpdatePickCreatures()
             summon->SetDisplayId(character->DisplayId);
         }
         summon->SetObjectScale(character->Scale);
-        summon->SetVirtualItem(0, character->WeaponMainHand);
+        // Sin arma en la derecha, el arma de distancia en la mano (como se probo con el arco de Sylvanas)
+        summon->SetVirtualItem(0, character->WeaponMainHand ? character->WeaponMainHand : character->WeaponRanged);
         summon->SetVirtualItem(1, character->WeaponOffHand);
         summon->SetVirtualItem(2, 0);
         _pickCreatures[id] = summon->GetGUID();

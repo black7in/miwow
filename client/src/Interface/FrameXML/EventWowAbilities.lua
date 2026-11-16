@@ -14,6 +14,8 @@
 -- Botones seguros (SecureActionButtonTemplate, type "spell"): lanzar hechizos es una accion protegida. Se lanza por
 -- NOMBRE sin rango (CastSpellByName = el rango mas alto aprendido): subir de rango en combate no necesita tocar el
 -- boton seguro. Un hechizo de heroe no debe llamarse igual que uno del druida contenedor.
+-- Ataque basico (EventWowCharacters.h): si la ficha lo tiene, es el primer hechizo (casilla 1, tecla 1): "Atacar"
+-- nativo o un disparo automatico; el clic derecho sobre un enemigo hace lo mismo (servidor).
 -- Teclas 1..0 por override bindings (las acciones nativas siguen bloqueadas en EventWow.lua).
 -- Los botones seguros no se pueden cambiar en combate: si llega un cambio de personaje en combate se aplica al salir.
 -- Los "+", el boton de atributos y la barra de XP no son seguros: cambian tambien en combate.
@@ -32,6 +34,13 @@ EVENTWOW_ABILITY_BAR = {
 	PLUS_SIZE = 18,
 	ATTRIBUTE_SIZE = 24,
 	ATTRIBUTE_ICON = "Interface\\Icons\\Spell_Holy_WordFortitude",
+	-- Ataque basico: como el clic derecho, pulsarlo con el ataque ya activo no lo para (un boton "spell" lo
+	-- alterna: el ataque/disparo se cortaba al pulsar varias veces y no llegaba a golpear). Boton "macro":
+	-- "Atacar" -> /startattack; disparos automaticos (ataques.toml) -> /cast !<nombre> ("!" = no alternar).
+	MELEE_ATTACK_SPELL = 6603,
+	AUTO_SHOT_FIRST = 9509020,
+	AUTO_SHOT_LAST = 9509039,
+	DEFAULT_ICON = "Interface\\Icons\\INV_Misc_QuestionMark",
 };
 
 EVENTWOW_STR_ABILITY_LEVEL = "Nivel %d";
@@ -79,6 +88,28 @@ local function EventWow_SpellString(spellId)
 		return name.."("..rank..")";
 	end
 	return name;
+end
+
+-- Icono de una casilla. Los hechizos que usan la ranura de distancia (disparo de Sylvanas) pueden no tener icono
+-- hasta que el arma llega al cliente (el disfraz la equipa a la vez que manda MATCH_CHARACTER): se reintenta con
+-- PLAYER_EQUIPMENT_CHANGED y, si sigue sin icono, el del arma de distancia.
+local function EventWow_GetSpellIcon(spellId)
+	local icon = spellId and select(3, GetSpellInfo(spellId));
+	if ( not icon or icon == "" ) then
+		icon = GetInventoryItemTexture("player", INVSLOT_RANGED) or EVENTWOW_ABILITY_BAR.DEFAULT_ICON;
+	end
+	return icon;
+end
+
+-- Macro del ataque basico (ver EVENTWOW_ABILITY_BAR), nil = hechizo normal
+local function EventWow_GetAttackMacro(spellId, spellName)
+	local config = EVENTWOW_ABILITY_BAR;
+	if ( spellId == config.MELEE_ATTACK_SPELL ) then
+		return "/startattack";
+	elseif ( spellId >= config.AUTO_SHOT_FIRST and spellId <= config.AUTO_SHOT_LAST ) then
+		return "/cast !"..spellName;
+	end
+	return nil;
 end
 
 -- Estado de progresion de una casilla (indice de la ficha), nil sin progresion
@@ -132,8 +163,9 @@ local function EventWow_GetButton(index)
 	button:SetScale(EVENTWOW_ABILITY_BAR.BUTTON_SIZE / 36);
 	button:RegisterForClicks("AnyUp");
 	button:SetAttribute("type", "spell");
+	-- Marcado = ataque o disparo automatico activo (EventWow_UpdateButtons); el clic no lo deja marcado
 	button:SetScript("PostClick", function(self)
-		self:SetChecked(false);
+		self:SetChecked(self.spell and (IsCurrentSpell(self.spell) or IsAutoRepeatSpell(self.spell)) or false);
 	end);
 	button:SetScript("OnEnter", EventWow_ShowAbilityTooltip);
 	button:SetScript("OnLeave", function()
@@ -278,7 +310,10 @@ local function EventWow_ApplyCharacter()
 			button.firstSpellId = spellId;
 			-- Por nombre sin rango: el rango mas alto aprendido (ver cabecera)
 			button:SetAttribute("spell", spellName);
-			button.icon:SetTexture(select(3, GetSpellInfo(spellId)));
+			local macro = EventWow_GetAttackMacro(spellId, spellName);
+			button:SetAttribute("type", macro and "macro" or "spell");
+			button:SetAttribute("macrotext", macro);
+			button.icon:SetTexture(EventWow_GetSpellIcon(spellId));
 			button.icon:SetVertexColor(1, 1, 1);
 			button:SetChecked(false);
 			button:Show();
@@ -295,6 +330,8 @@ local function EventWow_ApplyCharacter()
 		button.firstSpellId = nil;
 		button.spell = nil;
 		button:SetAttribute("spell", nil);
+		button:SetAttribute("type", "spell");
+		button:SetAttribute("macrotext", nil);
 		button:Hide();
 		button.plus:Hide();
 	end
@@ -331,6 +368,9 @@ local function EventWow_UpdateButtons()
 			if ( start ) then
 				CooldownFrame_SetTimer(button.cooldown, start, duration, enable);
 			end
+
+			-- Ataque basico (casilla 1: "Atacar" o disparo automatico) activo
+			button:SetChecked(IsCurrentSpell(button.spell) or IsAutoRepeatSpell(button.spell) or false);
 
 			local usable, noMana = IsUsableSpell(button.spell);
 			if ( usable ) then
@@ -444,10 +484,18 @@ local function EventWow_CreateAbilityBar()
 	bar:RegisterEvent("PLAYER_REGEN_ENABLED");
 	bar:RegisterEvent("PLAYER_XP_UPDATE");
 	bar:RegisterEvent("PLAYER_LEVEL_UP");
+	bar:RegisterEvent("PLAYER_EQUIPMENT_CHANGED");
 	bar:SetScript("OnEvent", function(self, event)
 		if ( event == "PLAYER_REGEN_ENABLED" ) then
 			if ( pendingUpdate ) then
 				EventWow_ApplyCharacter();
+			end
+		elseif ( event == "PLAYER_EQUIPMENT_CHANGED" ) then
+			-- Iconos (no seguro: tambien en combate)
+			for _, button in ipairs(buttons) do
+				if ( button:IsShown() and button.firstSpellId ) then
+					button.icon:SetTexture(EventWow_GetSpellIcon(button.firstSpellId));
+				end
 			end
 		else
 			EventWow_UpdateXpBar();

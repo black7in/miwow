@@ -42,8 +42,11 @@ Criterios:
   **[invoc.]**: invocacion (regla comun ya hecha: la nueva sustituye a la anterior; aura de `trigger` por rango).
 - Un jugador solo puede tener **una mascota controlable** a la vez; los guardianes (no controlables) no tienen limite.
 
-Ataque basico (decidido, `docs/heroes.md` seccion 6): C = cuerpo a cuerpo nativo, D = disparo automatico propio
-(arqueros), L = proyectil magico automatico propio (lanzadores).
+Ataque basico (`docs/heroes.md` seccion 6, implementado 2026-11-14 sin probar): C = cuerpo a cuerpo nativo
+("Atacar" + arma invisible de la ficha), D = disparo automatico fisico propio (Sylvanas, 9509020), L = disparo magico
+automatico propio (lanzadores: Jaina/Kel'Thuzad 9509021 Escarcha, Gul'dan 9509022 Sombras, Archimonde 9509023 Fuego,
+Vol'jin 9509024 Naturaleza; `data/spells/ataques.toml`). Vol'jin pasa a L (era D). Casilla 1 de la barra = ataque:
+las teclas de las habilidades pasan a 2-5, definitiva 6, suprema 7.
 
 ## Resumen
 
@@ -59,7 +62,7 @@ Ataque basico (decidido, `docs/heroes.md` seccion 6): C = cuerpo a cuerpo nativo
 | Kel'Thuzad | lanzador | L | escarcha y sombras, esqueletos, explosion de escarcha |
 | Gul'dan | lanzador | L | brujo: drenar vida, lluvia de fuego, guardia vil, infernal |
 | Archimonde | lanzador/jefe | L | dedo de la muerte, rafaga de aire, fuego apocaliptico |
-| Vol'jin | apoyo | D | maleficio, guardas serpiente, gran vudu |
+| Vol'jin | apoyo | L | maleficio, guardas serpiente, gran vudu |
 | Cairne | tanque | C | pisoton, ola de choque, reencarnacion |
 | Lor'themar | cuerpo a cuerpo/distancia | C | arcano: disparo arcano, silencio, trampas, fenix |
 | Garrosh | cuerpo a cuerpo | C | furia: torbellino, sed de sangre, ansia de sangre |

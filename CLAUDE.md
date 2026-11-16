@@ -372,7 +372,8 @@ Datos clave de la API Glue:
   "Lista inicial" en `docs/heroes-modelos.md`). Armas sin equipar: prototipo `EventWowWeapons.cpp` (comando
   `.eventwow weapon set/sheath/clear`, escribe `PLAYER_VISIBLE_ITEM_*`), probado por el usuario: se ven sobre el modelo
   transformado, la Z envaina/desenvaina; `sheath` no hace nada (el cliente controla el envainado propio; quitarlo) y
-  la ranura de distancia no se dibuja (arcos en la mano derecha). Armas visuales propias 9500200-9500299 (SQL
+  la ranura de distancia no se dibuja (arcos en la mano derecha; OJO: probado con un arco de PNJ de envainado 0, a
+  revisar con las armas equipadas de 2026-11-16). Armas propias 9500200-9500299 (SQL
   `2026_11_14_03`, 9500200 = arco de Sylvanas visible envainado). Siguiente: armas en la ficha (`eventwow_character`)
   aplicadas por el disfraz.
   **Eleccion estilo Warcraft 3 (decidida con el usuario 2026-11-14, probada: "todo bien"; tamanos a ajustar por el usuario)**: en el Asedio los heroes son PNJ en
@@ -407,6 +408,44 @@ Datos clave de la API Glue:
   `spell_eventwow_black_arrow`, `spell_eventwow_reincarnation`; solo las invocaciones controlables sustituyen a la
   anterior. spellgen: clave `[spell.fields]` (columnas sueltas, p. ej. `ProcChance`). Todo aplicado a mano en la BD
   de desarrollo y parche regenerado.
+  **Ataque basico de los heroes (2026-11-14, SIN COMPILAR NI PROBAR)**: `docs/heroes.md` seccion 6. Casilla 1 = ataque
+  ("Atacar" con arma invisible de la ficha, o disparo automatico propio `data/spells/ataques.toml` 9509020-024) y
+  clic derecho (hook nuevo del core `OnPlayerCanAttackSwing`, commit `ab105ded2`). Columnas
+  `eventwow_character.AutoAttackSpell/AttackMin/AttackMax/AttackPerLevel/AttackSpeed` (SQL `_09`, aplicado a mano),
+  spellgen `per_level`. Parche regenerado.
+  Probado por el usuario (2026-11-14): disparo de Kel'Thuzad bien; Sylvanas disparaba sin animacion con el arco
+  envainado (el cliente anima segun el arma EQUIPADA en la ranura de distancia). Un emote por disparo salia
+  "interrumpido" (probado 2026-11-16, descartado). Tambien corregido `UNIT_MASK_CONTROLABLE_GUARDIAN` ->
+  `IsControllableGuardian()` en `EventWowHeroSpells.cpp` (error de compilacion de `ca464c0`).
+  **Decision del usuario (2026-11-16): las armas de los heroes se EQUIPAN de verdad durante el disfraz** (todas:
+  derecha, izquierda y distancia; excepcion a "los objetos no se equipan", que sigue valiendo para los de la tienda).
+  SIN COMPILAR NI PROBAR: `EventWowWeapons::Equip/Unequip` (EquipNewItem, habilidad de arma que falte + competencia,
+  doble empunadura, aura 46699 sin municion; no se pueden quitar; Update las repone), `EventWowDisguise` (dano de la
+  ficha escalado a la velocidad del arma, hook `OnPlayerApplyWeaponDamage`), columna `WeaponRanged`, armas propias
+  9500200 + 9500210-9500222 sin stats, dano/velocidad normales de su tipo (SQL `2026_11_16_00`, aplicado a mano en la
+  BD de desarrollo junto con `eventwow_spells_ataques.sql`; parche regenerado). 9509020 recupera `USES_RANGED_SLOT`.
+  Detalle y "PROBAR" en `docs/heroes.md` sec. 6.
+  Probado por el usuario (2026-11-16): armas equipadas BIEN en todos los heroes (Arthas ya a dos manos, Garrosh doble
+  empunadura, Kel'Thuzad). Sylvanas NO: ni dispara con el arco ni lo desenvaina, tampoco tras devolver
+  `USES_RANGED_SLOT` a Multidisparo/Flecha negra/Salva. Ademas sus disparos daban "fuera de rango" a cualquier
+  distancia: causa = `RangedModRange` 0 del arco (copiado de PNJ; el CLIENTE lo usa como % del alcance) -> 100 (SQL
+  `_16_00` aplicado; sin probar; hace falta borrar la carpeta Cache del cliente: datos de objeto cacheados).
+  Pendiente de diagnostico (el usuario tuvo que salir): `.demorph` con el disfraz puesto y disparar: si el elfo saca
+  el arco y anima, el problema es el modelo de criatura (28213) y hay que buscar otra via; mirar tambien con C (modo
+  dev + /eventwow) que el arco esta en la ranura de distancia. Posible relacion con el alcance 0.
+  RESUELTO (probado por el usuario 2026-11-16: "lo hicimos"): el druida tenia ranura de RELIQUIA (`ChrClasses.dbc`
+  Flags bit 0x08) -> arco en rojo, sin envainar ni municion. SQL `_16_01` (TODAS las habilidades de armas al druida:
+  `skillraceclassinfo_dbc` + `playercreateinfo_skills` + `playercreateinfo_spell_custom`, override
+  `PlayerStart.CustomSpells = 1`) y `_16_02` (druida Flags 0x0A -> 0x02, Build-Dbc `ExtraRanges` chrclasses_dbc).
+  Sylvanas dispara y anima. Probado tambien (2026-11-16, "todo esta bien"): icono del disparo (icono propio en
+  `ataques.toml` + `EventWowAbilities.lua` refresca iconos con PLAYER_EQUIPMENT_CHANGED, el cliente da el del arma a
+  los hechizos de ranura de distancia) y la casilla del ataque basico ya no se corta al pulsarla varias veces (boton
+  "macro": `/startattack` para 6603, `/cast !<nombre>` para 9509020-9509039).
+  Todo lo anterior COMMITEADO (2026-11-16). Pendiente (lo hara el usuario sin prisa): el resto de "PROBAR" en
+  `docs/heroes.md` sec. 6 y probar las habilidades de los 14 heroes. Pendiente decidido: regla de la agilidad ->
+  velocidad de ataque (hoy solo `haste` acelera los disparos).
+  **SIGUIENTE (decidido por el usuario 2026-11-16)**: la logica del evento del Asedio (oleadas, regiones, flujo de
+  partida; ver `docs/asedio.md`).
 - Mapas propios desde Warcraft 3 (ver `docs/mapas.md`). Decision del usuario: los mapas los disena el (y un amigo) en
   el World Editor de WC3 1.26 (no usa Noggit) y se convierten. Diseno PROPIO: no se replican mapas de terceros
   (p. ej. X Hero Siege); el usuario y su amigo hicieron uno inspirado en el genero.

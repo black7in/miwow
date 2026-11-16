@@ -10,7 +10,7 @@ struct EventWowCharacterInfo;
 // (EventWowCharacters.h) y lo deshace sin dejar rastro. Nada se guarda en BD:
 //  - Modelo: display y display nativo (asi las auras de transformacion vuelven al disfraz, no a la raza).
 //  - Escala.
-//  - Armas visibles de la ficha (EventWowWeapons.h: solo el aspecto); al quitar, vuelven las equipadas.
+//  - Armas de la ficha equipadas de verdad (EventWowWeapons::Equip; no se pueden quitar); al quitar, se destruyen.
 //  - Vida/poder maximos = base del personaje + lo que el motor sume sobre el contenedor sin disfraz (stats,
 //    auras): hooks OnPlayerAfterUpdateMaxHealth/MaxPower (al final del calculo del core).
 //  - Stats del personaje (EventWowStats, como un objeto equipado); se restan al quitar el disfraz.

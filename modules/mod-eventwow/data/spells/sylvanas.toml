@@ -1,6 +1,8 @@
 # EventWow: Sylvanas Brisaveloz (arquera; ficha 33). Distancia. docs/heroes-habilidades.md
-# Numeros PROVISIONALES (vida base 6000, mana 5000). Los disparos de cazador piden arma de distancia y usan su
-# ranura: se les quita (attributes_remove 0x2, SPELL_ATTR0_USES_RANGED_SLOT) y el dano es fijo (no de arma).
+# Numeros PROVISIONALES (vida base 6000, mana 5000). Los disparos conservan SPELL_ATTR0_USES_RANGED_SLOT y piden arma
+# de distancia ([spell.fields]): con el atributo el CLIENTE anima el disparo con el arco equipado (el disfraz lo equipa
+# de verdad, EventWowWeapons). Dano por hechizo (SCHOOL_DAMAGE, no usa municion ni el dano del arco). El impacto de
+# la Salva (9500419) es desencadenado: sin atributo.
 #
 # Rango de IDs: 9500400-9500499.
 #   400-403 Multidisparo   404-407 Flecha negra   408-411 Lamento de alma en pena   412-415 Aura de disparo certero
@@ -18,12 +20,14 @@ range = 35
 cooldown = 6
 cost = [150, 180, 210, 240]
 ap_coefficient = 0.2
-attributes_remove = 0x2
 [spell.effect1]
 type = "SCHOOL_DAMAGE"
 target = "UNIT_TARGET_ENEMY"
 value = [250, 400, 550, 700]
 chain = [3, 4, 5, 6]
+[spell.fields]
+EquippedItemClass = 2
+EquippedItemSubclass = 0x5000C   # arco, escopeta, arrojadiza, ballesta
 
 # --- Basica 2: dano de sombras en el tiempo; si el objetivo muere con ella, se levanta un esqueleto que lucha
 # para Sylvanas (spell_eventwow_black_arrow). Base: Flecha negra (63672; su +6 % de dano recibido se mantiene).
@@ -40,10 +44,12 @@ cooldown = 8
 duration = 12
 cost = [150, 180, 210, 240]
 ap_dot_coefficient = 0.05
-attributes_remove = 0x2
 [spell.effect1]
 value = [100, 160, 220, 280]
 period = 2
+[spell.fields]
+EquippedItemClass = 2
+EquippedItemSubclass = 0x5000C
 
 # --- Basica 3: miedo a los cercanos. Base: Alarido psiquico (10890).
 [[spell]]
@@ -94,9 +100,11 @@ range = 35
 duration = 6
 cooldown = 30
 cost = [400, 450, 500]
-attributes_remove = 0x2
 [spell.effect2]
 trigger = [9500419, 9500420, 9500421]
+[spell.fields]
+EquippedItemClass = 2
+EquippedItemSubclass = 0x5000C
 
 [[spell]]
 id = 9500419

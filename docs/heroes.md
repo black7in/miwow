@@ -141,20 +141,80 @@ Decisiones:
 
 ## 6. Pendiente
 
-- **Ataque basico (decidido 2026-11-14: todos los heroes)**, segun el tipo de heroe en su ficha:
+- **Ataque basico: IMPLEMENTADO (2026-11-14, sin compilar ni probar)**:
+  - Ficha `eventwow_character` (SQL `2026_11_14_09`): `AttackSpeed` (ms; 0 = sin ataque basico, no se toca nada),
+    `AutoAttackSpell` (0 = "Atacar" cuerpo a cuerpo), `AttackMin/AttackMax` (nivel 1) + `AttackPerLevel` (arma
+    invisible, solo cuerpo a cuerpo). Con `AttackSpeed` el ataque es el primer hechizo de la barra (casilla 1, tecla 1;
+    fijo, siempre aprendido), antes de las habilidades.
+  - Cuerpo a cuerpo: `SetBaseWeaponDamage` + `SetAttackTime(BASE_ATTACK)` al disfrazarse y al cambiar de nivel
+    (`EventWowDisguise`); al quitar el disfraz, como sin arma (1-2, 2 s).
+  - Distancia/lanzadores: disparo automatico propio (`data/spells/ataques.toml`, 9509020-9509024): dano del hechizo
+    = min-max a nivel 1 + `per_level` por nivel (clave nueva de spellgen: `EffectRealPointsPerLevel`) + poder de
+    ataque a distancia (Sylvanas, familia de cazador sin mascara) o poder con hechizos (lanzadores). Intervalo =
+    `AttackSpeed` (`SetAttackTime(RANGED_ATTACK)`).
+  - Clic derecho: hook nuevo del core `OnPlayerCanAttackSwing` (`docs/core-changes.md`): con disparo automatico, en
+    vez de golpear se lanza el disparo. El core corta los disparos automaticos (salvo el 75 del cazador) al moverse
+    o al lanzar otro hechizo: el modulo lo vuelve a lanzar al pararse si el objetivo sigue seleccionado (ventana de
+    0,6 s; si falta estando quieto, lo cancelo el jugador y se olvida).
+  - Cliente: la casilla del ataque se marca mientras esta activo (`IsCurrentSpell` / `IsAutoRepeatSpell`).
+  - **Armas EQUIPADAS de verdad (decidido con el usuario 2026-11-16; SIN COMPILAR NI PROBAR)**. Problema (probado
+    2026-11-14 con Sylvanas): disparaba sin animacion y con el arco envainado. Causa: el Disparo automatico nativo (75)
+    lleva `SPELL_ATTR0_USES_RANGED_SLOT`; con el, el CLIENTE mira el arma equipada en la ranura de distancia, elige la
+    animacion (arco/escopeta/arrojadiza), la saca a la mano y usa la municion como proyectil; sin arma equipada el
+    atributo se habia quitado y el hechizo no se animaba. Un emote de disparo por cada tiro (probado 2026-11-16)
+    salia "interrumpido": descartado.
+    - Las armas de la ficha (`WeaponMainHand/OffHand/Ranged`, SQL `2026_11_16_00`) las EQUIPA el servidor durante el
+      disfraz (`EventWowWeapons::Equip`, `EquipNewItem`: sin comprobaciones de clase/habilidad/nivel) y se destruyen
+      al quitarlo (`Unequip`; `ClearInventory` en login como red). No se pueden quitar ni destruir (hook
+      `OnPlayerCanUnequipItem`); si faltan, `EventWowDisguise::Update` (1 s, en partida) las repone.
+    - Habilidad de arma: el core no la mira para atacar con lo equipado, pero su valor entra en la tabla de golpe (con
+      0 falla casi todo). Se da la que le falte al druida al maximo del nivel (`SetSkill`, y al subir de nivel) + la
+      competencia al cliente (`SMSG_SET_PROFICIENCY`). Sin SkillRaceClassInfo: si quedara guardada (caida del
+      servidor), el core la borra al hacer login por no ser de druida.
+      ACTUALIZADO 2026-11-16 (sin probar): el contenedor tiene TODAS las armas de forma permanente (SQL `_16_01`):
+      filas de druida en `skillraceclassinfo_dbc` (9500000-9500008, tambien en el DBC del cliente),
+      `playercreateinfo_skills` + `playercreateinfo_spell_custom` (competencias 201/196/264/266/202/197/2567/5011/5009)
+      aprendidas en cada login (override `PlayerStart.CustomSpells = 1`). Equip ya no anade habilidades (las tiene).
+      Probado: con eso el druida equipa el arco, pero en rojo, sin envainar/desenvainar y sin ranura de municion:
+      el druida tiene ranura de RELIQUIA (`ChrClasses.dbc` Flags bit 0x08, solo paladin/DK/chaman/druida). SQL `_16_02`:
+      druida 0x0A -> 0x02 (solo cliente; Build-Dbc `ExtraRanges` chrclasses_dbc ID 11). Probado: Sylvanas dispara y anima.
+    - Mano izquierda con arma: doble empunadura (golpea con la penalizacion nativa); escudo: solo aspecto (el druida no
+      bloquea). Arco/escopeta/ballesta: aura 46699 "No necesita municion" (proyectil de flecha en el `SPELL_GO`).
+    - Armas propias 9500200 (arco de Sylvanas) y 9500210-9500222: aspecto de las de PNJ, sin stats ni durabilidad,
+      dano y velocidad normales de su tipo (1 mano 2,6 s, daga 1,8, 2 manos 3,6, baston 3,3, arco 2,8).
+    - Dano: cuerpo a cuerpo = el de la ficha (`AttackMin/Max/PerLevel`, a la velocidad de referencia `AttackSpeed`)
+      escalado por (velocidad del arma / `AttackSpeed`): mismo dano por segundo, golpes mas lentos y fuertes con un
+      arma de dos manos (hook `OnPlayerApplyWeaponDamage` + `ApplyAttack`). Intervalo = el del arma; sin arma,
+      `AttackSpeed`. Disparos: dano del hechizo (9509020 escalado a 2,8 s: 56-84 + 11,2/nivel), intervalo = el del
+      arma de distancia (lanzadores sin ella: `AttackSpeed`).
+    - 9509020 conserva `USES_RANGED_SLOT` y pide arco/escopeta/ballesta/arrojadiza (`[spell.fields]`). El cliente ya
+      no desenvaina a mano. Igual las habilidades de disparo de Sylvanas (Multidisparo, Flecha negra, Salva): se les
+      habia quitado el atributo y por eso no usaban el arco (2026-11-16). Regla: habilidad de disparo de un heroe CON
+      arma de distancia = conservar el atributo; sin arma (Lor'themar, Disparo Arcano) = quitarlo.
+    - Arthas (9500210): el arma de PNJ es de una mano; la copia es maza a dos manos (el usuario lo pidio).
+    - Logout: el disfraz se quita en `OnPlayerBeforeLogout` (antes de `SaveToDB`; `OnPlayerLogout` llega despues).
+      Sin eso el arma quedaba guardada y al hacer login el core la mandaba por correo.
+    - PROBAR: Sylvanas (33) anima el disparo y saca el arco (y se ve el arco envainado en la espalda: antes se
+      penso que la ranura de distancia no se dibujaba, pero se probo con un arco de PNJ de envainado 0); la flecha
+      sale; Garrosh (43) golpea con las dos hachas; Lor'themar (42) con escudo; heroes de dos manos (31, 35, 36, 41)
+      golpes cada 3,6 s; que no fallen casi siempre (habilidad de arma); que no se puedan quitar ni destruir; que al
+      quitar el disfraz (`.eventwow hero off`, fin de partida, logout) no quede ni arma ni habilidad (Sylvanas sin
+      "Arcos"); un GM en modo dev con armas propias no las pierde (esa ranura no se toca).
+  - Probado: disparo de Kel'Thuzad bien. Solo la celeridad (`haste`) acelera los disparos (temporizador de distancia);
+    la regla de la agilidad (seccion 4, regla 4) sigue sin implementar.
+  - PROBAR: animaciones, que moverse y pararse reanuda el
+    disparo, que Esc / cambiar de objetivo lo para, dano por nivel (`.eventwow hero <id> <nivel>`).
+- Diseno del ataque basico (decidido 2026-11-14: todos los heroes), segun el tipo de heroe en su ficha:
   - **Cuerpo a cuerpo**: ataque automatico nativo (todos los personajes de WoW pueden pegar cuerpo a cuerpo,
     tambien sin arma). Dano base por ficha y por nivel (`SetBaseWeaponDamage`, el "arma invisible") + velocidad
     de ataque base; encima el motor suma el poder de ataque (fuerza) y el critico.
-  - **A distancia** (arqueros, pistoleros): en WoW el disparo automatico pide arco/arma de fuego/ballesta equipados
-    (no equipamos objetos), asi que sera un hechizo propio de disparo automatico (se repite solo mientras haya
-    objetivo) con proyectil de flecha o bala, sin arma.
+  - **A distancia** (arqueros, pistoleros): hechizo propio de disparo automatico (se repite solo mientras haya
+    objetivo) con el arma de distancia de la ficha equipada de verdad (ver "Armas EQUIPADAS" arriba).
   - **Lanzadores** (magos...): en WoW atacan a distancia con varita ("Disparar", automatico). Igual que los de
     distancia: disparo automatico propio con proyectil magico, mas flojo.
   - Los de distancia/lanzadores calculan su dano en el servidor (base + nivel + stats): el druida contenedor no
     tiene poder de ataque a distancia nativo.
   - Velocidad: la agilidad sube la de todos los tipos (regla 4 de la seccion 4); tope 1 golpe / 0,3 s (aceptado).
-  - Por comprobar: que se vea el arco/escopeta en la mano del disfraz sin equipar nada, y las animaciones de
-    ataque del modelo.
 - Forma de crear los hechizos (herramienta).
 
 ## 7. Orden de implementacion
