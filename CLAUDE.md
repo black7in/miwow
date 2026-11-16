@@ -441,7 +441,13 @@ Datos clave de la API Glue:
   `ataques.toml` + `EventWowAbilities.lua` refresca iconos con PLAYER_EQUIPMENT_CHANGED, el cliente da el del arma a
   los hechizos de ranura de distancia) y la casilla del ataque basico ya no se corta al pulsarla varias veces (boton
   "macro": `/startattack` para 6603, `/cast !<nombre>` para 9509020-9509039).
-  Todo lo anterior COMMITEADO (2026-11-16). Pendiente (lo hara el usuario sin prisa): el resto de "PROBAR" en
+  Todo lo anterior COMMITEADO (2026-11-16).
+  Velocidad de ataque (2026-11-16): el usuario quiere minimo ~0,15 s y que SOLO la agilidad suba la
+  celeridad de ataque (curva sin decidir del todo; ver opciones A lineal / B 400 % x agi/(agi+500)). Comando de prueba
+  `.eventwow attackspeed set <pct> | lineal <agi> | wc3 <agi> | off` (EventWowStats.cpp). Problema encontrado: a esa
+  velocidad nuestro disparo automatico cortaba las habilidades (Salva...); con el 75 no (probado). Causa: el core da
+  reglas propias solo al ID 75. Cambio al core `04ab628c7` (probado: Salva ya no se corta): `SpellInfo::IsAutoShot` + `SpellMgr::SetSpellAutoShot`
+  (docs/core-changes.md); `EventWowCharacters::Load` marca los `AutoAttackSpell` de las fichas. Pendiente (lo hara el usuario sin prisa): el resto de "PROBAR" en
   `docs/heroes.md` sec. 6 y probar las habilidades de los 14 heroes. Pendiente decidido: regla de la agilidad ->
   velocidad de ataque (hoy solo `haste` acelera los disparos).
   **SIGUIENTE (decidido por el usuario 2026-11-16)**: la logica del evento del Asedio (oleadas, regiones, flujo de

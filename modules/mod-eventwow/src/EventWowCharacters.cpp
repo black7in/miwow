@@ -76,6 +76,16 @@ void EventWowCharacters::Load()
                         "(SPELL_ATTR2_AUTO_REPEAT), ataca cuerpo a cuerpo", info.Id, info.Name, info.AutoAttackSpell);
                     info.AutoAttackSpell = 0;
                 }
+                else
+                {
+                    // Reglas del Disparo automatico de cazador (75) en el core (SpellInfo::IsAutoShot, commit del core
+                    // [EventWow]): lanzar, canalizar o moverse lo pausa en vez de cortarlo y empezar no interrumpe
+                    // otros hechizos. Sin esto, a alta velocidad de ataque el disparo cortaba las habilidades (probado
+                    // con Salva: con el 75 no pasa). Todos los rangos de la cadena.
+                    for (uint32 spell = sSpellMgr->GetFirstSpellInChain(info.AutoAttackSpell); spell;
+                        spell = sSpellMgr->GetNextSpellInChain(spell))
+                        sSpellMgr->SetSpellAutoShot(spell);
+                }
             }
 
             if (info.HasAttack() && info.AttackMax < info.AttackMin)

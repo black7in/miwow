@@ -5,6 +5,7 @@
 #include "ItemTemplate.h"
 #include "Player.h"
 #include "StringFormat.h"
+#include <algorithm>
 #include <array>
 #include <string>
 
@@ -192,8 +193,45 @@ void EventWowStats::Reset(Player* player)
             ApplyStat(player, EventWowStat(i), values[i], false);
 }
 
+// PRUEBA (decidir la regla agilidad -> velocidad de ataque, docs/heroes.md sec. 4 regla 4): celeridad de ataque de
+// cuerpo a cuerpo, mano izquierda y distancia (tambien el disparo de los lanzadores) sin tope, para ver en el juego
+// lo rapido que es cada intervalo. Mismo mecanismo que las auras nativas (ApplyAttackTimePercentMod: +X % = X % mas
+// golpes por segundo). Se mantiene hasta "off" o relog; no lo quitan ni el disfraz ni el estado base.
+namespace
+{
+    std::string const AttackSpeedTestKey = "EventWowAttackSpeedTest";
+
+    struct AttackSpeedTestSlot : public DataMap::Base
+    {
+        float Pct = 0.0f;
+    };
+
+    constexpr std::array<WeaponAttackType, 3> AttackSpeedTestTypes = { BASE_ATTACK, OFF_ATTACK, RANGED_ATTACK };
+
+    void SetAttackSpeedTest(Player* player, float pct)
+    {
+        AttackSpeedTestSlot* slot = player->CustomData.GetDefault<AttackSpeedTestSlot>(AttackSpeedTestKey);
+        for (WeaponAttackType type : AttackSpeedTestTypes)
+        {
+            if (slot->Pct > 0.0f)
+                player->ApplyAttackTimePercentMod(type, slot->Pct, false);
+            if (pct > 0.0f)
+                player->ApplyAttackTimePercentMod(type, pct, true);
+        }
+        slot->Pct = pct;
+    }
+
+    // Intervalo real (ms) que ve el cliente: UNIT_FIELD_BASEATTACKTIME ya lleva todos los modificadores
+    uint32 GetAttackInterval(Player const* player, WeaponAttackType type)
+    {
+        return uint32(player->GetFloatValue(UNIT_FIELD_BASEATTACKTIME + AsUnderlyingType(type)));
+    }
+}
+
 // Comandos de prueba (GM): .eventwow stat add <stat> <valor> | reset | list
 // Sobre el jugador seleccionado o uno mismo. Fuera de partida duran hasta el proximo estado base.
+// .eventwow attackspeed set <pct> | lineal <agi> | wc3 <agi> | off   (PRUEBA, ver arriba)
+//   lineal: 0,5 % por punto de agilidad; wc3: 400 % x agi / (agi + 500)
 using namespace Acore::ChatCommands;
 
 class EventWow_StatsCommandScript : public CommandScript
@@ -209,9 +247,17 @@ public:
             { "reset", HandleStatReset, SEC_GAMEMASTER, Console::No },
             { "list",  HandleStatList,  SEC_GAMEMASTER, Console::No }
         };
+        static ChatCommandTable attackSpeedTable =
+        {
+            { "set",    HandleAttackSpeedSet,    SEC_GAMEMASTER, Console::No },
+            { "lineal", HandleAttackSpeedLinear, SEC_GAMEMASTER, Console::No },
+            { "wc3",    HandleAttackSpeedWc3,    SEC_GAMEMASTER, Console::No },
+            { "off",    HandleAttackSpeedOff,    SEC_GAMEMASTER, Console::No }
+        };
         static ChatCommandTable eventwowTable =
         {
-            { "stat", statTable }
+            { "stat",        statTable },
+            { "attackspeed", attackSpeedTable }
         };
         static ChatCommandTable commandTable =
         {
@@ -281,6 +327,47 @@ public:
 
         handler->PSendSysMessage("EventWow: bonificaciones de {}: {}", target->GetName(), list.empty() ? "ninguna" : list);
         return true;
+    }
+
+    static bool ApplyAttackSpeed(ChatHandler* handler, float pct, std::string const& source)
+    {
+        if (pct < 0.0f || pct > 100000.0f)
+        {
+            handler->SendErrorMessage("EventWow: porcentaje entre 0 y 100000");
+            return false;
+        }
+
+        Player* target = handler->getSelectedPlayerOrSelf();
+        if (!target)
+            return false;
+
+        SetAttackSpeedTest(target, pct);
+        handler->PSendSysMessage("EventWow: {} celeridad de ataque +{:.1f} %{} -> intervalos: derecha {} ms, izquierda {} ms, distancia {} ms",
+            target->GetName(), pct, source, GetAttackInterval(target, BASE_ATTACK), GetAttackInterval(target, OFF_ATTACK),
+            GetAttackInterval(target, RANGED_ATTACK));
+        return true;
+    }
+
+    static bool HandleAttackSpeedSet(ChatHandler* handler, float pct)
+    {
+        return ApplyAttackSpeed(handler, pct, "");
+    }
+
+    static bool HandleAttackSpeedLinear(ChatHandler* handler, uint32 agility)
+    {
+        return ApplyAttackSpeed(handler, std::min(agility * 0.5f, 100000.0f),
+            Acore::StringFormat(" (lineal, {} agilidad)", agility));
+    }
+
+    static bool HandleAttackSpeedWc3(ChatHandler* handler, uint32 agility)
+    {
+        return ApplyAttackSpeed(handler, 400.0f * agility / (agility + 500.0f),
+            Acore::StringFormat(" (wc3, {} agilidad)", agility));
+    }
+
+    static bool HandleAttackSpeedOff(ChatHandler* handler)
+    {
+        return ApplyAttackSpeed(handler, 0.0f, "");
     }
 };
 
