@@ -213,6 +213,10 @@ Decisiones:
     la regla de la agilidad (seccion 4, regla 4) sigue sin implementar.
   - PROBAR: animaciones, que moverse y pararse reanuda el
     disparo, que Esc / cambiar de objetivo lo para, dano por nivel (`.eventwow hero <id> <nivel>`).
+  - **REVISAR (anotado por el usuario 2026-11-17)**: autoataque de los MAGOS (lanzadores con disparo automatico propio):
+    1. Bug: aunque se cancele con Esc, sigue atacando automaticamente al objetivo.
+    2. Revisar si ese ataque cuenta como cuerpo a cuerpo o a distancia (y si deberia ser magico).
+    3. Revisar que stat sube su dano (poder de ataque, poder a distancia, poder con hechizos...).
 - Diseno del ataque basico (decidido 2026-11-14: todos los heroes), segun el tipo de heroe en su ficha:
   - **Cuerpo a cuerpo**: ataque automatico nativo (todos los personajes de WoW pueden pegar cuerpo a cuerpo,
     tambien sin arma). Dano base por ficha y por nivel (`SetBaseWeaponDamage`, el "arma invisible") + velocidad
