@@ -33,6 +33,10 @@ LOCALE_SLOTS = (0, 6)
 TEXT_FIELDS = ("Name", "NameSubtext", "Description", "AuraDescription")
 SCHOOLS = {"physical": 0, "holy": 1, "fire": 2, "nature": 3, "frost": 4, "shadow": 5, "arcane": 6}
 POWERS = {"mana": 0, "rage": 1, "focus": 2, "energy": 3, "runic": 6}
+DMG_CLASSES = {"none": 0, "magic": 1, "melee": 2, "ranged": 3}
+ATTR1_CHANNELED_1 = 0x00000004
+ATTR1_CHANNELED_2 = 0x00000040
+ATTR5_SPELL_HASTE_AFFECTS_PERIODIC = 0x00002000
 
 
 class SpellError(Exception):
@@ -368,6 +372,10 @@ def build_rank(spells, spec, rank, ranks, ctx):
         row["Mechanic"] = enum_value(enums, "MECHANIC_", v, where + ".mechanic")
     if (v := opt("max_targets")) is not None:
         row["MaxTargets"] = int(v)
+    if (v := opt("dmg_class")) is not None:
+        # DmgClass (DefenseType): la celeridad con hechizos solo acorta el lanzamiento de los "magic"; los "ranged"
+        # usan la celeridad de distancia (agilidad)
+        row["DefenseType"] = DMG_CLASSES[v]
     for key in ("Attributes", "AttributesEx", "AttributesEx2", "AttributesEx3", "AttributesEx4",
                 "AttributesEx5", "AttributesEx6", "AttributesEx7"):
         lower = key.lower()
@@ -387,6 +395,21 @@ def build_rank(spells, spec, rank, ranks, ctx):
         if column not in row:
             raise SpellError(f"{where}.fields: la columna '{column}' no existe en spell_dbc")
         row[column] = per_rank(value, ranks, f"{where}.fields.{column}")[rank]
+
+    # Celeridad con hechizos (intelecto, docs/heroes.md sec. 4 regla 5). Con SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC
+    # el core la aplica tambien a: periodo Y duracion de las auras del hechizo (mismos ticks en menos tiempo; OJO,
+    # tambien acorta un aturdimiento/raiz que vaya en el mismo hechizo), duracion de canalizados y lanzamiento de
+    # los DmgClass NONE (los MAGIC ya lo tienen sin atributo). Por defecto en todo hechizo no fisico canalizado,
+    # periodico o con lanzamiento; los fisicos (melee/ranged) van con la agilidad. haste_periodic = true/false fuerza.
+    periodic = any(row[f"EffectAuraPeriod_{n}"] > 0 for n in (1, 2, 3))
+    channeled = row["AttributesEx"] & (ATTR1_CHANNELED_1 | ATTR1_CHANNELED_2)
+    none_cast = row["CastingTimeIndex"] > 1 and row["DefenseType"] == DMG_CLASSES["none"]  # indice 1 = instantaneo
+    physical = row["DefenseType"] in (DMG_CLASSES["melee"], DMG_CLASSES["ranged"])
+    haste = spec.get("haste_periodic", not physical and (periodic or channeled or none_cast))
+    if haste:
+        row["AttributesEx5"] |= ATTR5_SPELL_HASTE_AFFECTS_PERIODIC
+    else:
+        row["AttributesEx5"] &= ~ATTR5_SPELL_HASTE_AFFECTS_PERIODIC & 0xFFFFFFFF
     return row
 
 

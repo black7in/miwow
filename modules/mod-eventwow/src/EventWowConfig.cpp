@@ -34,6 +34,9 @@ void EventWowConfig::Load()
     AgilityHasteMax = std::max(0.0f, sConfigMgr->GetOption<float>("EventWow.Hero.AgilityHaste.Max", 1770.0f));
     AgilityHasteHalf = std::max(1.0f, sConfigMgr->GetOption<float>("EventWow.Hero.AgilityHaste.Half", 1000.0f));
     AttackMinInterval = sConfigMgr->GetOption<uint32>("EventWow.Hero.AttackMinInterval", 150);
+    IntellectHasteMax = std::max(0.0f, sConfigMgr->GetOption<float>("EventWow.Hero.IntellectHaste.Max", 300.0f));
+    IntellectHasteHalf = std::max(1.0f, sConfigMgr->GetOption<float>("EventWow.Hero.IntellectHaste.Half", 1000.0f));
+    SpellCastMinTime = sConfigMgr->GetOption<uint32>("EventWow.Hero.SpellCastMinTime", 500);
 
     LOG_INFO("module.eventwow", "EventWow: {} (raza {}, clase {}, lobby mapa {} [{}, {}, {}])",
         Enabled ? "activado" : "desactivado", CharacterRace, CharacterClass,

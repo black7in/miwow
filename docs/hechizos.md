@@ -174,6 +174,8 @@ lista = una por rango):
 | `range`, `speed` | alcance en metros, velocidad del proyectil |
 | `power`, `cost`, `cost_pct` | mana/rage/energy, coste fijo o % del mana base |
 | `school`, `mechanic`, `max_targets`, `family` | escuela, mecanica (STUN...), objetivos maximos, familia (0) |
+| `dmg_class` | `none`/`magic`/`melee`/`ranged` (DmgClass): el lanzamiento de los `magic` lo acelera el intelecto, el de los `ranged` la agilidad |
+| `haste_periodic` | `SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC` (celeridad con hechizos en canalizados, DoT/HoT y lanzamiento de los `none`). Por defecto en todo hechizo no fisico canalizado, periodico o `none` con lanzamiento. OJO: acorta TODAS las auras del hechizo (tambien un aturdimiento/raiz que vaya en el mismo) |
 | `attributes[_ex..]`, `*_add`, `*_remove` | atributos: poner, anadir o quitar bits |
 | `coefficient`, `dot_coefficient`, `ap_coefficient`, `ap_dot_coefficient` | `spell_bonus_data` (<= 0 = calculo por defecto del core) |
 | `script` | SpellScript del modulo (`spell_script_names`), p. ej. `spell_eventwow_death_coil` (`EventWowHeroSpells.cpp`) |

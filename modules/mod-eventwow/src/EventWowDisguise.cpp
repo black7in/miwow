@@ -51,6 +51,8 @@ namespace
         // Celeridad de ataque aplicada por la agilidad (UpdateAgilityHaste), % por tipo de ataque
         std::array<float, 3> AgilityHaste = { };
         uint32 AgilityHasteTimer = 0;
+        // Celeridad con hechizos aplicada por el intelecto (UpdateIntellectHaste), %
+        float IntellectHaste = 0.0f;
     };
 
     constexpr std::array<WeaponAttackType, 3> AgilityHasteTypes = { BASE_ATTACK, OFF_ATTACK, RANGED_ATTACK };
@@ -91,6 +93,29 @@ namespace
             ApplyAgilityHaste(player, type, pct, true);
             slot->AgilityHaste[i] = pct;
         }
+    }
+
+    void ApplyIntellectHaste(Player* player, float pct, bool apply)
+    {
+        if (pct > 0.0f)
+            player->ApplyCastTimePercentMod(pct, apply);
+    }
+
+    // Regla propia (docs/heroes.md sec. 4 regla 5): intelecto extra -> celeridad con hechizos (UNIT_MOD_CAST_SPEED,
+    // como las auras nativas): lanzamiento de los hechizos magicos (y de los NONE con
+    // SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC), tiempo global (minimo 1 s del motor) y, con ese atributo (spellgen
+    // lo pone por defecto), canalizados y DoT/HoT. Max x int / (int + Half); suelo del lanzamiento en
+    // EventWow_DisguiseUnitScript (SpellCastMinTime).
+    void UpdateIntellectHaste(Player* player, DisguiseSlot* slot)
+    {
+        float const intellect = std::max(0.0f, player->GetStat(STAT_INTELLECT) - player->GetCreateStat(STAT_INTELLECT));
+        float const pct = sEventWowConfig.IntellectHasteMax * intellect / (intellect + sEventWowConfig.IntellectHasteHalf);
+        if (std::fabs(pct - slot->IntellectHaste) < 0.1f)
+            return;
+
+        ApplyIntellectHaste(player, slot->IntellectHaste, false);
+        ApplyIntellectHaste(player, pct, true);
+        slot->IntellectHaste = pct;
     }
 
     // Margen tras moverse/lanzar en el que un disparo desaparecido se reanuda (el core lo corta en su Update)
@@ -385,12 +410,14 @@ void EventWowDisguise::Remove(Player* player)
     ObjectGuid const vehicleGuid = slot->VehicleGuid;
     EventWowWeapons::EquipState weapons = slot->Weapons;
     std::array<float, 3> const agilityHaste = slot->AgilityHaste;
+    float const intellectHaste = slot->IntellectHaste;
     EventWowCharacterInfo const* character = sEventWowCharacters.Get(slot->CharacterId);
     // Primero fuera el slot: a partir de aqui los hooks ya no fuerzan nada
     player->CustomData.Erase(DisguiseKey);
 
     for (std::size_t i = 0; i < AgilityHasteTypes.size(); ++i)
         ApplyAgilityHaste(player, AgilityHasteTypes[i], agilityHaste[i], false);
+    ApplyIntellectHaste(player, intellectHaste, false);
 
     DismissVehicle(player, vehicleGuid);
     DismissSummons(player);
@@ -565,6 +592,7 @@ public:
             {
                 slot->AgilityHasteTimer = 0;
                 UpdateAgilityHaste(player, slot);
+                UpdateIntellectHaste(player, slot);
             }
         }
     }
@@ -610,6 +638,26 @@ public:
         EventWowCharacterInfo const* character = EventWowDisguise::Get(player);
         if (character && !character->HasSpell(spell->GetSpellInfo()->Id))
             res = SPELL_FAILED_SPELL_UNAVAILABLE;
+    }
+};
+
+// Suelo del tiempo de lanzamiento de los heroes (EventWow.Hero.SpellCastMinTime): la celeridad no baja un
+// lanzamiento de ahi, pero nunca alarga un hechizo que ya era mas corto (0,3 s sigue en 0,3 s) ni toca los
+// instantaneos ni lo que un efecto deje en 0 (castTime 0). Hook del core ModifySpellCastTime (docs/core-changes.md).
+class EventWow_DisguiseUnitScript : public UnitScript
+{
+public:
+    EventWow_DisguiseUnitScript() : UnitScript("EventWow_DisguiseUnitScript", true, {
+        UNITHOOK_MODIFY_SPELL_CAST_TIME
+    }) { }
+
+    void ModifySpellCastTime(Unit const* caster, SpellInfo const* /*spellInfo*/, int32 baseCastTime, int32& castTime) override
+    {
+        int32 const minTime = int32(sEventWowConfig.SpellCastMinTime);
+        if (castTime <= 0 || castTime >= minTime || !caster || !caster->IsPlayer() || !GetSlot(caster->ToPlayer()))
+            return;
+
+        castTime = std::max(castTime, std::min(baseCastTime, minTime));
     }
 };
 
@@ -714,6 +762,7 @@ void AddSC_eventwow_disguise()
 {
     new EventWow_DisguisePlayerScript();
     new EventWow_DisguiseSpellScript();
+    new EventWow_DisguiseUnitScript();
     new EventWow_DisguiseCommandScript();
 
     // Tras /reload el cliente pierde la barra: se reenvia

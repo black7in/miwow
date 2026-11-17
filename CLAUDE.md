@@ -64,6 +64,9 @@ EventWow/
   el DBC original de `client/DBCs/DBCesES` (no versionado; `DBCenEN` = ingles, para un parche futuro) + nuestras filas
   (ID >= 9500000) en `patch-4.MPQ/DBFilesClient`: lo hace `Build-Patch` (necesita la BD arrancada; `-SkipDbc` sin ella).
   Objetos: `item_dbc` se rellena DESDE `item_template` en el SQL (con `DBC.EnforceItemAttributes = 1` deben coincidir).
+- **Parche listo ANTES de arrancar**: Claude SIEMPRE regenera el parche tras cambios de cliente. Si cambio SQL del
+  modulo que afecta a DBC (`*_dbc`), Claude lo aplica el mismo a la BD de desarrollo antes de `Build-Patch` (el updater
+  lo reaplica al arrancar: SQL idempotente). Nunca pedir al usuario que aplique SQL a mano.
 
 ### Servidor (AzerothCore)
 - No modificar el core si se puede evitar: todo en modulos (`mod-eventwow`), hooks de ScriptMgr.
@@ -445,7 +448,12 @@ Datos clave de la API Glue:
   Velocidad de ataque (2026-11-16): SOLO la agilidad EXTRA (total - base del contenedor) sube la celeridad de
   todos los ataques automaticos: % = Max x agi / (agi + Half), suelo AttackMinInterval (config
   `EventWow.Hero.AgilityHaste.Max/Half` = 1770/1000, `EventWow.Hero.AttackMinInterval` = 150 ms;
-  `EventWowDisguise::UpdateAgilityHaste` cada 250 ms, se deshace en `Remove`). PROBADO por el usuario 2026-11-16 ("funciona"). Comando de prueba
+  `EventWowDisguise::UpdateAgilityHaste` cada 250 ms, se deshace en `Remove`). PROBADO por el usuario 2026-11-16 ("funciona").
+  Celeridad con hechizos (2026-11-16, PROBADO por el usuario 2026-11-17: "funciona"): igual con el intelecto EXTRA (`UpdateIntellectHaste`,
+  `EventWow.Hero.IntellectHaste.Max/Half` = 300/1000, `UNIT_MOD_CAST_SPEED`); spellgen pone
+  `SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC` por defecto (clave `haste_periodic`, nueva `dmg_class`); SQL de hechizos
+  regenerados. Suelo de lanzamiento 500 ms (`EventWow.Hero.SpellCastMinTime`, hook nuevo del core
+  `UnitScript::ModifySpellCastTime`, commit del core `b88f7bc5d`). Detalle en `docs/heroes.md` sec. 4 regla 5. Comando de prueba
   `.eventwow attackspeed set <pct> | lineal <agi> | wc3 <agi> | off` (EventWowStats.cpp). Problema encontrado: a esa
   velocidad nuestro disparo automatico cortaba las habilidades (Salva...); con el 75 no (probado). Causa: el core da
   reglas propias solo al ID 75. Cambio al core `04ab628c7` (probado: Salva ya no se corta): `SpellInfo::IsAutoShot` + `SpellMgr::SetSpellAutoShot`

@@ -123,8 +123,16 @@ Decisiones:
    (config `EventWow.Hero.*`). El motor no tiene tope propio: un golpe por actualizacion del mapa (10 ms). Reglas de conversion propias: solo esta y la siguiente.
    Nativo, sin tocar: fuerza -> +2 poder de ataque (druida sin forma; la agilidad no da poder de ataque),
    poder de ataque -> +1 DPS por cada 14 en cada golpe (tambien sin arma), poder con hechizos -> dano/curacion.
-5. **El intelecto sube la celeridad con hechizos** (decidido 2026-11-14): tiempo de lanzamiento, canalizados y tiempo
-   global (minimo 1 s, del motor). +X % por punto (provisional 0,5 %). La reutilizacion no la reduce nada de esto.
+5. **El intelecto sube la celeridad con hechizos** (decidido 2026-11-14). IMPLEMENTADO 2026-11-16 y probado por el usuario
+   2026-11-17: "funciona"): como la agilidad, solo el intelecto EXTRA, celeridad % = Max x int / (int + Half) (300 / 1000, config
+   `EventWow.Hero.IntellectHaste.*`), `UNIT_MOD_CAST_SPEED` (`ApplyCastTimePercentMod`, como las auras nativas).
+   Acelera: lanzamiento de los hechizos `magic`, tiempo global (1,5 s -> minimo 1 s del motor, tope a +50 %) y, con
+   `SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC` (spellgen lo pone por defecto, clave `haste_periodic`): canalizados,
+   DoT/HoT (mismos ticks en menos tiempo: mas DPS, no mas dano total) y lanzamiento de los `none`. Los hechizos
+   fisicos (melee/ranged: Salva, Filotormenta, Lanzar roca) van con la agilidad. Suelo de lanzamiento
+   `EventWow.Hero.SpellCastMinTime` = 500 ms (hook nuevo del core `ModifySpellCastTime`): la celeridad no baja de
+   ahi, pero no alarga hechizos que ya eran mas cortos (0,3 s sigue igual) ni toca instantaneos.
+   La reutilizacion no la reduce nada de esto.
 6. **Reduccion de reutilizacion**: ninguna stat nativa la da (en WoW solo talentos, glifos, bonus de conjunto y auras
    concretas). No habra stat propia; quiza algun objeto ("-20 % de reutilizacion", aura de modificador de
    reutilizacion sobre la familia de nuestros hechizos). Se vera con la tienda.

@@ -25,6 +25,10 @@ struct EventWowConfig
     float AgilityHasteMax = 1770.0f;   // % maximo (agilidad infinita)
     float AgilityHasteHalf = 1000.0f;  // agilidad con la que se llega a la mitad del maximo
     uint32 AttackMinInterval = 150;    // ms: ningun ataque automatico baja de esto por la agilidad
+    // Heroes: intelecto extra -> celeridad con hechizos (EventWowDisguise, docs/heroes.md sec. 4 regla 5)
+    float IntellectHasteMax = 300.0f;   // % maximo (intelecto infinito): lanzamiento / 4
+    float IntellectHasteHalf = 1000.0f; // intelecto con el que se llega a la mitad del maximo
+    uint32 SpellCastMinTime = 500;      // ms: la celeridad no baja un lanzamiento de aqui (no alarga los mas cortos)
 
     void Load();
 
