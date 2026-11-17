@@ -1029,6 +1029,9 @@ def main():
                 os.makedirs(args.preview, exist_ok=True)
                 conv.preview(os.path.join(args.preview, '%s_plano.png' % directory))
                 print('  Vista previa: %s' % args.preview)
+            if args.server and conv.race():
+                write(os.path.join(args.server, 'maps', '%03d_pista.json' % info['id']),
+                      json.dumps(conv.path_samples()).encode('ascii'))
         elif track:
             # Circuito de carreras desde un plano (trackgen.py)
             conv = trackgen.TrackConverter(info, source, args.wow_data)

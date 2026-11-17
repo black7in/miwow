@@ -1,6 +1,6 @@
 -- EventWow: mapa propio 753 "EventWowEspacio" (mismo esquema que 2026_11_17_00_eventwow_map_carrera.sql; ver
--- docs/mapas.md). Mapa de PRUEBA de piezas de pista en el espacio, generado por tools/mapgen/platformgen.py desde
--- Maps/Planos/espacio_prueba.json: sin terreno (todo agujeros), pistas de modelos M2 encadenados.
+-- docs/mapas.md). Circuito de carreras en el espacio, generado por tools/mapgen/platformgen.py desde
+-- Maps/Planos/circuito_estelar.json: sin terreno (todo agujeros), pista de modelos M2 encadenados.
 -- Nombre en las 16 columnas de idioma: el cliente esES lee la 7a (las columnas de AC no siguen el orden del cliente).
 
 DELETE FROM `map_dbc` WHERE `ID` = 753;
@@ -13,7 +13,7 @@ INSERT INTO `map_dbc` (`ID`, `Directory`, `InstanceType`, `Flags`, `PVP`,
     `LoadingScreenID`, `MinimapIconScale`, `CorpseMapID`, `CorpseX`, `CorpseY`, `TimeOfDayOverride`, `ExpansionID`,
     `RaidOffset`, `MaxPlayers`)
 VALUES (753, 'EventWowEspacio', 1, 0, 0,
-    'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales',
+    'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar',
     16712190, 5003,
     16712190, 16712190,
     250, 1, -1, 0, 0, -1, 0,
@@ -36,7 +36,7 @@ INSERT INTO `areatable_dbc` (`ID`, `ContinentID`, `ParentAreaID`, `AreaBit`, `Fl
     `AreaName_Lang_Unk`, `AreaName_Lang_Mask`, `MinElevation`)
 VALUES
     (5003, 753, 0, 3703, 0,
-     'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales', 'Pruebas espaciales',
+     'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar', 'Circuito Estelar',
      16712190, -500);
 
 -- Cielo: luz global del mapa (posicion 0,0,0 = luz por defecto, como GetDefaultMapLight del core). Copia de la del

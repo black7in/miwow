@@ -8,8 +8,13 @@ pone una luz del mapa (Light.dbc, SQL del modulo). Caer al vacio: el servidor ma
 Plano:
   pieces: {clave: {model, scale, kind: "rect" | "disc", overlap, maxTurn, zigzag}}
       rect = pieza alargada en su +X (la pista va a lo largo); disc = pieza redonda, se encadena solapada.
-  paths: [{name, piece, start: [x, y, z], heading (grados, 0 = este, 90 = norte), segments: [...]}]
-      segmento: {"straight": yardas, "dz": subida} | {"arc": grados (+ izquierda), "radius": yardas, "dz": subida}
+  paths: [{name, piece, ...}] de dos clases:
+      abierta: start: [x, y, z], heading (grados, 0 = este, 90 = norte), segments: [...]
+          segmento: {"straight": yardas, "dz": subida} | {"arc": grados (+ izquierda), "radius": yardas, "dz": subida}
+      circuito cerrado: points: [{p: [x, y], z, start?}] (Catmull-Rom centripeta cerrada, como trackgen), checkpoints
+          La primera pista cerrada es la carrera: meta (punto con "start"), parrilla de 8, puntos de control y la
+          linea central para el servidor (<DataDir>/maps/<id>_pista.json, mismo formato que trackgen).
+      Las pistas pueden cruzarse por encima/debajo (las piezas son modelos): summary avisa si falta altura libre.
   decor: [{models: [...], count, scale: [min, max], distance: [min, max], z: [min, max], seed}]
       rocas flotantes alrededor de las pistas (a distancia minima de ellas).
 
@@ -23,7 +28,7 @@ import numpy as np
 
 import vmaps
 import wowfiles as wow
-from trackgen import m2_box
+from trackgen import Track, m2_box
 
 PLAN_DEFAULTS = {
     'seed': 1,
@@ -75,10 +80,32 @@ def rotation(angle, pitch, roll):
     return rz @ ry @ rx
 
 
+def wrap(a):
+    return (a + math.pi) % (2 * math.pi) - math.pi
+
+
 class Path:
     """Linea central muestreada cada yarda: x, y, z, rumbo (radianes, 0 = este) y distancia s."""
 
     def __init__(self, cfg):
+        self.closed = 'points' in cfg
+        if self.closed:
+            self._closed(cfg)
+        else:
+            self._open(cfg)
+        self.hu = np.unwrap(self.h)
+
+    def _closed(self, cfg):
+        pts = [dict(p, biome='-') for p in cfg['points']]
+        tr = Track({'track': pts}, {'-': 0})
+        self.x, self.y, self.z = tr.x, tr.y, tr.z
+        self.h = np.arctan2(tr.ty, tr.tx)
+        self.s = tr.s
+        self.length = tr.length
+        self.start = float(tr.s[tr.start])
+
+    def _open(self, cfg):
+        self.start = 0.0
         x, y, z = (float(c) for c in cfg['start'])
         a = math.radians(float(cfg.get('heading', 0.0)))
         xs, ys, zs, hs = [x], [y], [z], [a]
@@ -104,9 +131,17 @@ class Path:
         self.length = float(self.s[-1])
 
     def at(self, s):
+        """(x, y, z, rumbo) a la distancia s (en un circuito cerrado, s da la vuelta)."""
+        if self.closed:
+            s %= self.length
+            S = np.append(self.s, self.length)
+            h = np.append(self.hu, self.hu[-1] + wrap(self.hu[0] - self.hu[-1]))
+            return (float(np.interp(s, S, np.append(self.x, self.x[0]))),
+                    float(np.interp(s, S, np.append(self.y, self.y[0]))),
+                    float(np.interp(s, S, np.append(self.z, self.z[0]))), float(np.interp(s, S, h)))
         s = min(max(s, 0.0), self.length)
         return (float(np.interp(s, self.s, self.x)), float(np.interp(s, self.s, self.y)),
-                float(np.interp(s, self.s, self.z)), float(np.interp(s, self.s, np.unwrap(self.h))))
+                float(np.interp(s, self.s, self.z)), float(np.interp(s, self.s, self.hu)))
 
 
 class PlatformConverter:
@@ -180,10 +215,13 @@ class PlatformConverter:
             step0 = size * (1.0 - float(piece['overlap']))
         max_turn = math.radians(float(piece['maxTurn']))
         half = size / 2.0
-        s, i = half, 0
+        s, i = (0.0, 0) if path.closed else (half, 0)
         while True:
-            last = s >= path.length - half
-            s = min(s, path.length - half)
+            if path.closed:
+                last = s + step0 * 0.5 >= path.length
+            else:
+                last = s >= path.length - half
+                s = min(s, path.length - half)
             x0, y0, z0, _ = path.at(s - half)
             x1, y1, z1, _ = path.at(s + half)
             x, y, z, _ = path.at(s)
@@ -202,7 +240,7 @@ class PlatformConverter:
             while step > 1.0:
                 _, _, _, h0 = path.at(s)
                 _, _, _, h1 = path.at(s + step)
-                if abs(h1 - h0) <= max_turn:
+                if abs(wrap(h1 - h0)) <= max_turn:
                     break
                 step *= 0.8
             s += step
@@ -302,9 +340,60 @@ class PlatformConverter:
             dr.text((cx + 8, cy - 6), name, fill=(255, 255, 255))
         im.save(path)
 
+    def race(self):
+        """La pista de la carrera: la primera cerrada (o None)."""
+        return next(((cfg, p) for cfg, p in self.paths if p.closed), None)
+
+    def markers(self):
+        """[(nombre, x, y, z, rumbo, s desde la meta)] de la carrera: meta, parrilla y puntos de control."""
+        race = self.race()
+        if not race:
+            return []
+        cfg, path = race
+        piece = self.pieces[cfg['piece']]
+        width = piece['width'] * float(piece['scale'])
+        s0 = path.start
+        x, y, z, h = path.at(s0)
+        out = [('Meta', x, y, z, h, 0.0)]
+        # Parrilla: 2 columnas, filas cada 9 yardas detras de la meta, escalonadas (igual que trackgen)
+        for slot in range(8):
+            row, col = slot // 2, slot % 2
+            back = 10.0 + row * 9.0 + col * 4.5
+            px, py, pz, ph = path.at(s0 - back)
+            lat = width * 0.22 * (1 if col == 0 else -1)
+            out.append(('Parrilla %d' % (slot + 1), px - math.sin(ph) * lat, py + math.cos(ph) * lat, pz, ph, -back))
+        n = int(cfg.get('checkpoints', 8))
+        for c in range(1, n):
+            s = path.length * c / n
+            px, py, pz, ph = path.at(s0 + s)
+            out.append(('Control %d' % c, px, py, pz, ph, s))
+        return out
+
+    def path_samples(self, every=2.0):
+        """Linea central de la carrera desde la meta: [(s, X, Y, Z, media anchura)] (Z = superficie)."""
+        race = self.race()
+        if not race:
+            return []
+        cfg, path = race
+        piece = self.pieces[cfg['piece']]
+        half = piece['width'] * float(piece['scale']) / 2.0
+        out = []
+        s = 0.0
+        while s < path.length:
+            x, y, z, _ = path.at(path.start + s)
+            X, Y = self.to_wow(x, y)
+            out.append((round(s, 2), round(X, 2), round(Y, 2), round(z, 2), round(half, 2)))
+            s += every
+        return out
+
     def points(self):
         out = []
+        for name, x, y, z, h, _ in self.markers():
+            X, Y = self.to_wow(x, y)
+            out.append((name, X, Y, z + 1.0, (h - math.pi / 2) % (2 * math.pi)))
         for cfg, path in self.paths:
+            if path.closed:
+                continue
             x, y, z, h = path.at(6.0)
             X, Y = self.to_wow(x, y)
             # Orientacion WoW: 0 = norte (+X), pi/2 = oeste (+Y); h = rumbo en el plano (0 = este)
@@ -315,11 +404,34 @@ class PlatformConverter:
         lines = []
         for cfg, path in self.paths:
             grade = np.abs(np.diff(path.z)) / np.maximum(np.diff(path.s), 1e-6)
+            if path.closed:
+                turn = np.abs([wrap(d) for d in np.diff(path.h)]) / np.maximum(np.diff(path.s), 1e-6)
+                lines.append('  %s: circuito cerrado, radio de curva minimo %.0f yardas'
+                             % (cfg['name'], 1.0 / max(float(np.max(turn)), 1e-6)))
             piece = self.pieces[cfg['piece']]
             lines.append('  %s: %.0f yardas, z %.0f..%.0f, pendiente max %.1f %%, %d piezas %s (escala %.2f, %.0f x %.0f)'
                          % (cfg['name'], path.length, path.z.min(), path.z.max(), grade.max() * 100,
                             self.piece_count[cfg['name']], piece['model'].split('\\')[-1], piece['scale'],
                             piece['length'] * piece['scale'], piece['width'] * piece['scale']))
+        # Cruces: tramos alejados en la pista que pasan uno sobre otro (altura libre entre superficies)
+        rows = []
+        for k, (cfg, path) in enumerate(self.paths):
+            for j in range(0, len(path.s), 3):
+                rows.append((k, path.s[j], path.x[j], path.y[j], path.z[j], path.length if path.closed else 0.0))
+        A = np.array(rows)
+        worst = None
+        for k, s_, x, y, z, loop in rows:
+            ds = np.abs(A[:, 1] - s_)
+            if loop:
+                ds = np.minimum(ds, loop - ds)
+            other = (np.hypot(A[:, 2] - x, A[:, 3] - y) < 26.0) & ((A[:, 0] != k) | (ds > 80.0))
+            if other.any():
+                gap = float(np.abs(A[other, 4] - z).min())
+                if worst is None or gap < worst[0]:
+                    worst = (gap, x, y)
+        if worst:
+            lines.append('  Cruces: altura libre minima entre superficies %.1f yardas (en %.0f, %.0f)%s'
+                         % (worst[0], worst[1], worst[2], '  AVISO: menos de 18' if worst[0] < 18 else ''))
         lines.append('  Decoracion: %d modelos (%d distintos en total)'
                      % (len(self.models) - self.track_models, len(self.model_names)))
         return lines

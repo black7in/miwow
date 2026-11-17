@@ -160,3 +160,22 @@ servidor (`<DataDir>/maps/<id>_pista.json`: `[s, X, Y, Z, media anchura]` cada 2
   posicion del MCNK = (X, Y, altura base).
 - `.map` comprobado reconstruyendo las alturas desde el ADT como hace `map_extractor` (diferencia < 1e-6).
 - `tools/mapgen/mpq.py` lee los MPQ de WC3 y los del cliente (zlib/bzip2; sin PKWARE implode).
+
+## Pistas de plataformas en el espacio (sin terreno)
+
+`tools/mapgen/platformgen.py`, plano JSON con `"type": "platforms"` (mapgen lo detecta). Ejemplo: 753
+`Maps/Planos/circuito_estelar.json`.
+
+- Sin terreno: los ADT existen (llevan la decoracion) pero todos sus MCNK son agujeros (`holes = 0xFFFF`), y el `.map`
+  del servidor lleva los mismos agujeros (`GridTerrainData::isHole` -> sin suelo). El unico suelo son las piezas.
+- Pista = piezas M2 encadenadas por la linea central (decoracion MDDF, colision en el cliente y en los vmaps).
+  `pieces`: `model`, `scale`, `kind` (`rect`: alargada en su +X; `disc`: redonda, solapada), `overlap`, `maxTurn`,
+  `zigzag` (desnivel alterno contra el parpadeo de caras coplanarias). La pieza necesita colision con una cara superior
+  plana (se mide del M2: centro, altura, tamano). En subidas se inclina (MDDF rot[0] = -cabeceo, rot[2] = alabeo;
+  convencion del extractor de vmaps). Probadas 2026-11-17: solo `SC_Platform2` (Plaga) convencio; muchos suelos
+  "espaciales" (Ojo de la Eternidad, Algalon, El Castillo de la Tempestad) NO tienen colision propia.
+- `paths`: abierta (`start`, `heading`, `segments` rectas/arcos) o circuito cerrado (`points` como trackgen). La
+  primera cerrada es la carrera: meta, parrilla, controles y `<id>_pista.json` (Z = superficie). Pueden cruzarse por
+  encima/debajo; el resumen avisa si la altura libre entre superficies baja de 18 yardas.
+- `decor`: rocas flotantes a distancia de la pista. Cielo: fila de `light_dbc` (2600-2699) en el SQL del mapa.
+- Caer al vacio: el core mata por debajo de z -500 (`MIN_HEIGHT`, sin planos de altura minima): pistas cerca de -400.

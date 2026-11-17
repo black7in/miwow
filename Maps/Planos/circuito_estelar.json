@@ -1,0 +1,61 @@
+{
+  "type": "platforms",
+  "_comentario": "Mapa 753 Circuito Estelar: pista de plataformas de la Plaga en el vacio, sin barandillas. Ocho con cruce (el segundo paso va por debajo del primero), subida larga hasta el mirador del norte y bajada en picado al cruce. Ver platformgen.py.",
+  "seed": 23,
+  "adts": 2,
+  "texture": "Tileset\\Elwynn\\ElwynnGrassBase.blp",
+  "pieces": {
+    "plaga": {
+      "model": "World\\EXPANSION02\\DOODADS\\GENERIC\\Scourge\\SC_Platform2.M2",
+      "kind": "disc",
+      "scale": 1.7,
+      "overlap": 0.5
+    }
+  },
+  "paths": [
+    {
+      "name": "Circuito",
+      "piece": "plaga",
+      "checkpoints": 8,
+      "points": [
+        {"p": [-294, -364], "z": -380, "start": true},
+        {"p": [0, -368], "z": -380},
+        {"p": [210, -329], "z": -378},
+        {"p": [336, -224], "z": -373},
+        {"p": [371, -63], "z": -366},
+        {"p": [308, 63], "z": -358},
+        {"p": [175, 91], "z": -351},
+        {"p": [42, 0], "z": -346},
+        {"p": [-84, -105], "z": -343},
+        {"p": [-231, -140], "z": -340},
+        {"p": [-364, -70], "z": -335},
+        {"p": [-399, 84], "z": -330},
+        {"p": [-322, 231], "z": -330},
+        {"p": [-175, 301], "z": -326},
+        {"p": [-42, 273], "z": -332},
+        {"p": [28, 140], "z": -350},
+        {"p": [-21, -52], "z": -370},
+        {"p": [-77, -203], "z": -377},
+        {"p": [-231, -234], "z": -379},
+        {"p": [-420, -253], "z": -380},
+        {"p": [-452, -305], "z": -380},
+        {"p": [-420, -357], "z": -380}
+      ]
+    }
+  ],
+  "decor": [
+    {
+      "models": [
+        "World\\EXPANSION01\\DOODADS\\NETHERSTORM\\FLOATINGROCKS\\NETHERSTORM_FLOATINGSMALL01.M2",
+        "World\\EXPANSION01\\DOODADS\\NETHERSTORM\\FLOATINGROCKS\\NETHERSTORM_FLOATINGSMALL02.M2",
+        "World\\EXPANSION01\\DOODADS\\NETHERSTORM\\FLOATINGROCKS\\NETHERSTORM_OVERHANGROCK_SMALL_02.M2",
+        "World\\EXPANSION01\\DOODADS\\NETHERSTORM\\FLOATINGROCKS\\NETHERSTORM_OVERHANGROCK_LARGE_02.M2"
+      ],
+      "count": 110,
+      "scale": [0.7, 2.4],
+      "distance": [55, 500],
+      "z": [-110, 80],
+      "seed": 5
+    }
+  ]
+}
