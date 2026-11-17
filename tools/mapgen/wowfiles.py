@@ -81,6 +81,7 @@ class TileData:
         self.water = np.zeros((128, 128), dtype=bool)
         self.water_height = np.zeros((129, 129))
         self.area_id = 0        # AreaTable (zona del mapa); 0 = sin zona
+        self.effects = {}       # indice de textura -> efecto de suelo (GroundEffectTexture; 0 = ninguno)
         self.models = []        # rutas M2 (MMDX)
         self.doodads = []       # Doodad: colocaciones (MDDF), incluidas las de modelos que solo rozan este ADT
 
@@ -155,10 +156,11 @@ def _mcnk(tile, cr, cc):
     mcly = bytearray()
     mcal = bytearray()
     for i, (texture, alpha) in enumerate(layers):
+        effect = tile.effects.get(texture, 0)
         if i == 0:
-            mcly += struct.pack('<4I', texture, 0, 0, 0)
+            mcly += struct.pack('<4I', texture, 0, 0, effect)
         else:
-            mcly += struct.pack('<4I', texture, 0x100, len(mcal), 0)
+            mcly += struct.pack('<4I', texture, 0x100, len(mcal), effect)
             mcal += _pack_alpha4(alpha)
 
     # MCRF: modelos cuyo circulo toca el chunk (el cliente solo dibuja los referenciados por chunks visibles)

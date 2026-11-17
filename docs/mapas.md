@@ -122,6 +122,37 @@ mmaps_generator <id> (a mano, tras .map y vmaps) --> <DataDir>\mmaps (caminos de
   Sin modelos (750) no se escribe nada (y se borran los de una version anterior): el servidor no aplica vmaps.
 - Sin convertir todavia: sombras, sonidos y musica de zona (`ZoneMusic`/`AmbienceID` de `areatable_dbc` = 0).
 
+## Circuitos (sin Warcraft 3)
+
+Un mapa de `maps.json` cuyo `source` es un `.json` (en `Maps/Planos/`) es un **plano de circuito**: lo genera
+`tools/mapgen/trackgen.py` en vez del conversor de WC3. Mismo resultado (ADT/WDT, `.map`, minimapa, vmaps, zona) y
+ademas una vista previa (`tools/mapgen/_work/<Directory>_plano.png`) y la linea central de la pista para el
+servidor (`<DataDir>/maps/<id>_pista.json`: `[s, X, Y, Z, media anchura]` cada 2 yardas desde la meta).
+
+- **Pista** (`track`): puntos de control de una curva cerrada (Catmull-Rom centripeta) en yardas (x = este,
+  y = norte, origen en el centro del mapa de `adts` x `adts` ADT). Por punto: `z`, ancho `w`, ambiente `biome` y el
+  borde de cada lado (`left`/`right`, segun el sentido de la marcha) para el tramo hasta el siguiente punto:
+  `berm` (muro de tierra de 6 yardas, cara > 60 grados: no se sube), `cut` (el relieve natural sube pegado: canon),
+  `drop` (cae pegado: precipicio), `open`. `start: true` = meta. La pista queda llana a su altura (suavizada) con un
+  arcen (`shoulder`) a cada lado.
+- **Relieve natural** (`baseNoise` + `features`): `mountain` (elipse con crestas), `mesa` (poligono, `terraces`
+  = estratos), `lake` (agua a `level`), `rim` (montanas en el borde del mapa), `flat`.
+- **Ambientes** (`biomes`): texturas de pista (`road`), arcen (`verge`), suelo (`ground` + `ground2` en manchas),
+  roca (pendiente > ~30 grados), cota de nieve (`snowLine`) y decoracion aleatoria (`scatter`: `density` por 1000
+  yardas cuadradas, `lining` = mas densidad junto a la pista, modelos con peso, escala y pendiente maxima). El
+  ambiente de cada punto del mapa = el del tramo de pista mas cercano, difuminado (`biomeBlend`).
+- **Adornos** (`props`): un modelo cada `every` yardas a lo largo de la pista (`from`/`to` desde la meta, lado,
+  distancia al arcen). Decoracion con colision -> vmaps (un `.vmo` por modelo; los que no tienen colision no van).
+- **Efectos de suelo** (`effects`): textura -> `GroundEffectTexture` (hierba, flores, piedrecitas que pinta el
+  cliente). Valores sacados de los ADT oficiales (la zona de cada textura; `MCLY` campo 4).
+- Texturas y modelos: solo rutas que existen en el cliente (se sacaron de los ADT oficiales por zona). Los colores
+  del minimapa se calculan del BLP de cada textura.
+- Puntos que imprime: meta, parrilla de 8 (2 columnas escalonadas) y puntos de control repartidos por la vuelta.
+- Sin mmaps: no hacen falta mientras no haya PNJ que anden por el circuito.
+- 752 `EventWowCarrera` = `Planos/circuito_cuatro_tierras.json` (SQL `2026_11_17_00_eventwow_map_carrera.sql`,
+  zona 5002): pradera (salida) -> bosque (Colinas Pardas) -> puerto nevado (Dun Morogh, con precipicio al lago) ->
+  canon (Tierras Inhospitas) -> pradera. 2682 yardas por vuelta, ancho 22-26, 2x2 ADT.
+
 ## Formato (comprobado)
 
 - ADT comparado con `Azeroth_32_48.adt` y `PVPZone01_32_32.adt` del cliente (`tools/mapgen/inspect_adt.py`):

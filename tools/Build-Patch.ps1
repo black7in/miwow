@@ -44,13 +44,12 @@ else
 if (-not $SkipMaps)
 {
     if (-not $ServerDataDir) { $ServerDataDir = Join-Path $root "server\bin\RelWithDebInfo\data" }
-    $mapArgs = @((Join-Path $PSScriptRoot "mapgen\mapgen.py"), "--client", $out)
-    if (Test-Path $ServerDataDir)
-    {
-        $mapArgs += @("--server", $ServerDataDir)
-        if (Test-Path $WowDataDir) { $mapArgs += @("--wow-data", $WowDataDir) }
-        else { Write-Warning "No existe $WowDataDir (parametro -WowDataDir): sin vmaps de los mapas propios" }
-    }
+    $mapArgs = @((Join-Path $PSScriptRoot "mapgen\mapgen.py"), "--client", $out,
+                 "--preview", (Join-Path $PSScriptRoot "mapgen\_work"))
+    # Data\ del cliente: colision de los modelos (vmaps) y decoracion de los circuitos (obligatorio para ellos)
+    if (Test-Path $WowDataDir) { $mapArgs += @("--wow-data", $WowDataDir) }
+    else { Write-Warning "No existe $WowDataDir (parametro -WowDataDir): sin vmaps ni circuitos" }
+    if (Test-Path $ServerDataDir) { $mapArgs += @("--server", $ServerDataDir) }
     else { Write-Warning "No existe $ServerDataDir (parametro -ServerDataDir): solo se generan los mapas del cliente" }
     # Minimapas: necesitan el md5translate.trs original del cliente (no versionado, ver docs/mapas.md)
     $trs = Join-Path $root "client\Minimap\md5translate.trs"

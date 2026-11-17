@@ -26,6 +26,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import trackgen                 # noqa: E402
 import vmaps                    # noqa: E402
 import wc3                      # noqa: E402
 import wowfiles as wow          # noqa: E402
@@ -350,6 +351,10 @@ class Converter:
 
         if info['wallModels'] is not None:
             self._place_wall_models()
+        # Modelos: lista de rutas + indice por colocacion (igual que trackgen)
+        self.model_names = [self.wall_model_cfg['model']] if self.models else []
+        for m in self.models:
+            m['model'] = 0
         self._build_texture_grid()
 
     # --- Modelos de muro ---------------------------------------------------------------------------------------
@@ -827,10 +832,7 @@ class Converter:
         tile.textures = [self.texture_names[i] for i in used]
 
         # Modelos: cada uno en todos los ADT que toca, con el mismo uniqueId (el cliente no lo duplica)
-        for k, m in self.tile_doodads(tx, ty):
-            if not tile.models:
-                tile.models.append(self.wall_model_cfg['model'])
-            tile.doodads.append(wow.Doodad(0, k + 1, m['x'], m['y'], m['z'], m['angle'], m['scale'], m['radius']))
+        add_tile_doodads(tile, self, tx, ty)
         return tile
 
     # --- Minimapa ----------------------------------------------------------------------------------------------
@@ -895,6 +897,17 @@ class Converter:
         return out
 
 
+def add_tile_doodads(tile, conv, tx, ty):
+    """Modelos que tocan el ADT (conv.models con indice en conv.model_names), con uniqueId global k + 1."""
+    local = {}
+    for k, m in conv.tile_doodads(tx, ty):
+        if m['model'] not in local:
+            local[m['model']] = len(tile.models)
+            tile.models.append(conv.model_names[m['model']])
+        tile.doodads.append(wow.Doodad(local[m['model']], k + 1, m['x'], m['y'], m['z'], m['angle'], m['scale'],
+                                       m['radius']))
+
+
 def load_config():
     with open(os.path.join(ROOT, 'Maps', 'maps.json'), encoding='utf-8') as f:
         cfg = json.load(f)
@@ -915,7 +928,7 @@ def write(path, data):
 
 
 def write_vmaps(server, info, conv, client_data):
-    """vmaps del mapa (modelos de muro) en <server>/vmaps: .vmtree, .vmtile y el .vmo del modelo (vmaps.py).
+    """vmaps del mapa (modelos con colision) en <server>/vmaps: .vmtree, .vmtile y un .vmo por modelo (vmaps.py).
     Borra antes los del mismo mapa (sin modelos no queda ninguno: el servidor no aplica vmaps al mapa)."""
     out = os.path.join(server, 'vmaps')
     prefix = '%03d_' % info['id']
@@ -925,20 +938,29 @@ def write_vmaps(server, info, conv, client_data):
                 os.remove(os.path.join(out, name))
     if not conv.models:
         return 0
-    model = conv.wall_model_cfg['model']
-    verts, tris = vmaps.m2_collision(vmaps.read_client_file(client_data, model))
-    name = vmaps.vmo_name(model)
-    write(os.path.join(out, name + '.vmo'), vmaps.build_vmo(verts, tris))
+    meshes = {}
+    for i, model in enumerate(conv.model_names):
+        verts, tris = vmaps.m2_collision(vmaps.read_client_file(client_data, model))
+        if len(tris) == 0:
+            continue                                # sin colision (hierba, matorrales): no va a los vmaps
+        name = vmaps.vmo_name(model)
+        write(os.path.join(out, name + '.vmo'), vmaps.build_vmo(verts, tris))
+        meshes[i] = (name, verts)
     tiles = {}
     for tx, ty in conv.tiles:
         for k, _ in conv.tile_doodads(tx, ty):
             tiles.setdefault(k, []).append((tx, ty))
     spawns = []
     for k, m in enumerate(conv.models):
+        if m['model'] not in meshes:
+            continue
+        name, verts = meshes[m['model']]
         d = wow.Doodad(0, k + 1, m['x'], m['y'], m['z'], m['angle'], m['scale'], m['radius'])
         _, uid, px, pz, py, rx, ry, rz, scale, _ = struct.unpack('<II3f3fHH', d.mddf())
         # Igual que el extractor sobre el MDDF: posicion (pos.z, pos.x, pos.y), giro tal cual, escala / 1024
         spawns.append(vmaps.Spawn(uid, name, (py, px, pz), (rx, ry, rz), scale / 1024.0, verts, tiles.get(k, [])))
+    if not spawns:
+        return 0
     vmtree, vmtiles = vmaps.build_map(spawns)
     write(os.path.join(out, vmaps.tree_name(info['id'])), vmtree)
     for (tx, ty), data in vmtiles.items():
@@ -979,6 +1001,7 @@ def main():
     parser.add_argument('--only', type=int, help='solo el mapa con este id')
     parser.add_argument('--minimap-trs', help='md5translate.trs original del cliente (client\\Minimap): '
                                               'con el se generan los minimapas; sin el no hay minimapa')
+    parser.add_argument('--preview', help='carpeta donde dejar las vistas previas de los circuitos (PNG)')
     parser.add_argument('--wow-data', help='carpeta Data del cliente (MPQ originales): colision de los modelos para '
                                            'los vmaps del servidor; sin ella no se generan vmaps')
     args = parser.parse_args()
@@ -990,15 +1013,29 @@ def main():
         source = os.path.join(ROOT, 'Maps', info['source'])
         directory = info['directory']
         print('Mapa %d "%s" <- %s' % (info['id'], directory, info['source']))
-        conv = Converter(info, wc3.Wc3Map(source))
-        t = conv.t
-        print('  WC3: %dx%d casillas, tileset %s, texturas %s, acantilados %s'
-              % (t.width - 1, t.height - 1, t.tileset, t.ground, t.cliffs))
-        print('  WoW: %d ADT (%s), muro a %.1f yardas' % (len(conv.tiles), ', '.join('%d_%d' % c for c in conv.tiles),
-                                                         conv.wall_height))
-        if conv.models:
-            print('  Muros: %d modelos %s (%d de relleno en cruces/cuellos)'
-                  % (len(conv.models), conv.wall_model_cfg['model'].split('\\')[-1], conv.filler_models))
+        track = source.lower().endswith('.json')
+        if track:
+            # Circuito de carreras desde un plano (trackgen.py)
+            conv = trackgen.TrackConverter(info, source, args.wow_data)
+            for line in conv.summary():
+                print(line)
+            if args.preview:
+                os.makedirs(args.preview, exist_ok=True)
+                conv.preview(os.path.join(args.preview, '%s_plano.png' % directory))
+                print('  Vista previa: %s' % args.preview)
+            if args.server:
+                write(os.path.join(args.server, 'maps', '%03d_pista.json' % info['id']),
+                      json.dumps(conv.path_samples()).encode('ascii'))
+        else:
+            conv = Converter(info, wc3.Wc3Map(source))
+            t = conv.t
+            print('  WC3: %dx%d casillas, tileset %s, texturas %s, acantilados %s'
+                  % (t.width - 1, t.height - 1, t.tileset, t.ground, t.cliffs))
+            print('  WoW: %d ADT (%s), muro a %.1f yardas' % (len(conv.tiles), ', '.join('%d_%d' % c for c in conv.tiles),
+                                                             conv.wall_height))
+            if conv.models:
+                print('  Muros: %d modelos %s (%d de relleno en cruces/cuellos)'
+                      % (len(conv.models), conv.wall_model_cfg['model'].split('\\')[-1], conv.filler_models))
         client_dir = os.path.join(args.client, 'World', 'Maps', directory)
         write(os.path.join(client_dir, directory + '.wdt'), wow.build_wdt(conv.tiles))
         for tx, ty in conv.tiles:
@@ -1021,7 +1058,7 @@ def main():
             print('  Minimapa: %d texturas' % len(tiles))
         if conv.unknown:
             print('  AVISO: casillas sin textura en la tabla (se usa "default"): %s' % ', '.join(sorted(conv.unknown)))
-        if conv.map.doodads:
+        if not track and conv.map.doodads:
             print('  AVISO: %d decoraciones de WC3 sin convertir todavia' % len(conv.map.doodads))
         print('  Puntos (X, Y, Z, orientacion):')
         for name, X, Y, Z, o in conv.points():

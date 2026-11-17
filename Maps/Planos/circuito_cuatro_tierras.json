@@ -1,0 +1,169 @@
+{
+  "_info": "Circuito de las Cuatro Tierras: pradera (salida y meta) -> bosque -> puerto de montana nevado -> canon del desierto -> pradera. Sentido antihorario visto desde arriba. Coordenadas en yardas: x = este, y = norte, origen en el centro del mapa. Ver docs/mapas.md (Circuitos).",
+  "seed": 7,
+  "adts": 2,
+  "shoulder": 3.0,
+  "checkpoints": 8,
+  "biomeBlend": 55.0,
+  "snowLine": 175.0,
+  "snow": "Tileset\\IronForge\\IronForgeSnow01solid.blp",
+  "shore": "Tileset\\Westwood\\WestfallSandBaseWet.blp",
+  "baseNoise": {"amplitude": 6.0, "scale": 170.0},
+
+  "track": [
+    {"p": [-200, -345], "z": 4, "w": 26, "biome": "pradera"},
+    {"p": [0, -345], "z": 4, "w": 26, "biome": "pradera", "start": true},
+    {"p": [180, -340], "z": 4, "w": 26, "biome": "pradera"},
+    {"p": [300, -300], "z": 5, "w": 24, "biome": "pradera"},
+    {"p": [360, -210], "z": 7, "w": 24, "biome": "bosque"},
+    {"p": [330, -110], "z": 10, "w": 22, "biome": "bosque"},
+    {"p": [380, -10], "z": 13, "w": 22, "biome": "bosque"},
+    {"p": [320, 90], "z": 17, "w": 22, "biome": "bosque"},
+    {"p": [370, 190], "z": 23, "w": 22, "biome": "bosque"},
+    {"p": [310, 290], "z": 34, "w": 22, "biome": "montana", "right": "cut"},
+    {"p": [190, 350], "z": 48, "w": 22, "biome": "montana", "right": "cut"},
+    {"p": [60, 385], "z": 62, "w": 22, "biome": "montana", "left": "drop", "right": "cut"},
+    {"p": [-70, 395], "z": 74, "w": 22, "biome": "montana", "left": "drop", "right": "cut"},
+    {"p": [-200, 365], "z": 64, "w": 22, "biome": "montana", "right": "cut"},
+    {"p": [-310, 300], "z": 52, "w": 22, "biome": "montana"},
+    {"p": [-370, 200], "z": 44, "w": 22, "biome": "canon", "left": "cut", "right": "cut"},
+    {"p": [-320, 100], "z": 36, "w": 22, "biome": "canon", "left": "cut", "right": "cut"},
+    {"p": [-380, 0], "z": 28, "w": 22, "biome": "canon", "left": "cut", "right": "cut"},
+    {"p": [-320, -100], "z": 20, "w": 22, "biome": "canon", "left": "cut", "right": "cut"},
+    {"p": [-370, -200], "z": 12, "w": 22, "biome": "canon"},
+    {"p": [-320, -300], "z": 6, "w": 24, "biome": "pradera"}
+  ],
+
+  "features": [
+    {"type": "mountain", "c": [0, 560], "rx": 560, "ry": 270, "h": 150, "power": 1.0, "ridges": 0.35},
+    {"type": "mesa", "poly": [[-560, -250], [-235, -250], [-225, 280], [-560, 300]], "h": 70, "edge": 22,
+     "terraces": 3, "warp": 26},
+    {"type": "lake", "c": [40, 30], "rx": 150, "ry": 105, "level": 1.5, "depth": 8},
+    {"type": "mountain", "c": [520, -80], "rx": 200, "ry": 420, "h": 70, "ridges": 0.3},
+    {"type": "rim", "margin": 150, "h": 115, "warp": 40}
+  ],
+
+  "biomes": {
+    "pradera": {
+      "_zona": "Bosque de Elwynn",
+      "ground": ["Tileset\\Elwynn\\ElwynnGrassBase.blp"],
+      "ground2": ["Tileset\\Elwynn\\ElwynnFlowerBase.blp", 0.25],
+      "road": "Tileset\\Elwynn\\ElwynnCobbleStoneBase.blp",
+      "verge": "Tileset\\Elwynn\\ElwynnDirtBase2.blp",
+      "rock": "Tileset\\Elwynn\\ElwynnRockBaseTest2.blp",
+      "scatter": {
+        "density": 2.5, "lining": 2.0,
+        "models": [
+          {"model": "WORLD\\AZEROTH\\ELWYNN\\PASSIVEDOODADS\\TREES\\ELWYNNTREECANOPY01.M2", "weight": 2},
+          {"model": "WORLD\\AZEROTH\\ELWYNN\\PASSIVEDOODADS\\TREES\\ELWYNNTREECANOPY02.M2", "weight": 2},
+          {"model": "WORLD\\AZEROTH\\ELWYNN\\PASSIVEDOODADS\\TREES\\ELWYNNTREECANOPY03.M2", "weight": 1},
+          {"model": "WORLD\\AZEROTH\\ELWYNN\\PASSIVEDOODADS\\TREES\\ELWYNNTREECANOPY04.M2", "weight": 1},
+          {"model": "WORLD\\AZEROTH\\ELWYNN\\PASSIVEDOODADS\\TREES\\ELWYNNTREEMID01.M2", "weight": 2},
+          {"model": "WORLD\\AZEROTH\\ELWYNN\\PASSIVEDOODADS\\BUSH\\ELWYNNBUSH09.M2", "weight": 4, "sink": 0.2},
+          {"model": "WORLD\\AZEROTH\\ELWYNN\\PASSIVEDOODADS\\DETAIL\\ELWYNNROCK1\\ELWYNNROCK1.M2", "weight": 1, "maxSlope": 1.5},
+          {"model": "WORLD\\AZEROTH\\ELWYNN\\PASSIVEDOODADS\\DETAIL\\ELWYNNROCK2\\ELWYNNROCK2.M2", "weight": 1, "maxSlope": 1.5}
+        ]
+      }
+    },
+    "bosque": {
+      "_zona": "Colinas Pardas",
+      "ground": ["Tileset\\Expansion02\\GrizzlyHills\\GH_ShrubbyA.blp"],
+      "ground2": ["Tileset\\Expansion02\\GrizzlyHills\\GH_ShrubbyI.blp", 0.4],
+      "road": "Tileset\\Expansion02\\GrizzlyHills\\GH_DirtA.blp",
+      "verge": "Tileset\\Expansion02\\GrizzlyHills\\GH_PebblyC.blp",
+      "rock": "Tileset\\Expansion02\\GrizzlyHills\\GH_MossyRockA.blp",
+      "scatter": {
+        "density": 9.0, "lining": 22.0, "liningAt": 9.0, "liningWidth": 6.0,
+        "models": [
+          {"model": "WORLD\\EXPANSION02\\DOODADS\\GRIZZLYHILLS\\TREES\\GRIZZLYHILLS_TREE03.M2", "weight": 4},
+          {"model": "WORLD\\EXPANSION02\\DOODADS\\GRIZZLYHILLS\\TREES\\GRIZZLYHILLS_TREE02.M2", "weight": 3},
+          {"model": "WORLD\\EXPANSION02\\DOODADS\\GRIZZLYHILLS\\TREES\\GRIZZLYHILLS_TREE05.M2", "weight": 2},
+          {"model": "WORLD\\EXPANSION02\\DOODADS\\GRIZZLYHILLS\\TREES\\GRIZZLYHILLS_TREE04.M2", "weight": 1},
+          {"model": "WORLD\\EXPANSION02\\DOODADS\\GRIZZLYHILLS\\TREES\\GRIZZLYHILLS_TREE12.M2", "weight": 1},
+          {"model": "WORLD\\EXPANSION02\\DOODADS\\GRIZZLYHILLS\\TREES\\GRIZZLYHILLS_BUSH01.M2", "weight": 3, "sink": 0.2},
+          {"model": "WORLD\\EXPANSION02\\DOODADS\\GRIZZLYHILLS\\TREES\\GRIZZLYHILLS_BUSH02.M2", "weight": 2, "sink": 0.2},
+          {"model": "WORLD\\EXPANSION02\\DOODADS\\GRIZZLYHILLS\\ROCKS\\GRIZZLYHILLS_ROCK_01.M2", "weight": 1, "maxSlope": 1.5},
+          {"model": "WORLD\\EXPANSION02\\DOODADS\\GRIZZLYHILLS\\ROCKS\\GRIZZLYHILLS_ROCK_03.M2", "weight": 1, "maxSlope": 1.5},
+          {"model": "WORLD\\EXPANSION02\\DOODADS\\GRIZZLYHILLS\\TREES\\GRIZZLYHILLS_MUSHROOMGROUP01.M2", "weight": 1, "sink": 0.1},
+          {"model": "WORLD\\EXPANSION02\\DOODADS\\GRIZZLYHILLS\\TREES\\GRIZZLYHILLS_LOG01.M2", "weight": 0.5}
+        ]
+      }
+    },
+    "montana": {
+      "_zona": "Dun Morogh",
+      "snowLine": 58.0,
+      "ground": ["Tileset\\IronForge\\IronForgeSnow01solid.blp"],
+      "ground2": ["Tileset\\IronForge\\IronForgeSnow05ScrapeBrown.blp", 0.3],
+      "road": "Tileset\\IronForge\\IronForgeRock06road2.blp",
+      "verge": "Tileset\\IronForge\\IronForgeSnow03ripple.blp",
+      "rock": "Tileset\\IronForge\\IronForgeRock08Brown.blp",
+      "scatter": {
+        "density": 5.0, "lining": 8.0,
+        "models": [
+          {"model": "WORLD\\KHAZMODAN\\IRONFORGE\\PASSIVEDOODADS\\TREES\\IRONFORGESNOWTREE01.M2", "weight": 3},
+          {"model": "WORLD\\KHAZMODAN\\IRONFORGE\\PASSIVEDOODADS\\TREES\\WINTERTREE03.M2", "weight": 2},
+          {"model": "WORLD\\KHAZMODAN\\IRONFORGE\\PASSIVEDOODADS\\TREES\\WINTERTREE01.M2", "weight": 1},
+          {"model": "WORLD\\KHAZMODAN\\IRONFORGE\\PASSIVEDOODADS\\TREES\\WINTERTREE04.M2", "weight": 1},
+          {"model": "WORLD\\KHAZMODAN\\IRONFORGE\\PASSIVEDOODADS\\TREES\\WINTERSMALLTREE01.M2", "weight": 2},
+          {"model": "WORLD\\KHAZMODAN\\IRONFORGE\\PASSIVEDOODADS\\TREES\\WINTERMIDTREE02.M2", "weight": 1},
+          {"model": "WORLD\\AZEROTH\\ELWYNN\\PASSIVEDOODADS\\DETAIL\\ELWYNNROCK2\\ELWYNNROCK2.M2", "weight": 1, "maxSlope": 1.5}
+        ]
+      }
+    },
+    "canon": {
+      "_zona": "Tierras Inhospitas / Tanaris",
+      "ground": ["Tileset\\The Badlands\\BadlandsDirt.blp"],
+      "ground2": ["Tileset\\The Badlands\\BadlandsSand.blp", 0.35],
+      "road": "Tileset\\Tanaris\\TanarisCrackedGround.blp",
+      "verge": "Tileset\\The Badlands\\BadlandsSand.blp",
+      "rock": "Tileset\\The Badlands\\BadlandsRock.blp",
+      "scatter": {
+        "density": 2.5, "lining": 4.0,
+        "models": [
+          {"model": "WORLD\\KHAZMODAN\\BADLANDS\\PASSIVEDOODADS\\ROCKS\\BADLANDSROCK02.M2", "weight": 1, "maxSlope": 1.5},
+          {"model": "WORLD\\KHAZMODAN\\BADLANDS\\PASSIVEDOODADS\\ROCKS\\BADLANDSROCK04.M2", "weight": 1, "maxSlope": 1.5},
+          {"model": "WORLD\\KHAZMODAN\\BADLANDS\\PASSIVEDOODADS\\ROCKS\\BADLANDSROCK05.M2", "weight": 1, "maxSlope": 1.5},
+          {"model": "WORLD\\KALIMDOR\\TANARIS\\PASSIVEDOODADS\\ROCKS\\TANARISROCK01.M2", "weight": 1, "maxSlope": 1.5},
+          {"model": "WORLD\\KALIMDOR\\TANARIS\\PASSIVEDOODADS\\ROCKS\\TANARISROCK04.M2", "weight": 1, "maxSlope": 1.5},
+          {"model": "WORLD\\KHAZMODAN\\BADLANDS\\PASSIVEDOODADS\\CACTUS\\BADLANDSCACTUS_1.M2", "weight": 2},
+          {"model": "WORLD\\KHAZMODAN\\BADLANDS\\PASSIVEDOODADS\\CACTUS\\BADLANDSCACTUS_3.M2", "weight": 1},
+          {"model": "WORLD\\KHAZMODAN\\BADLANDS\\PASSIVEDOODADS\\BUSHES\\BADLANDSSHRUB08.M2", "weight": 3, "sink": 0.2},
+          {"model": "WORLD\\KHAZMODAN\\BADLANDS\\PASSIVEDOODADS\\BUSHES\\BADLANDSSHRUB05.M2", "weight": 2, "sink": 0.2},
+          {"model": "WORLD\\KHAZMODAN\\BADLANDS\\PASSIVEDOODADS\\TREES\\BADLANDSTREE02DEAD.M2", "weight": 1},
+          {"model": "WORLD\\KHAZMODAN\\BADLANDS\\PASSIVEDOODADS\\TREES\\BADLANDSTREE01DEAD.M2", "weight": 1}
+        ]
+      }
+    }
+  },
+
+  "props": [
+    {"model": "WORLD\\AZEROTH\\ELWYNN\\PASSIVEDOODADS\\LAMPPOST\\LAMPPOST.M2", "from": -180, "to": 180, "every": 30,
+     "side": "both", "offset": 5.0},
+    {"model": "WORLD\\EXPANSION02\\DOODADS\\GENERIC\\ARGENTCRUSADE\\BANNERS\\ARGENTCURSADE_WINDYPENNANT01.M2",
+     "from": 0, "to": 0, "every": 1, "side": "both", "offset": 1.0, "angle": "inward"}
+  ],
+  "clear": [],
+
+  "effects": {
+    "Tileset\\Elwynn\\ElwynnGrassBase.blp": 505,
+    "Tileset\\Elwynn\\ElwynnFlowerBase.blp": 507,
+    "Tileset\\Elwynn\\ElwynnDirtBase2.blp": 1106,
+    "Tileset\\Elwynn\\ElwynnCobbleStoneBase.blp": 513,
+    "Tileset\\Elwynn\\ElwynnRockBaseTest2.blp": 993,
+    "Tileset\\Expansion02\\GrizzlyHills\\GH_ShrubbyA.blp": 32732,
+    "Tileset\\Expansion02\\GrizzlyHills\\GH_ShrubbyI.blp": 32730,
+    "Tileset\\Expansion02\\GrizzlyHills\\GH_DirtA.blp": 33202,
+    "Tileset\\Expansion02\\GrizzlyHills\\GH_PebblyC.blp": 32904,
+    "Tileset\\Expansion02\\GrizzlyHills\\GH_MossyRockA.blp": 32895,
+    "Tileset\\IronForge\\IronForgeSnow01solid.blp": 409,
+    "Tileset\\IronForge\\IronForgeSnow05ScrapeBrown.blp": 1033,
+    "Tileset\\IronForge\\IronForgeRock06road2.blp": 417,
+    "Tileset\\IronForge\\IronForgeSnow03ripple.blp": 944,
+    "Tileset\\IronForge\\IronForgeRock08Brown.blp": 1034,
+    "Tileset\\The Badlands\\BadlandsDirt.blp": 447,
+    "Tileset\\The Badlands\\BadlandsSand.blp": 459,
+    "Tileset\\The Badlands\\BadlandsRock.blp": 455,
+    "Tileset\\Tanaris\\TanarisCrackedGround.blp": 4540,
+    "Tileset\\Westwood\\WestfallSandBaseWet.blp": 878
+  }
+}

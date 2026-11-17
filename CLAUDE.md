@@ -328,6 +328,14 @@ Datos clave de la API Glue:
     hechizos (`EventWow.Hero.*`, suelo de lanzamiento con el hook del core `b88f7bc5d`).
   - Comandos GM: `.eventwow hero <id> [nivel]` | `level <n>` | `off` | `list`, `.eventwow attackspeed ...`.
   - Enemigos para probar: `.dev on` + `/eventwow` + `.npc add temp 28104` (esqueleto 80) / 31144 (muneco).
+- **Carrera (evento actual, desde 2026-11-17)**. Decisiones del usuario: circuito cerrado con vueltas (tipo Mario
+  Kart, varios ambientes), en moto (vehiculo), 1-8 jugadores, objetos/poderes MAS ADELANTE. Mapas de circuito
+  generados SIN Warcraft 3 desde un plano JSON (`tools/mapgen/trackgen.py`, ver "Circuitos" en `docs/mapas.md`; el
+  usuario lo pidio tras comprobar que no existe un MCP para Noggit).
+  - Mapa 752 "Circuito de las Cuatro Tierras" (`Maps/Planos/circuito_cuatro_tierras.json`, SQL `2026_11_17_00`,
+    aplicado en la BD de desarrollo). PROBADO por el usuario 2026-11-17 ("esta super"; algunas rocas flotan un poco).
+  - Siguiente: juego `carrera` en el servidor (vueltas, puntos de control, posiciones, parrilla, reaparicion al
+    ultimo control si se cae/sale, final con cuenta atras) usando `<id>_pista.json`, y moto propia de carrera.
 - Mapas propios desde Warcraft 3 (ver `docs/mapas.md`). Decision del usuario: los mapas los disena el (y un amigo) en
   el World Editor de WC3 1.26 (no usa Noggit) y se convierten. Diseno PROPIO: no se replican mapas de terceros
   (p. ej. X Hero Siege); el usuario y su amigo hicieron uno inspirado en el genero.

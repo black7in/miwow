@@ -78,6 +78,12 @@
         "O44556": "Plaza_Media_Norte",
         "O44651": "Plaza_Media_Sur"
       }
+    },
+    {
+      "id": 752,
+      "directory": "EventWowCarrera",
+      "areaId": 5002,
+      "source": "Planos/circuito_cuatro_tierras.json"
     }
   ]
 }
