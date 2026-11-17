@@ -36,6 +36,7 @@ $ExtraRanges = @{
     "map_dbc" = "BETWEEN 750 AND 799"
     "areatable_dbc" = "BETWEEN 5000 AND 5099"     # zonas de los mapas propios (ver SQL *_eventwow_map_areas)
     "chrclasses_dbc" = "= 11"                     # druida sin reliquia (SQL *_eventwow_druid_no_relic)
+    "light_dbc" = "BETWEEN 2600 AND 2699"          # cielo de los mapas propios (Light.dbc llega a 2538)
 }
 
 function Get-IdFilter([string]$table, [string]$id)

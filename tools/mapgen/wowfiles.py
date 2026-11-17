@@ -82,6 +82,7 @@ class TileData:
         self.water_height = np.zeros((129, 129))
         self.area_id = 0        # AreaTable (zona del mapa); 0 = sin zona
         self.effects = {}       # indice de textura -> efecto de suelo (GroundEffectTexture; 0 = ninguno)
+        self.holes = {}         # (cr, cc) -> agujeros del MCNK (16 bits, 4x4 de 2x2 celdas; 0xFFFF = sin terreno)
         self.models = []        # rutas M2 (MMDX)
         self.doodads = []       # Doodad: colocaciones (MDDF), incluidas las de modelos que solo rozan este ADT
 
@@ -90,10 +91,14 @@ class Doodad:
     """Modelo M2 colocado. x, y, z del mundo; angle = hacia donde apunta el +X del M2 (radianes, como la
     orientacion de WoW: 0 = norte, pi/2 = oeste); radius = radio en planta para saber que chunks toca."""
 
-    def __init__(self, model, unique_id, x, y, z, angle, scale, radius):
+    def __init__(self, model, unique_id, x, y, z, angle, scale, radius, rot_x=0.0, rot_z=0.0):
         self.model, self.unique_id = model, unique_id
         self.x, self.y, self.z = x, y, z
         self.angle, self.scale, self.radius = angle, scale, radius
+        # Inclinacion en grados (MDDF rot[0] / rot[2]): con la convencion del extractor de vmaps
+        # (Rz(rot[1]) * Ry(rot[0]) * Rx(rot[2]) en espacio del modelo), rot[0] = -cabeceo del eje +X del modelo
+        # y rot[2] = +cabeceo del eje +Y (ver trackgen: inclinacion de las piezas de pista)
+        self.rot_x, self.rot_z = rot_x, rot_z
 
     def mddf(self):
         # Posicion en coordenadas de colocacion (ZERO - Y, altura, ZERO - X). Giro: rot[1] = guinada en grados y
@@ -101,7 +106,7 @@ class Doodad:
         # y con el extractor de vmaps, que gira en coordenadas (ZERO - X, ZERO - Y)).
         yaw = (np.degrees(self.angle) - 180.0) % 360.0
         return struct.pack('<II3f3fHH', self.model, self.unique_id, ZERO - self.y, self.z, ZERO - self.x,
-                           0.0, yaw, 0.0, int(round(self.scale * 1024)), 0)
+                           self.rot_x, yaw, self.rot_z, int(round(self.scale * 1024)), 0)
 
 
 def _mh2o(tile):
@@ -184,7 +189,7 @@ def _mcnk(tile, cr, cc):
         0x8000, cc, cr, len(layers), len(refs),
         offsets['MCVT'], offsets['MCNR'], offsets['MCLY'], offsets['MCRF'], offsets['MCAL'], 8 + len(mcal),
         0, 0,                       # MCSH
-        tile.area_id, 0, 0,         # area, objetos de mapa, agujeros
+        tile.area_id, 0, tile.holes.get((cr, cc), 0),     # area, objetos de mapa, agujeros
         0, 0, 0, 0,                 # textura de baja calidad
         0, 0, offsets['MCSE'], 0, 0, 0,
         x - cr * CHUNK, y - cc * CHUNK, base,
@@ -277,13 +282,22 @@ def build_server_map(tile, build=12340):
         if not header_flags & MAP_LIQUID_NO_HEIGHT:
             liquid += levels[min_y:min_y + rows, min_x:min_x + width].astype(np.float32).tobytes()
 
+    # Agujeros (GridTerrainData::isHole): uint16 por MCNK en el mismo orden que el ADT (el extractor copia el campo)
+    holes = b''
+    if tile.holes:
+        grid = np.zeros((16, 16), dtype=np.uint16)
+        for (cr, cc), mask in tile.holes.items():
+            grid[cr, cc] = mask
+        holes = grid.tobytes()
+
     header_size = 44
     area_ofs = header_size
     height_ofs = area_ofs + len(area)
     liquid_ofs = height_ofs + len(height) if liquid else 0
+    holes_ofs = height_ofs + len(height) + len(liquid) if holes else 0
     header = b'MAPS' + struct.pack('<10I', 9, build, area_ofs, len(area), height_ofs, len(height),
-                                   liquid_ofs, len(liquid), 0, 0)
-    return header + area + height + liquid
+                                   liquid_ofs, len(liquid), holes_ofs, len(holes))
+    return header + area + height + liquid + holes
 
 
 # --- Minimapa --------------------------------------------------------------------------------------------------

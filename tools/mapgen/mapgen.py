@@ -26,6 +26,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import platformgen              # noqa: E402
 import trackgen                 # noqa: E402
 import vmaps                    # noqa: E402
 import wc3                      # noqa: E402
@@ -905,7 +906,7 @@ def add_tile_doodads(tile, conv, tx, ty):
             local[m['model']] = len(tile.models)
             tile.models.append(conv.model_names[m['model']])
         tile.doodads.append(wow.Doodad(local[m['model']], k + 1, m['x'], m['y'], m['z'], m['angle'], m['scale'],
-                                       m['radius']))
+                                       m['radius'], m.get('rot_x', 0.0), m.get('rot_z', 0.0)))
 
 
 def load_config():
@@ -955,7 +956,8 @@ def write_vmaps(server, info, conv, client_data):
         if m['model'] not in meshes:
             continue
         name, verts = meshes[m['model']]
-        d = wow.Doodad(0, k + 1, m['x'], m['y'], m['z'], m['angle'], m['scale'], m['radius'])
+        d = wow.Doodad(0, k + 1, m['x'], m['y'], m['z'], m['angle'], m['scale'], m['radius'], m.get('rot_x', 0.0),
+                       m.get('rot_z', 0.0))
         _, uid, px, pz, py, rx, ry, rz, scale, _ = struct.unpack('<II3f3fHH', d.mddf())
         # Igual que el extractor sobre el MDDF: posicion (pos.z, pos.x, pos.y), giro tal cual, escala / 1024
         spawns.append(vmaps.Spawn(uid, name, (py, px, pz), (rx, ry, rz), scale / 1024.0, verts, tiles.get(k, [])))
@@ -1013,8 +1015,21 @@ def main():
         source = os.path.join(ROOT, 'Maps', info['source'])
         directory = info['directory']
         print('Mapa %d "%s" <- %s' % (info['id'], directory, info['source']))
-        track = source.lower().endswith('.json')
-        if track:
+        plan_type = None
+        if source.lower().endswith('.json'):
+            with open(source, encoding='utf-8') as f:
+                plan_type = json.load(f).get('type', 'track')
+        track = plan_type is not None
+        if plan_type == 'platforms':
+            # Pista de piezas M2 sobre el vacio, sin terreno (platformgen.py)
+            conv = platformgen.PlatformConverter(info, source, args.wow_data)
+            for line in conv.summary():
+                print(line)
+            if args.preview:
+                os.makedirs(args.preview, exist_ok=True)
+                conv.preview(os.path.join(args.preview, '%s_plano.png' % directory))
+                print('  Vista previa: %s' % args.preview)
+        elif track:
             # Circuito de carreras desde un plano (trackgen.py)
             conv = trackgen.TrackConverter(info, source, args.wow_data)
             for line in conv.summary():

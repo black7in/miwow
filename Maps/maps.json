@@ -84,6 +84,12 @@
       "directory": "EventWowCarrera",
       "areaId": 5002,
       "source": "Planos/circuito_cuatro_tierras.json"
+    },
+    {
+      "id": 753,
+      "directory": "EventWowEspacio",
+      "areaId": 5003,
+      "source": "Planos/espacio_prueba.json"
     }
   ]
 }

@@ -334,6 +334,12 @@ Datos clave de la API Glue:
   usuario lo pidio tras comprobar que no existe un MCP para Noggit).
   - Mapa 752 "Circuito de las Cuatro Tierras" (`Maps/Planos/circuito_cuatro_tierras.json`, SQL `2026_11_17_00`,
     aplicado en la BD de desarrollo). PROBADO por el usuario 2026-11-17 ("esta super"; algunas rocas flotan un poco).
+  - Mapa 753 "Pruebas espaciales" (PROTOTIPO, sin probar): pista en el espacio sin barandillas. Sin terreno (ADT todo
+    agujeros, tambien en el `.map` del servidor) + piezas M2 encadenadas como decoracion del ADT (colision en cliente y
+    vmaps; inclinadas en subidas con MDDF rot[0]/rot[2]) - `tools/mapgen/platformgen.py`, plano `"type": "platforms"`
+    (`Maps/Planos/espacio_prueba.json`). Cielo = luz global propia (`light_dbc` 2600-2699, copia de la del Ojo de la
+    Eternidad: estrellas). Cinco pistas de prueba con piezas distintas (titan, nexo, plaga, elevada, colmillo) para
+    que el usuario elija. Caer: el core mata por debajo de z -500 (pistas a -420). SQL `2026_11_17_01`.
   - Siguiente: juego `carrera` en el servidor (vueltas, puntos de control, posiciones, parrilla, reaparicion al
     ultimo control si se cae/sale, final con cuenta atras) usando `<id>_pista.json`, y moto propia de carrera.
 - Mapas propios desde Warcraft 3 (ver `docs/mapas.md`). Decision del usuario: los mapas los disena el (y un amigo) en
