@@ -21,6 +21,11 @@ struct EventWowConfig
     Seconds MatchLoadTimeout = 30s;  // jugadores que no llegan a la instancia en este tiempo quedan fuera
     Seconds MatchReturnDelay = 8s;   // resultado en pantalla antes de volver al lobby
 
+    // Heroes: agilidad extra -> velocidad de ataque (EventWowDisguise, docs/heroes.md sec. 4 regla 4)
+    float AgilityHasteMax = 1770.0f;   // % maximo (agilidad infinita)
+    float AgilityHasteHalf = 1000.0f;  // agilidad con la que se llega a la mitad del maximo
+    uint32 AttackMinInterval = 150;    // ms: ningun ataque automatico baja de esto por la agilidad
+
     void Load();
 
     static EventWowConfig& Instance();

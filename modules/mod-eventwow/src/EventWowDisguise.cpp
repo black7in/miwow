@@ -16,6 +16,8 @@
 #include "Player.h"
 #include "TemporarySummon.h"
 #include <algorithm>
+#include <array>
+#include <cmath>
 #include <cstdlib>
 #include <vector>
 #include "ScriptMgr.h"
@@ -46,7 +48,50 @@ namespace
         uint32 AutoAttackBusyMs = 0; // > 0: hace poco se movia o lanzaba (si el disparo falta, se reanuda)
         // Armas equipadas de verdad mientras dura el disfraz (EventWowWeapons::Equip)
         EventWowWeapons::EquipState Weapons;
+        // Celeridad de ataque aplicada por la agilidad (UpdateAgilityHaste), % por tipo de ataque
+        std::array<float, 3> AgilityHaste = { };
+        uint32 AgilityHasteTimer = 0;
     };
+
+    constexpr std::array<WeaponAttackType, 3> AgilityHasteTypes = { BASE_ATTACK, OFF_ATTACK, RANGED_ATTACK };
+    constexpr uint32 AgilityHasteInterval = 250; // ms entre recalculos
+
+    void ApplyAgilityHaste(Player* player, WeaponAttackType type, float pct, bool apply)
+    {
+        if (pct > 0.0f)
+            player->ApplyAttackTimePercentMod(type, pct, apply);
+    }
+
+    // Regla propia (docs/heroes.md sec. 4 regla 4): agilidad extra -> celeridad de todos los ataques automaticos,
+    // Max x agi / (agi + Half), con un suelo de AttackMinInterval ms contando el resto de celeridad (objetos,
+    // auras). Mismo mecanismo que las auras nativas de celeridad (el cliente recibe el intervalo nuevo).
+    void UpdateAgilityHaste(Player* player, DisguiseSlot* slot)
+    {
+        float const agility = std::max(0.0f, player->GetStat(STAT_AGILITY) - player->GetCreateStat(STAT_AGILITY));
+        float const wanted = sEventWowConfig.AgilityHasteMax * agility / (agility + sEventWowConfig.AgilityHasteHalf);
+        float const minInterval = float(sEventWowConfig.AttackMinInterval);
+
+        for (std::size_t i = 0; i < AgilityHasteTypes.size(); ++i)
+        {
+            WeaponAttackType const type = AgilityHasteTypes[i];
+            float const current = slot->AgilityHaste[i];
+            float pct = wanted;
+            if (minInterval > 0.0f)
+            {
+                // Intervalo con todo lo demas (sin nuestra parte): +X % divide el intervalo entre (1 + X/100)
+                float const interval = player->GetFloatValue(UNIT_FIELD_BASEATTACKTIME + AsUnderlyingType(type)) *
+                    (100.0f + current) / 100.0f;
+                pct = std::min(pct, std::max(0.0f, (interval / minInterval - 1.0f) * 100.0f));
+            }
+
+            if (std::fabs(pct - current) < 0.1f)
+                continue;
+
+            ApplyAgilityHaste(player, type, current, false);
+            ApplyAgilityHaste(player, type, pct, true);
+            slot->AgilityHaste[i] = pct;
+        }
+    }
 
     // Margen tras moverse/lanzar en el que un disparo desaparecido se reanuda (el core lo corta en su Update)
     constexpr uint32 AutoAttackResumeWindow = 600;
@@ -339,9 +384,13 @@ void EventWowDisguise::Remove(Player* player)
     std::vector<uint32> const spells = slot->AddedSpells;
     ObjectGuid const vehicleGuid = slot->VehicleGuid;
     EventWowWeapons::EquipState weapons = slot->Weapons;
+    std::array<float, 3> const agilityHaste = slot->AgilityHaste;
     EventWowCharacterInfo const* character = sEventWowCharacters.Get(slot->CharacterId);
     // Primero fuera el slot: a partir de aqui los hooks ya no fuerzan nada
     player->CustomData.Erase(DisguiseKey);
+
+    for (std::size_t i = 0; i < AgilityHasteTypes.size(); ++i)
+        ApplyAgilityHaste(player, AgilityHasteTypes[i], agilityHaste[i], false);
 
     DismissVehicle(player, vehicleGuid);
     DismissSummons(player);
@@ -508,7 +557,16 @@ public:
     void OnPlayerUpdate(Player* player, uint32 diff) override
     {
         if (DisguiseSlot* slot = GetSlot(player))
+        {
             UpdateAutoAttack(player, slot, diff);
+
+            slot->AgilityHasteTimer += diff;
+            if (slot->AgilityHasteTimer >= AgilityHasteInterval)
+            {
+                slot->AgilityHasteTimer = 0;
+                UpdateAgilityHaste(player, slot);
+            }
+        }
     }
 
     // Vida maxima = vida base del personaje + lo que el motor sume sobre el contenedor sin disfraz

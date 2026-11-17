@@ -442,14 +442,15 @@ Datos clave de la API Glue:
   los hechizos de ranura de distancia) y la casilla del ataque basico ya no se corta al pulsarla varias veces (boton
   "macro": `/startattack` para 6603, `/cast !<nombre>` para 9509020-9509039).
   Todo lo anterior COMMITEADO (2026-11-16).
-  Velocidad de ataque (2026-11-16): el usuario quiere minimo ~0,15 s y que SOLO la agilidad suba la
-  celeridad de ataque (curva sin decidir del todo; ver opciones A lineal / B 400 % x agi/(agi+500)). Comando de prueba
+  Velocidad de ataque (2026-11-16): SOLO la agilidad EXTRA (total - base del contenedor) sube la celeridad de
+  todos los ataques automaticos: % = Max x agi / (agi + Half), suelo AttackMinInterval (config
+  `EventWow.Hero.AgilityHaste.Max/Half` = 1770/1000, `EventWow.Hero.AttackMinInterval` = 150 ms;
+  `EventWowDisguise::UpdateAgilityHaste` cada 250 ms, se deshace en `Remove`). PROBADO por el usuario 2026-11-16 ("funciona"). Comando de prueba
   `.eventwow attackspeed set <pct> | lineal <agi> | wc3 <agi> | off` (EventWowStats.cpp). Problema encontrado: a esa
   velocidad nuestro disparo automatico cortaba las habilidades (Salva...); con el 75 no (probado). Causa: el core da
   reglas propias solo al ID 75. Cambio al core `04ab628c7` (probado: Salva ya no se corta): `SpellInfo::IsAutoShot` + `SpellMgr::SetSpellAutoShot`
   (docs/core-changes.md); `EventWowCharacters::Load` marca los `AutoAttackSpell` de las fichas. Pendiente (lo hara el usuario sin prisa): el resto de "PROBAR" en
-  `docs/heroes.md` sec. 6 y probar las habilidades de los 14 heroes. Pendiente decidido: regla de la agilidad ->
-  velocidad de ataque (hoy solo `haste` acelera los disparos).
+  `docs/heroes.md` sec. 6 y probar las habilidades de los 14 heroes.
   **SIGUIENTE (decidido por el usuario 2026-11-16)**: la logica del evento del Asedio (oleadas, regiones, flujo de
   partida; ver `docs/asedio.md`).
 - Mapas propios desde Warcraft 3 (ver `docs/mapas.md`). Decision del usuario: los mapas los disena el (y un amigo) en

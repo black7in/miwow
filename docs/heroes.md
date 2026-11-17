@@ -118,8 +118,9 @@ Decisiones:
    es siempre un 5 % (y se lee mejor en la tienda).
 3. Agilidad e intelecto: cantidades pequenas o asumir su critico extra a nivel bajo; se mide al probar.
 4. **Excepcion a las formulas nativas (decidido 2026-11-14): la agilidad sube la velocidad de ataque** (estilo WC3;
-   en WoW ninguna stat principal la sube). +X % por punto (provisional 0,5 %, se ajusta probando), con tope (aceptado) de un golpe cada
-   0,3 s (el servidor procesa en ciclos de ~50-100 ms). Reglas de conversion propias: solo esta y la siguiente.
+   en WoW ninguna stat principal la sube). IMPLEMENTADO y probado 2026-11-16: solo la agilidad EXTRA (total - base del
+   contenedor), celeridad % = Max x agi / (agi + Half) (1770 / 1000) en los tres ataques automaticos, suelo de 150 ms
+   (config `EventWow.Hero.*`). El motor no tiene tope propio: un golpe por actualizacion del mapa (10 ms). Reglas de conversion propias: solo esta y la siguiente.
    Nativo, sin tocar: fuerza -> +2 poder de ataque (druida sin forma; la agilidad no da poder de ataque),
    poder de ataque -> +1 DPS por cada 14 en cada golpe (tambien sin arma), poder con hechizos -> dano/curacion.
 5. **El intelecto sube la celeridad con hechizos** (decidido 2026-11-14): tiempo de lanzamiento, canalizados y tiempo
