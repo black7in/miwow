@@ -214,7 +214,9 @@ Datos clave de la API Glue:
        (`UnitNameOwn = 1`, `UnitName*Pet/Guardian/TotemName = 0`). Comprobado: el vehiculo conducido NO cuenta como
        mascota para el cliente (sale como PNJ) y cambiar `UNITNAME_TITLE_*` desde Lua no tiene efecto: se edita
        `client/src/Interface/FrameXML/GlobalStrings.lua` (`UNITNAME_TITLE_CHARM/MINION` y `UNITNAME_SUMMON_TITLE3`
-       = "%s": el subtitulo de un vehiculo sin nombre muestra solo el nombre del conductor, entre < > (lo pone el motor); probado y aceptado por ahora. Mejora posible: entrada de vehiculo por jugador con su nombre (fragil, descartada de momento)).
+       = "%s": el subtitulo de un vehiculo sin nombre muestra solo el nombre del conductor, entre < > (lo pone el motor); probado y aceptado por ahora.
+       2026-11-18 (SIN PROBAR): las tres cadenas = "" a peticion del usuario (el nombre del jugador ya se ve); comprobar
+       que no sale "<>" vacio. Mejora posible: entrada de vehiculo por jugador con su nombre (fragil, descartada de momento)).
        Al conducir, el cliente muestra sobre el vehiculo el nombre de la CRIATURA y nunca el del conductor (probado),
        y el nombre es por entrada (no por jugador). Decision: **vehiculos propios de EventWow sin nombre**, rango de
        entradas reservado **9500000-9599999**, copias de vehiculos existentes sin script/heroico/clic/locale
@@ -378,7 +380,30 @@ Datos clave de la API Glue:
       SQL `2026_11_17_03` + `eventwow_spells_carrera.sql` (aplicados a la BD de desarrollo). Protocolo v10
       (`RACE_EVENT ITEM/HIT/BLOCK`). Para combates de verdad entre jugadores (otros eventos): zona con
       `AREA_FLAG_ARENA` (0x80) en `areatable_dbc` = todos contra todos nativo (salvo mismo grupo: el core lo comprueba antes).
-    - Siguiente: placas de aceleracion; fase 3 trampas; fase 4 modo "carrera de la muerte".
+    - Placas de aceleracion (2026-11-18; el efecto funciona, probado por el usuario): el juego las coloca solo
+      (`FindBoostPads`): a la salida de cada curva que gire >= 50 grados, por el lado de dentro, lejos de las cajas y
+      >= 100 yd entre si; tramos de > 500 yd sin placa se rellenan (una cada ~400 yd, lado alterno). Simulado: 752 = 10
+      placas, 753 = 9. Hechizo 9502013 Aceleron (+40 % 1,5 s, base Turbo; la velocidad usa la mayor aura, no se suman).
+      Sin mensaje de protocolo. Criatura 9500012: la runa G_RuneGroundBlue01 (27879) NO se veia (animaciones de goober);
+      cambiada SIN PROBAR a la plataforma de teletransporte de Ulduar (31853, escala 1,8: a 0,6 se veia diminuta; radio de recogida 5 yd). SQL `2026_11_18_00`
+      (aplicado a la BD de desarrollo). Mismo SQL: Piloto = gnomo (display 5436; probado) e icono arreglado.
+    - Salida: la moto se invoca a ras de suelo (`SummonVehicle`, `GetMapHeight` hasta 5 yd por debajo): PROBADO, ya no
+      queda en el aire. Aviso "HandleSetActiveMoverOpcode: incorrect mover guid": el disfraz montaba al jugador en
+      `Map::AddPlayerToMap` con el cliente aun cargando (al terminar reclama el control de su personaje).
+      Montarle 1,5 s despues desde `EventWowDisguise::Update` NO funciono (2 pruebas; en la segunda ni siquiera llego a
+      intentarlo: ninguna linea de `BoardVehicle` en el log; causa sin averiguar -> el retraso por defecto de `Apply`
+      (`VehicleEnterDelay`) puede dejar SIN vehiculo a otros juegos con vehiculo, p. ej. `test_vehicle`).
+      Decision del usuario (2026-11-18, PROBADO: "mucho mejor"): por etapas. Llegan a pie a su puesto (`HoldVehicle` en
+      `OnPlayerArrived`); a los 3 s de la cuenta atras `MountAll`: aviso "¡Todos a sus motos!" (protocolo v11,
+      `RACE_EVENT MOUNT`, sonido) + `EventWowDisguise::MountVehicle` (invoca la moto en su puesto y le sube; log
+      "a su moto (puesto N): montado/NO montado" y, si falla, el `SpellCastResult` de `BoardVehicle`). Si la cuenta
+      atras no llega a ese momento, `OnStart` monta a todos.
+    - PENDIENTE (proxima sesion, el usuario da el evento casi por terminado): caidas. Al caerse de la plataforma
+      (visto en el 753) deberia volver a la pista a los pocos segundos y no lo hace. Logica actual: `Track` -> `Fell`
+      si z < suelo de la muestra - `FallDepth` (753: 10 yd) o lateral > media anchura + `OffTrackMargin`; revisar
+      con la moto cayendo (posicion del vehiculo, ventana de busqueda, `Frozen`).
+    - Despues (sin fecha): placas con otro modelo (el usuario buscara uno, quiza flechas propias); fase 3 trampas;
+      fase 4 modo "carrera de la muerte"; montaje con retraso desde `Update` sin resolver (ver arriba).
 - Mapas propios desde Warcraft 3 (ver `docs/mapas.md`). Decision del usuario: los mapas los disena el (y un amigo) en
   el World Editor de WC3 1.26 (no usa Noggit) y se convierten. Diseno PROPIO: no se replican mapas de terceros
   (p. ej. X Hero Siege); el usuario y su amigo hicieron uno inspirado en el genero.

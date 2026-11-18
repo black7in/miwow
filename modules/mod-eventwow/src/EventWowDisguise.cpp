@@ -10,11 +10,14 @@
 #include "EventWowProtocol.h"
 #include "EventWowStats.h"
 #include "EventWowWeapons.h"
+#include "GameTime.h"
 #include "Item.h"
 #include "Log.h"
+#include "Map.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
 #include "TemporarySummon.h"
+#include "VehicleDefines.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -38,6 +41,8 @@ namespace
         ObjectGuid VehicleGuid;
         // No se pudo invocar: no se reintenta (evita repetirlo en cada Update)
         bool VehicleFailed = false;
+        // No subir al vehiculo antes de esto (GameTime): ver VehicleEnterDelay
+        Milliseconds VehicleReadyAt = 0ms;
         // Maximos nativos del contenedor al disfrazarse (sin las stats del personaje). Lo que el motor sume
         // por encima (stats del personaje, libros, auras) se suma a la vida/poder base del personaje.
         float NativeHealth = 0.0f;
@@ -124,9 +129,41 @@ namespace
     // Mas lejos que esto (reaparicion, teleport) se invoca otro vehiculo en vez de subir al antiguo
     constexpr float VehicleMaxDistance = 10.0f;
 
-    void SummonVehicle(Player* player, DisguiseSlot* slot, uint32 entry)
+    // Hasta cuanto por debajo se busca el suelo al invocar el vehiculo (el jugador puede llegar algo por encima)
+    constexpr float VehicleGroundSearch = 5.0f;
+
+    // Al disfrazarse el vehiculo espera (lo invoca Update). El disfraz se aplica al llegar a la partida, en
+    // Map::AddPlayerToMap, con el cliente aun cargando: al terminar el cliente reclama el control de su personaje
+    // (CMSG_SET_ACTIVE_MOVER) y, si ya estaba en la moto, la consola avisa "HandleSetActiveMoverOpcode: incorrect mover
+    // guid". Un primer intento (2026-11-18) no llego a montarle sin saber por que: BoardVehicle registra el motivo.
+    constexpr Milliseconds VehicleEnterDelay = 1500ms;
+
+    // Unit::EnterVehicle, pero con el resultado del hechizo de montar en el log si no llega a subirle
+    void BoardVehicle(Player* player, Unit* vehicle)
     {
-        TempSummon* vehicle = player->SummonCreature(entry, *player, TEMPSUMMON_MANUAL_DESPAWN);
+        SpellCastResult const result = player->CastCustomSpell(VEHICLE_SPELL_RIDE_HARDCODED, SPELLVALUE_BASE_POINT0, 1,
+            vehicle, TRIGGERED_IGNORE_CASTER_MOUNTED_OR_ON_VEHICLE);
+        sScriptMgr->AnticheatSetUnderACKmount(player);
+
+        if (player->GetVehicleBase() == vehicle)
+            LOG_INFO("module.eventwow", "EventWow: {} sube al vehiculo {}", player->GetName(), vehicle->GetEntry());
+        else
+            LOG_ERROR("module.eventwow", "EventWow: {} no ha subido al vehiculo {} (resultado del hechizo {}, distancia "
+                "{:.1f}, vivo {}, en vehiculo {})", player->GetName(), vehicle->GetEntry(), uint32(result),
+                player->GetExactDist(vehicle), vehicle->IsAlive() ? 1 : 0, player->GetVehicle() ? 1 : 0);
+    }
+
+    // Invoca el vehiculo en at (o junto al jugador) y le sube
+    void SummonVehicle(Player* player, DisguiseSlot* slot, uint32 entry, Position const* at = nullptr)
+    {
+        // A ras de suelo (si lo hay cerca), no a la altura a la que llego el jugador
+        Position pos = at ? *at : player->GetPosition();
+        float const ground = player->GetMapHeight(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ() + 1.0f,
+            true, VehicleGroundSearch + 1.0f);
+        if (ground > INVALID_HEIGHT && ground <= pos.GetPositionZ() + 1.0f && pos.GetPositionZ() - ground <= VehicleGroundSearch)
+            pos.m_positionZ = ground;
+
+        TempSummon* vehicle = player->SummonCreature(entry, pos, TEMPSUMMON_MANUAL_DESPAWN);
         if (!vehicle || !vehicle->IsVehicle())
         {
             if (vehicle)
@@ -141,7 +178,7 @@ namespace
         // Amistoso para su conductor (y para su equipo cuando haya equipos)
         vehicle->SetFaction(player->GetFaction());
         slot->VehicleGuid = vehicle->GetGUID();
-        player->EnterVehicle(vehicle, 0);
+        BoardVehicle(player, vehicle);
     }
 
     // Baja al jugador y hace desaparecer el vehiculo (si sigue en su mapa)
@@ -370,8 +407,9 @@ void EventWowDisguise::Apply(Player* player, EventWowCharacterInfo const& charac
 
     ApplyAttack(player, character);
 
+    // El vehiculo lo invoca Update pasado VehicleEnterDelay (el juego puede llamar a Update antes si tiene prisa)
     if (character.VehicleEntry)
-        SummonVehicle(player, slot, character.VehicleEntry);
+        slot->VehicleReadyAt = GameTime::GetGameTimeMS() + VehicleEnterDelay;
 
     LOG_DEBUG("module.eventwow", "EventWow: {} disfrazado de {} ({})", player->GetName(), character.Name, character.Id);
     SendState(player);
@@ -471,7 +509,8 @@ void EventWowDisguise::Update(Player* player)
     if (ApplyWeapons(player, slot, *character))
         ApplyAttack(player, *character);
 
-    if (!character->VehicleEntry || slot->VehicleFailed || player->GetVehicle() || EventWowDevMode::IsActive(player))
+    if (!character->VehicleEntry || slot->VehicleFailed || player->GetVehicle() || EventWowDevMode::IsActive(player)
+        || GameTime::GetGameTimeMS() < slot->VehicleReadyAt)
         return;
 
     Creature* vehicle = slot->VehicleGuid ? ObjectAccessor::GetCreature(*player, slot->VehicleGuid) : nullptr;
@@ -482,7 +521,7 @@ void EventWowDisguise::Update(Player* player)
     }
 
     if (vehicle)
-        player->EnterVehicle(vehicle, 0);
+        BoardVehicle(player, vehicle);
     else
         SummonVehicle(player, slot, character->VehicleEntry);
 }
@@ -495,6 +534,41 @@ void EventWowDisguise::DismissVehicle(Player* player)
 
     DismissVehicleOf(player, slot->VehicleGuid);
     slot->VehicleGuid.Clear();
+}
+
+void EventWowDisguise::HoldVehicle(Player* player)
+{
+    if (DisguiseSlot* slot = GetSlot(player))
+        slot->VehicleReadyAt = Milliseconds::max();
+}
+
+bool EventWowDisguise::MountVehicle(Player* player, Position const* at)
+{
+    DisguiseSlot* slot = GetSlot(player);
+    EventWowCharacterInfo const* character = slot ? sEventWowCharacters.Get(slot->CharacterId) : nullptr;
+    if (!character || !character->VehicleEntry)
+    {
+        LOG_ERROR("module.eventwow", "EventWow: no se puede montar a {}: sin disfraz con vehiculo", player->GetName());
+        return false;
+    }
+
+    slot->VehicleReadyAt = 0ms;     // desde aqui Update le mantiene montado
+    if (player->GetVehicle())
+        return true;
+
+    if (!player->IsInWorld() || !player->IsAlive() || player->IsBeingTeleported())
+    {
+        LOG_ERROR("module.eventwow", "EventWow: no se puede montar a {} (en el mundo {}, vivo {}, teletransportandose {})",
+            player->GetName(), player->IsInWorld() ? 1 : 0, player->IsAlive() ? 1 : 0, player->IsBeingTeleported() ? 1 : 0);
+        return false;
+    }
+
+    // El anterior (si lo hay) fuera: el nuevo se invoca donde toca
+    DismissVehicleOf(player, slot->VehicleGuid);
+    slot->VehicleGuid.Clear();
+    slot->VehicleFailed = false;
+    SummonVehicle(player, slot, character->VehicleEntry, at);
+    return player->GetVehicle() != nullptr;
 }
 
 void EventWowDisguise::SendState(Player* player)

@@ -3,6 +3,7 @@
 --   RACE <vuelta> <vueltas> <posicion> <corredores> <ms carrera> <ms vuelta> <ms mejor vuelta> <contraria 0/1> <terminado 0/1>
 --   RACE_EVENT LAP <vuelta> <ms vuelta> | FINAL_LAP | FELL | FINISH <posicion> <ms> | WINNER <nombre> <segundos>
 --              | ITEM <hechizo> <hueco> | HIT <hechizo> | BLOCK   (v10: poderes en los huecos 1-5 de la barra de la moto)
+--              | MOUNT   (v11: "¡Todos a sus motos!" en la cuenta atras)
 --   RACE_RESULTS <final 0/1> <n> (<posicion> <nombre> <ms total, 0 = sin terminar> <ms mejor vuelta>) x n
 -- Ver docs/protocolo.md.
 --
@@ -30,6 +31,7 @@ EVENTWOW_STR_RACE_HEADERS = { "Pos.", "Piloto", "Tiempo", "Mejor vuelta" };
 EVENTWOW_STR_RACE_ITEM = "%s  |cffffffff(tecla %d)|r";
 EVENTWOW_STR_RACE_HIT = "¡%s!";
 EVENTWOW_STR_RACE_BLOCK = "¡El escudo te ha protegido!";
+EVENTWOW_STR_RACE_MOUNT = "¡Todos a sus motos!";
 
 local RACE_MAX_ROWS = 8;
 
@@ -271,6 +273,9 @@ EventWow_RegisterHandler("RACE_EVENT", function(fields)
 		PlaySound("RaidWarning");
 	elseif ( event == "BLOCK" ) then
 		EventWowRace_ShowNotice(EVENTWOW_STR_RACE_BLOCK, 1.5, 1, 1, 0.6);
+	elseif ( event == "MOUNT" ) then
+		EventWowRace_ShowNotice(EVENTWOW_STR_RACE_MOUNT, 3, 1, 0.82, 0);
+		PlaySound("RaidWarning");
 	end
 end);
 

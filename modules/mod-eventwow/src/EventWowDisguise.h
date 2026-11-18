@@ -4,6 +4,7 @@
 #include "Define.h"
 
 class Player;
+struct Position;
 struct EventWowCharacterInfo;
 
 // Disfraz: convierte el contenedor (elfo de la noche druida) en un personaje de minijuego
@@ -45,6 +46,11 @@ namespace EventWowDisguise
     // Baja al jugador y hace desaparecer su vehiculo; el siguiente Update invoca uno nuevo donde este el jugador.
     // Para recolocar a alguien con vehiculo sin Vehicle::TeleportVehicle (que lo baja y lo sube por clic).
     void DismissVehicle(Player* player);
+    // Para juegos que montan en un momento concreto (p. ej. la carrera: "¡Todos a sus motos!"): HoldVehicle hace que
+    // Update no invoque el vehiculo; MountVehicle lo invoca (en at, o junto al jugador) y le sube ya, y desde ahi
+    // Update vuelve a mantenerle montado. Devuelve si ha quedado montado (si no, el motivo va al log).
+    void HoldVehicle(Player* player);
+    bool MountVehicle(Player* player, Position const* at = nullptr);
 
     void SendState(Player* player);
 }

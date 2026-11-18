@@ -148,6 +148,25 @@ duration = 1.5
 [spell.effect1]
 target = "UNIT_CASTER"
 
+# Placa de aceleracion: la moto que pasa por encima se lo lanza a si misma (se renueva al pisar otra). Mismo aura de
+# velocidad que el Turbo (MOD_INCREASE_SPEED: el core usa la mayor, no se suman)
+[[spell]]
+id = 9502013
+base = 54861                     # Propulsiones de nitro (llamas en la moto)
+name = "Acelerón"
+description = "Velocidad aumentada un $s1% durante $d."
+aura_description = "Velocidad aumentada un $s1%."
+icon = "ability_vehicle_rocketboost"
+duration = 1.5
+cooldown = 0
+gcd = 0
+[spell.effect1]
+value = 40
+[spell.effect2]
+type = "NONE"
+[spell.effect3]
+type = "NONE"
+
 # Rayo: moto frenada
 [[spell]]
 id = 9502012

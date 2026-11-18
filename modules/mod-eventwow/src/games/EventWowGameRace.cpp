@@ -36,8 +36,10 @@
 // anterior (asi en los cruces del Circuito Estelar no salta al otro tramo, y atajar campo a traves no cuenta: se
 // queda "fuera de la pista" y reaparece). El avance acumulado (Progress, yardas desde la meta, negativo en la
 // parrilla) da las vueltas, los puntos de control (en orden por construccion) y las posiciones.
-//  - Parrilla de 8 detras de la meta: cada piloto llega a la instancia ya en su puesto (GetArrivalPosition) y la moto
-//    se invoca alli. Motos quietas (raiz en el vehiculo) en la carga, la cuenta atras (10 s) y al terminar.
+//  - Parrilla de 8 detras de la meta: cada piloto llega a la instancia a pie, ya en su puesto (GetArrivalPosition).
+//    A los 3 s de la cuenta atras (10 s): "¡Todos a sus motos!" (MountAll; la moto se invoca en su puesto). Montarle
+//    al llegar (en Map::AddPlayerToMap, con el cliente aun cargando) hacia saltar "HandleSetActiveMoverOpcode:
+//    incorrect mover guid" en la consola. Motos quietas (raiz en el vehiculo) en la cuenta atras y al terminar.
 //  - Nunca Vehicle::TeleportVehicle: baja al jugador y lo vuelve a subir por clic (las motos no tienen) y deja el
 //    control del vehiculo (mover) descolocado. Para recolocar: se quita la moto, se mueve al jugador y se invoca otra.
 //  - Caer (por debajo del suelo de la pista) o salirse demasiado: vuelve al ultimo punto bueno, quieto 2 s.
@@ -50,14 +52,17 @@
 //    Cohete (al de delante), Turbo, Mancha de aceite (detras), Escudo (para el siguiente golpe), Rayo (frena a todos
 //    los de delante). Los golpes los aplica el juego (la moto golpeada se lanza el efecto a si misma): no hace falta que
 //    los pilotos sean enemigos y tambien alcanza a los del mismo grupo.
+//  - Placas de aceleracion (runas en el suelo): las coloca el juego solo, a la salida de cada curva cerrada y por el
+//    lado de dentro (FindBoostPads, lejos de las cajas). Pasar por encima = Acelerón (+40 % 1,5 s), se renueva.
 // Reglas solo para jugadores: en modo dev no se le recoloca ni se le inmoviliza.
 //
-// Protocolo (docs/protocolo.md, v10):
+// Protocolo (docs/protocolo.md, v11):
 //   RACE_INFO <vueltas>
 //   RACE <vuelta> <vueltas> <posicion> <corredores> <ms carrera> <ms vuelta actual> <ms mejor vuelta> <contraria 0/1>
 //        <terminado 0/1>                                   (cada 500 ms a cada corredor)
 //   RACE_EVENT LAP <vuelta> <ms vuelta> | FINAL_LAP | FELL | FINISH <posicion> <ms> | WINNER <nombre> <segundos>
 //              | ITEM <hechizo> <hueco 1-5> | HIT <hechizo> | BLOCK         (v10: poderes)
+//              | MOUNT                                                      (v11: "¡Todos a sus motos!")
 //   RACE_RESULTS <final 0/1> <n> (<posicion> <nombre> <ms total, 0 = sin terminar> <ms mejor vuelta>) x n
 namespace
 {
@@ -69,6 +74,7 @@ namespace
     constexpr Milliseconds TrackInterval = 100ms;
     constexpr Milliseconds HudInterval = 500ms;
     constexpr Milliseconds RootInterval = 250ms;
+    constexpr Milliseconds MountDelay = 3s;        // de la cuenta atras (10 s) hasta "¡Todos a sus motos!"
     constexpr int32 WindowBack = 40;               // muestras (2 yd) hacia atras y hacia delante
     constexpr int32 WindowAhead = 60;
 
@@ -77,6 +83,7 @@ namespace
     {
         NPC_RACE_POWER_BOX = 9500010,
         NPC_RACE_OIL = 9500011,
+        NPC_RACE_BOOST_PAD = 9500012,
 
         // Activadores (barra de la moto)
         SPELL_RACE_ROCKET = 9502000,
@@ -87,7 +94,8 @@ namespace
         // Efectos
         SPELL_RACE_ROCKET_MISSILE = 9502010,
         SPELL_RACE_SPIN = 9502011,
-        SPELL_RACE_SHOCK = 9502012
+        SPELL_RACE_SHOCK = 9502012,
+        SPELL_RACE_BOOST = 9502013          // placa de aceleracion
     };
 
     // Probabilidad relativa de cada poder para el primero y para el ultimo (en medio, proporcional a la posicion)
@@ -120,6 +128,22 @@ namespace
     // Tramo maximo entre dos posiciones seguidas para barrerlo (mas = teleport/caida: solo el punto nuevo)
     constexpr float MaxSweep = 60.0f;
     constexpr float WrongWayDistance = 20.0f;      // yardas hacia atras seguidas para avisar
+
+    // Placas de aceleracion: a la salida de cada curva que gire al menos BoostMinTurn, por el lado de dentro
+    constexpr int32 BoostTurnWindow = 10;          // muestras a cada lado para medir el giro (40 yd en total)
+    constexpr float BoostCurveTurn = 0.26f;        // giro (rad) en esa ventana a partir del que se esta en curva (~15 grados)
+    constexpr float BoostMinTurn = 0.87f;          // giro total de la curva (~50 grados)
+    constexpr float BoostExitOffset = 12.0f;       // yardas despues del final de la curva
+    constexpr float BoostLateral = 0.4f;           // fraccion de la media anchura hacia dentro de la curva
+    constexpr float BoostRadius = 5.0f;           // placa a escala 1,8 (SQL 2026_11_18_00)
+    constexpr float BoostMinSpacing = 100.0f;      // entre placas
+    constexpr float BoostBoxClearance = 25.0f;     // lejos de las filas de cajas
+    constexpr float BoostMaxShift = 40.0f;         // lo que se puede adelantar para alejarla de las cajas
+    constexpr float BoostStartGap = 60.0f;         // ni en la salida (parrilla)...
+    constexpr float BoostEndGap = 40.0f;           // ...ni justo antes de la meta
+    constexpr float BoostMaxGap = 500.0f;          // tramo sin placa a partir del que se rellena...
+    constexpr float BoostFillSpacing = 400.0f;     // ...con una placa cada tanto
+    constexpr Milliseconds BoostRetrigger = 2s;    // la misma placa no vuelve a dar acelerón seguido
 
     struct RaceSample
     {
@@ -213,6 +237,125 @@ namespace
 
     std::unordered_map<uint32, RaceTrack> Tracks;
 
+    // Placa de aceleracion: muestra de la pista y lado (+1 izquierda, -1 derecha)
+    struct BoostPadSpot
+    {
+        int32 Index;
+        float Side;
+    };
+
+    float AngleDiff(float a, float b)
+    {
+        float d = a - b;
+        while (d > float(M_PI))
+            d -= 2.0f * float(M_PI);
+        while (d < -float(M_PI))
+            d += 2.0f * float(M_PI);
+        return d;
+    }
+
+    // Busca las curvas (tramos donde el rumbo cambia mas de BoostCurveTurn en la ventana) y pone una placa a la salida
+    // de las que giran al menos BoostMinTurn en total, por el lado de dentro: premia trazar cerrado.
+    std::vector<BoostPadSpot> FindBoostPads(RaceTrack const& track)
+    {
+        int32 const n = track.Count();
+        auto turnAt = [&track](int32 i)
+        {
+            return AngleDiff(track.Heading(i + BoostTurnWindow), track.Heading(i - BoostTurnWindow));
+        };
+
+        // Empezar en una recta, para que ninguna curva quede partida por el principio del recorrido
+        int32 start = 0;
+        while (start < n && std::fabs(turnAt(start)) > BoostCurveTurn)
+            ++start;
+        if (start == n)
+            return {};
+
+        std::vector<float> rows;
+        for (float s = BoxFirstRow; s < track.Length - BoxLastRowGap; s += BoxRowSpacing)
+            rows.push_back(s);
+        auto nearBoxes = [&rows](float s)
+        {
+            return std::any_of(rows.begin(), rows.end(), [s](float r) { return std::fabs(r - s) < BoostBoxClearance; });
+        };
+
+        std::vector<BoostPadSpot> pads;
+        std::vector<float> placed;      // yardas desde la meta
+        // Adelanta s (hasta BoostMaxShift) mientras este junto a una fila de cajas
+        auto nudge = [&track, &nearBoxes](float s)
+        {
+            float const limit = s + BoostMaxShift;
+            while (s < limit && nearBoxes(std::fmod(s, track.Length)))
+                s += track.Step;
+            return std::fmod(s, track.Length);
+        };
+        auto canPlace = [&track, &nearBoxes, &placed](float s)
+        {
+            if (nearBoxes(s) || s < BoostStartGap || s > track.Length - BoostEndGap)
+                return false;
+            return std::none_of(placed.begin(), placed.end(), [&track, s](float p)
+            {
+                float const d = std::fabs(p - s);
+                return std::min(d, track.Length - d) < BoostMinSpacing;
+            });
+        };
+        auto indexOf = [&track](float s) { return track.Wrap(static_cast<int32>(std::lround(s / track.Step))); };
+
+        bool inCurve = false;
+        float total = 0.0f;
+        for (int32 k = 0; k <= n; ++k)
+        {
+            int32 const i = start + k;
+            bool const curve = k < n && std::fabs(turnAt(i)) > BoostCurveTurn;
+            if (curve)
+            {
+                total = (inCurve ? total : 0.0f) + AngleDiff(track.Heading(i), track.Heading(i - 1));
+                inCurve = true;
+                continue;
+            }
+            if (!inCurve)
+                continue;
+
+            // Fin de curva en la muestra i
+            inCurve = false;
+            if (std::fabs(total) < BoostMinTurn)
+                continue;
+
+            float const s = nudge(track.At(i).S + BoostExitOffset);
+            if (!canPlace(s))
+                continue;
+
+            placed.push_back(s);
+            pads.push_back({ indexOf(s), total > 0.0f ? 1.0f : -1.0f });
+        }
+
+        // Tramos largos sin placa (curvas muy abiertas, rectas): placas repartidas, alternando el lado
+        std::vector<float> edges = placed;
+        std::sort(edges.begin(), edges.end());
+        edges.insert(edges.begin(), BoostStartGap);
+        edges.push_back(track.Length - BoostEndGap);
+        float side = 1.0f;
+        for (std::size_t e = 0; e + 1 < edges.size(); ++e)
+        {
+            float const gap = edges[e + 1] - edges[e];
+            if (gap <= BoostMaxGap)
+                continue;
+
+            int32 const count = static_cast<int32>(gap / BoostFillSpacing);
+            for (int32 j = 1; j <= count; ++j)
+            {
+                float const s = nudge(edges[e] + gap * j / (count + 1));
+                if (!canPlace(s))
+                    continue;
+
+                placed.push_back(s);
+                pads.push_back({ indexOf(s), side });
+                side = -side;
+            }
+        }
+        return pads;
+    }
+
     // Parametros de cada circuito
     struct RaceSettings
     {
@@ -284,6 +427,8 @@ protected:
         std::vector<uint32> Powers; // activadores en la barra de la moto (huecos 1..MaxPowers)
         Position LastPos;           // posicion de la moto en la comprobacion anterior (cajas/manchas)
         bool HasLastPos = false;
+        std::size_t LastBoostPad = std::numeric_limits<std::size_t>::max();
+        Milliseconds LastBoostTime = 0ms;
         float Backwards = 0.0f;
         bool WrongWay = false;
     };
@@ -313,6 +458,9 @@ protected:
 
         LOG_INFO("module.eventwow", "EventWow: carrera: {} llega al puesto {} (indice {}, moto {})", player->GetName(),
             racer.Slot, racer.Index, player->GetVehicleBase() ? "si" : "no");
+        // A pie hasta "¡Todos a sus motos!" (MountAll, en la cuenta atras)
+        if (!_mounted)
+            EventWowDisguise::HoldVehicle(player);
         SetRooted(player, true);
         EventWowMessage("RACE_INFO").Add(RaceLaps).Send(player);
         SendResults(player, false);
@@ -328,6 +476,8 @@ protected:
     void OnStart() override
     {
         SetHud("Completa " + std::to_string(RaceLaps) + " vueltas. ¡Cuidado con las caídas!");
+        if (!_mounted)
+            MountAll();     // por si la cuenta atras no llego al momento de montar
         _clock = 0ms;
         ForEachPlayer([this](Player* player)
         {
@@ -380,6 +530,14 @@ protected:
         Milliseconds const elapsed = _rootTimer;
         _rootTimer = 0ms;
         UpdateItems(elapsed);
+
+        // Llegan a pie a la parrilla; a MountDelay de la cuenta atras, todos a sus motos
+        if (!_mounted && GetState() == EventWowMatchState::Countdown)
+        {
+            _countdownElapsed += elapsed;
+            if (_countdownElapsed >= MountDelay)
+                MountAll();
+        }
         ForEachPlayer([this, elapsed](Player* player)
         {
             auto itr = _racers.find(player->GetGUID());
@@ -472,6 +630,26 @@ private:
         return _track.Place(index, lateral, 1.5f);
     }
 
+    // "¡Todos a sus motos!": cada piloto a su moto, invocada en su puesto de la parrilla (si se ha movido a pie, el
+    // hechizo de montar le sube desde donde este). Quietas hasta la salida (OnTick).
+    void MountAll()
+    {
+        _mounted = true;
+        ForEachPlayer([this](Player* player)
+        {
+            auto itr = _racers.find(player->GetGUID());
+            if (itr == _racers.end())
+                return;
+
+            EventWowMessage("RACE_EVENT").Add("MOUNT").Send(player);
+            Racer& racer = itr->second;
+            Position const spot = GridPosition(racer);
+            bool const mounted = EventWowDisguise::MountVehicle(player, &spot);
+            LOG_INFO("module.eventwow", "EventWow: carrera: {} a su moto (puesto {}): {}", player->GetName(), racer.Slot,
+                mounted ? "montado" : "NO montado");
+        });
+    }
+
     // --- Poderes ---
 
     struct PowerBox
@@ -479,6 +657,12 @@ private:
         Position Pos;
         ObjectGuid Creature;
         Milliseconds Respawn = 0ms;     // > 0: recogida, reaparece al llegar a 0
+    };
+
+    struct BoostPad
+    {
+        Position Pos;
+        ObjectGuid Creature;
     };
 
     struct OilSlick
@@ -514,7 +698,28 @@ private:
                     _boxes.push_back(box);
                 }
             }
-            LOG_INFO("module.eventwow", "EventWow: carrera: {} cajas de poder", _boxes.size());
+            for (BoostPadSpot const& spot : FindBoostPads(_track))
+            {
+                BoostPad pad;
+                pad.Pos = _track.Place(spot.Index, _track.At(spot.Index).Half * BoostLateral * spot.Side, 0.0f);
+                float const ground = map->GetHeight(PHASEMASK_NORMAL, pad.Pos.GetPositionX(), pad.Pos.GetPositionY(),
+                    pad.Pos.GetPositionZ() + 5.0f, true, 15.0f);
+                if (std::fabs(ground - pad.Pos.GetPositionZ()) < 6.0f)
+                    pad.Pos.m_positionZ = ground;
+                _pads.push_back(pad);
+            }
+            LOG_INFO("module.eventwow", "EventWow: carrera: {} cajas de poder, {} placas de aceleracion", _boxes.size(),
+                _pads.size());
+        }
+
+        // Placas: siempre puestas (solo se reinvocan si desaparecen)
+        for (BoostPad& pad : _pads)
+        {
+            if (!pad.Creature || !map->GetCreature(pad.Creature))
+            {
+                TempSummon* creature = map->SummonCreature(NPC_RACE_BOOST_PAD, pad.Pos);
+                pad.Creature = creature ? creature->GetGUID() : ObjectGuid::Empty;
+            }
         }
 
         for (PowerBox& box : _boxes)
@@ -598,6 +803,20 @@ private:
                 if (racer.Powers.size() >= MaxPowers)
                     break;
             }
+        }
+
+        // Placas: acelerón a la moto (la misma placa no repite enseguida; otra si)
+        for (std::size_t i = 0; i < _pads.size(); ++i)
+        {
+            if (!Touches(from, to, _pads[i].Pos, BoostRadius))
+                continue;
+            if (racer.LastBoostPad == i && _clock - racer.LastBoostTime < BoostRetrigger)
+                continue;
+
+            racer.LastBoostPad = i;
+            racer.LastBoostTime = _clock;
+            if (Unit* vehicle = player->GetVehicleBase())
+                vehicle->CastSpell(vehicle, SPELL_RACE_BOOST, true);
         }
 
         for (auto itr = _oil.begin(); itr != _oil.end(); ++itr)
@@ -991,8 +1210,11 @@ private:
     uint32 _finished = 0;
     mutable Position _respawnPosition;
     std::vector<PowerBox> _boxes;
+    std::vector<BoostPad> _pads;
     std::vector<OilSlick> _oil;
     bool _boxesPlaced = false;
+    bool _mounted = false;
+    Milliseconds _countdownElapsed = 0ms;
 };
 
 // Activadores de los poderes (los lanza la moto desde su barra): avisan al juego

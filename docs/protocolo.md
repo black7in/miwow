@@ -1,7 +1,7 @@
 # Protocolo cliente <-> servidor (addon messages)
 
 Implementacion: servidor `modules/mod-eventwow/src/EventWowProtocol.*`, cliente
-`client/src/Interface/FrameXML/EventWowProtocol.lua`. Version actual: **8**
+`client/src/Interface/FrameXML/EventWowProtocol.lua`. Version actual: **11**
 (`EventWowProtocol::Version` / `EVENTWOW_PROTOCOL.VERSION`; cambiarla en ambos lados a la vez).
 
 ## Transporte
@@ -80,7 +80,7 @@ opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `Regi
 | `MATCH_PICKS` | n, luego n x (nombre jugador, id personaje / 0 = eligiendo) | quien ha elegido que (con `MATCH_PICK`, en cada eleccion y al acabar: los que no eligieron reciben uno al azar) |
 | `RACE_INFO` | vueltas | empieza una carrera (`EventWowGameRace`, juegos `carrera` / `carrera_estelar`): al llegar a la instancia. v9 |
 | `RACE` | vuelta, vueltas, posicion, corredores, ms carrera, ms vuelta actual, ms mejor vuelta, contraria 0/1, terminado 0/1 | marcador de la carrera, cada 500 ms a cada corredor; el cliente hace avanzar el reloj entre mensajes. v9 |
-| `RACE_EVENT` | `LAP` vuelta ms / `FINAL_LAP` / `FELL` / `FINISH` posicion ms / `WINNER` nombre segundos / `ITEM` hechizo hueco / `HIT` hechizo / `BLOCK` | avisos: nueva vuelta, ultima vuelta, caida (vuelve al ultimo punto bueno, quieto 2 s), has llegado, alguien ha ganado (quedan N s). v9. v10: poder recogido (hasta 5 acumulados, huecos 1-5 de la barra de la moto), golpe recibido (derrape/frenado), el escudo ha parado un golpe |
+| `RACE_EVENT` | `LAP` vuelta ms / `FINAL_LAP` / `FELL` / `FINISH` posicion ms / `WINNER` nombre segundos / `ITEM` hechizo hueco / `HIT` hechizo / `BLOCK` / `MOUNT` | avisos: nueva vuelta, ultima vuelta, caida (vuelve al ultimo punto bueno, quieto 2 s), has llegado, alguien ha ganado (quedan N s). v9. v10: poder recogido (hasta 5 acumulados, huecos 1-5 de la barra de la moto), golpe recibido (derrape/frenado), el escudo ha parado un golpe. v11: "¡Todos a sus motos!" (cuenta atras: llegan a pie y se montan a la vez) |
 | `RACE_RESULTS` | final 0/1, n, luego n x (posicion, nombre, ms total / 0 = sin terminar, ms mejor vuelta) | clasificacion: provisional cada vez que alguien llega (el cliente la muestra si ya has llegado), final al acabar (con boton "Salir al lobby" = `ABANDON`). v9 |
 | `DEV_MODE` | 0/1 | modo dev (`.gm on` o `.dev on`; se comprueba cada 250 ms). Al conectar y en cada cambio. En modo dev el cliente permite ocultar el panel (solo cliente) |
 
