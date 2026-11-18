@@ -160,7 +160,6 @@ void EventWowProgress::Start(Player* player, EventWowCharacterInfo const& charac
         if (character.SpellKinds[i] == EventWowAbilityKind::Fixed)
             slot->Ranks[i] = 1;
 
-    player->RemovePlayerFlag(PLAYER_FLAGS_NO_XP_GAIN);
     UpdateAutomatic(player, slot, character);
     SendState(player);
 }
@@ -176,8 +175,9 @@ void EventWowProgress::Stop(Player* player)
 
     player->CustomData.Erase(ProgressKey);
 
+    // Servidor tradicional: inalcanzable de momento (EventWowGames::Validate desactiva los juegos con progresion y el
+    // comando la rechaza). Pendiente: devolver el nivel y la XP reales guardados al empezar, no StartPlayerLevel.
     SetLevel(player, uint8(sWorld->getIntConfig(CONFIG_START_PLAYER_LEVEL)));
-    player->SetPlayerFlag(PLAYER_FLAGS_NO_XP_GAIN);
     SendState(player);
 }
 
@@ -272,8 +272,7 @@ public:
         PLAYERHOOK_ON_GIVE_EXP,
         PLAYERHOOK_CAN_LEARN_TALENT,
         PLAYERHOOK_ON_BEFORE_ACHI_COMPLETE,
-        PLAYERHOOK_CAN_GIVE_MAIL_REWARD_AT_GIVE_LEVEL,
-        PLAYERHOOK_ON_LOGIN
+        PLAYERHOOK_CAN_GIVE_MAIL_REWARD_AT_GIVE_LEVEL
     }) { }
 
     void OnPlayerLevelChanged(Player* player, uint8 /*oldLevel*/) override
@@ -303,10 +302,10 @@ public:
         amount = std::min(uint32(float(amount) * slot->XpRate), GetXpToMaxLevel(player, slot->MaxLevel));
     }
 
-    // Los talentos no existen en EventWow (el motor da puntos desde nivel 10)
+    // Con progresion el heroe no usa talentos (el motor da puntos desde nivel 10); fuera de ella, WoW normal
     bool OnPlayerCanLearnTalent(Player* player, TalentEntry const* /*talent*/, uint32 /*rank*/) override
     {
-        return !sEventWowConfig.Enabled || EventWowDevMode::IsActive(player);
+        return !EventWowProgress::IsActive(player) || EventWowDevMode::IsActive(player);
     }
 
     bool OnPlayerBeforeAchievementComplete(Player* player, AchievementEntry const* /*achievement*/) override
@@ -314,20 +313,9 @@ public:
         return !EventWowProgress::IsActive(player);
     }
 
-    bool OnPlayerCanGiveMailRewardAtGiveLevel(Player* /*player*/, uint8 /*level*/) override
+    bool OnPlayerCanGiveMailRewardAtGiveLevel(Player* player, uint8 /*level*/) override
     {
-        return !sEventWowConfig.Enabled;
-    }
-
-    // Se desconecto a mitad de partida: el nivel de partida quedo guardado
-    void OnPlayerLogin(Player* player) override
-    {
-        if (!sEventWowConfig.Enabled)
-            return;
-
-        uint8 const baseLevel = uint8(sWorld->getIntConfig(CONFIG_START_PLAYER_LEVEL));
-        if (player->GetLevel() != baseLevel)
-            EventWowProgress::SetLevel(player, baseLevel);
+        return !EventWowProgress::IsActive(player);
     }
 };
 

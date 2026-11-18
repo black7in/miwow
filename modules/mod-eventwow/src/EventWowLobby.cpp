@@ -1,26 +1,58 @@
 #include "EventWowLobby.h"
+#include "DataMap.h"
 #include "EventWowConfig.h"
 #include "EventWowDisguise.h"
+#include "EventWowGames.h"
 #include "EventWowInventory.h"
 #include "EventWowStats.h"
+#include "Map.h"
 #include "Player.h"
 #include "ScriptMgr.h"
-#include "WorldSession.h"
 
-// El mapa no basta: la Isla de los GM esta en Kalimdor (mapa 1), igual que Orgrimmar y otros cementerios
-bool EventWowLobby::IsInLobby(Player const* player)
+namespace
 {
-    WorldLocation const& lobby = sEventWowConfig.Lobby;
-    return player->GetMapId() == lobby.GetMapId() && player->GetExactDist2d(&lobby) <= Radius;
+    // Login dentro del mapa de un evento: se resucita al terminar de cargar (OnPlayerLogin)
+    std::string const RelocatedKey = "EventWowLoginRelocated";
+
+    struct RelocatedFlag : public DataMap::Base { };
 }
 
-// Visible solo para GMs (nivel >= moderador) mientras esta en el lobby
-void EventWowLobby::SetVisibility(Player* player, bool inLobby)
+char const* EventWowLobby::CanJoinFrom(Player const* player)
 {
-    if (player->GetSession()->GetSecurity() > SEC_PLAYER)
+    if (!player->IsAlive())
+        return "QUEUE_DEAD";
+
+    if (player->IsInCombat())
+        return "QUEUE_IN_COMBAT";
+
+    if (player->IsInFlight())
+        return "QUEUE_IN_FLIGHT";
+
+    if (player->GetMap()->Instanceable())
+        return "QUEUE_IN_INSTANCE";
+
+    if (player->InBattlegroundQueue())
+        return "QUEUE_IN_BG_QUEUE";
+
+    return nullptr;
+}
+
+bool EventWowLobby::IsEventMap(uint32 mapId)
+{
+    for (EventWowGameInfo const& game : sEventWowGames.GetAll())
+        if (game.MapId == mapId)
+            return true;
+
+    return false;
+}
+
+void EventWowLobby::SaveReturnPoint(Player* player)
+{
+    // Ya dentro de un evento (p. ej. modo dev): se conserva el punto de vuelta que tuviera
+    if (IsEventMap(player->GetMapId()))
         return;
 
-    player->SetServerSideVisibility(SERVERSIDE_VISIBILITY_GM, inLobby ? SEC_MODERATOR : SEC_PLAYER);
+    player->SetEntryPoint();
 }
 
 void EventWowLobby::RestoreBaseState(Player* player)
@@ -32,106 +64,56 @@ void EventWowLobby::RestoreBaseState(Player* player)
     }
 
     player->CombatStop(true);
-    player->RemoveAllAuras();
+    // Como al entrar a una arena: beneficios temporales fuera; pasivas (talentos, raciales), auras de paladin,
+    // actitudes y debilitaciones que sobreviven a la muerte se quedan
+    player->RemoveArenaAuras();
+    player->RemoveAurasByType(SPELL_AURA_MOUNTED);
+    player->RemoveAurasByType(SPELL_AURA_MOD_SHAPESHIFT);
     EventWowDisguise::Remove(player);
     EventWowInventory::Clear(player);
     EventWowStats::Reset(player);
-    ClearInventory(player);
     player->SetFullHealth();
 }
 
-// Equipo, mochila y bolsas (destruir una bolsa destruye su contenido)
-void EventWowLobby::ClearInventory(Player* player)
-{
-    for (uint8 slot = EQUIPMENT_SLOT_START; slot < INVENTORY_SLOT_ITEM_END; ++slot)
-        if (player->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
-            player->DestroyItem(INVENTORY_SLOT_BAG_0, slot, true);
-
-    // Lo vendido en la tienda (recompra)
-    for (uint8 slot = BUYBACK_SLOT_START; slot < BUYBACK_SLOT_END; ++slot)
-        player->RemoveItemFromBuyBackSlot(slot, true);
-
-    player->SetMoney(0);
-}
-
-bool EventWowLobby::ReturnToLobby(Player* player)
+bool EventWowLobby::ReturnFromMatch(Player* player)
 {
     RestoreBaseState(player);
-    SetVisibility(player, true);
-    return player->TeleportTo(sEventWowConfig.Lobby);
+    return player->TeleportToEntryPoint();
 }
 
-// Lobby: "limbo" invisible donde el personaje queda aparcado mientras el jugador usa el panel.
-//  - Cada login carga directamente en el lobby (hook del core OnPlayerOverrideLoginLocation),
-//    incluso si el jugador se desconecto dentro de un minijuego.
-//  - Los jugadores del lobby son invisibles para los demas (visibilidad server-side tipo GM),
-//    asi el servidor no envia trafico de visibilidad entre ellos.
-//  - Cada login: personaje neutro (sin objetos ni oro, sin XP).
+// Login dentro del mapa de un evento: la partida ya no existe (se pierde con el logout), asi que aparece en su punto
+// de vuelta. Sin el hook, el core lo mandaria a la entrada de la mazmorra o a su hogar.
 class EventWow_LobbyPlayerScript : public PlayerScript
 {
 public:
     EventWow_LobbyPlayerScript() : PlayerScript("EventWow_LobbyPlayerScript", {
         PLAYERHOOK_ON_OVERRIDE_LOGIN_LOCATION,
-        PLAYERHOOK_ON_LOAD_FROM_DB,
-        PLAYERHOOK_ON_LOGIN,
-        PLAYERHOOK_NOT_VISIBLE_GLOBALLY_FOR
+        PLAYERHOOK_ON_LOGIN
     }) { }
 
-    // La invisibilidad del lobby (SetVisibility) es solo para el mapa. En las listas globales del core
-    // (amigos y sus avisos de conexion, /who) un jugador del lobby debe verse conectado.
-    // false = visible globalmente (Player::IsVisibleGloballyFor). Las cuentas GM no pasan por aqui con nuestra
-    // invisibilidad: su visibilidad la gestiona el core.
-    bool OnPlayerNotVisibleGloballyFor(Player* player, Player const* /*viewer*/) override
+    bool OnPlayerOverrideLoginLocation(Player* player, WorldLocation& location) override
     {
-        return !sEventWowConfig.Enabled || player->GetSession()->GetSecurity() > SEC_PLAYER;
-    }
-
-    bool OnPlayerOverrideLoginLocation(Player* /*player*/, WorldLocation& location) override
-    {
-        if (!sEventWowConfig.Enabled)
+        if (!sEventWowConfig.Enabled || !EventWowLobby::IsEventMap(location.GetMapId()))
             return false;
 
-        location.WorldRelocate(sEventWowConfig.Lobby);
+        WorldLocation const& entry = player->GetEntryPoint();
+        if (entry.GetMapId() != MAPID_INVALID && !EventWowLobby::IsEventMap(entry.GetMapId()))
+            location.WorldRelocate(entry);
+        else
+            location.WorldRelocate(player->m_homebindMapId, player->m_homebindX, player->m_homebindY,
+                player->m_homebindZ, player->GetOrientation());
+
+        player->CustomData.GetDefault<RelocatedFlag>(RelocatedKey);
         return true;
-    }
-
-    // Antes de entrar al mapa: ya invisible para el resto del lobby
-    void OnPlayerLoadFromDB(Player* player) override
-    {
-        if (!sEventWowConfig.Enabled)
-            return;
-
-        EventWowLobby::SetVisibility(player, true);
     }
 
     void OnPlayerLogin(Player* player) override
     {
-        if (!sEventWowConfig.Enabled)
+        if (!player->CustomData.Get<RelocatedFlag>(RelocatedKey))
             return;
 
-        // El progreso no existe en EventWow: sin experiencia
-        player->SetPlayerFlag(PLAYER_FLAGS_NO_XP_GAIN);
-
-        // Sin tutoriales: todos vistos (por cuenta; se guarda en BD). El cliente ya recibio los flags al
-        // autenticarse, asi que se reenvian (el primer login tambien queda cubierto).
-        WorldSession* session = player->GetSession();
-        bool changed = false;
-        for (uint8 i = 0; i < MAX_ACCOUNT_TUTORIAL_VALUES; ++i)
-        {
-            if (session->GetTutorialInt(i) != 0xFFFFFFFF)
-            {
-                session->SetTutorialInt(i, 0xFFFFFFFF);
-                changed = true;
-            }
-        }
-
-        if (changed)
-            session->SendTutorialsData();
-
-        // Oro y objetos solo existen dentro de una partida (pudo desconectarse en ella)
-        EventWowLobby::ClearInventory(player);
-
-        // Pudo desconectarse muerto (p. ej. dentro de una partida): siempre vivo en el lobby
+        player->CustomData.Erase(RelocatedKey);
+        // Pudo desconectarse muerto o disfrazado (el disfraz no se guarda, pero la muerte si)
         if (!player->IsAlive())
             EventWowLobby::RestoreBaseState(player);
     }

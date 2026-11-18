@@ -1,8 +1,6 @@
 -- EventWow: pagina "Amigos" de la seccion social del panel (EventWowSocial.lua: pestanas Grupo / Amigos).
 -- Usa la lista de amigos NATIVA (GetFriendInfo, AddFriend, RemoveFriend, ShowFriends; evento FRIENDLIST_UPDATE):
 -- se guarda en BD por personaje y el core avisa en el chat cuando un amigo se conecta/desconecta.
--- Servidor: los jugadores del lobby son invisibles en el mapa pero cuentan como conectados para la lista
--- (EventWowLobby.cpp, OnPlayerNotVisibleGloballyFor).
 --
 --   [o] Nombre                 Ausente    <- al pasar el raton: [Invitar] [Quitar]; clic = susurrar
 --   [o] Nombre             desconectado

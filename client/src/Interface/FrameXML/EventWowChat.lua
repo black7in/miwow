@@ -1,15 +1,12 @@
--- EventWow: chat del panel (sustituye al chat nativo). Pestanas:
---   Global:  chat global (CHAT por el protocolo) + todo lo que mostraria ChatFrame1 (sistema, errores...).
+-- EventWow: chat del panel de eventos (el chat nativo funciona normal; esto es un anadido). Pestanas:
+--   Global:  chat global de EventWow (CHAT por el protocolo).
 --   Una por conversacion privada (susurros nativos): se abre al recibir o enviar un susurro, o al hacer clic en
 --   un nombre. Contador de no leidos; clic derecho o "x" la cierra (el historial se conserva en la sesion).
 --   Grupo:   chat de grupo nativo (CHAT_MSG_PARTY*). Fija (sin cerrar) mientras estas en un grupo, justo tras Global;
 --            al salir del grupo desaparece y se borra su historial.
 -- Contraparte en el servidor: modules/mod-eventwow/src/EventWowChat.cpp
 --
---  - El chat nativo (ChatFrame1-10, pestanas, dock, botones) se oculta, pero sigue existiendo; vuelve con el
---    panel oculto en modo dev (EventWowChat_SetNativeVisible).
---  - Los canales (General, Comercio...) no existen: el servidor no deja unirse (salvo modo dev) y aqui se filtran.
---  - Los susurros no se muestran en el chat nativo (solo en su pestana), salvo con el panel oculto en modo dev.
+--  - Susurros y grupo se ven tambien en el chat nativo (no se filtra nada).
 --  - Alt+clic en un nombre: invitar al grupo.
 --  - Texto que empieza por "/" -> comandos nativos (/reload, /w, /r...); por "." -> comandos de GM
 --    (el core los intercepta antes de decirlos); el resto -> CHAT global o susurro segun la pestana.
@@ -54,36 +51,8 @@ EVENTWOW_STR_CHAT_DND = "%s no quiere ser molestado: ";
 EVENTWOW_STR_CHAT_CLOSE_TOOLTIP = "Cerrar (clic derecho)";
 EVENTWOW_STR_CHAT_SEND = "Enviar";
 
--- Marcos nativos del chat que se ocultan (las pestanas las reparenta FCF al acoplar: se ocultan aparte)
-EVENTWOW_NATIVE_CHAT_FRAMES = {
-	"GeneralDockManager",
-	"ChatFrameMenuButton",
-	"FriendsMicroButton",
-};
-
--- Eventos que no se muestran en el chat nativo (salvo con el panel oculto en modo dev)
-EVENTWOW_CHAT_FILTERED_EVENTS = {
-	"CHAT_MSG_CHANNEL",
-	"CHAT_MSG_CHANNEL_JOIN",
-	"CHAT_MSG_CHANNEL_LEAVE",
-	"CHAT_MSG_CHANNEL_LIST",
-	"CHAT_MSG_CHANNEL_NOTICE",
-	"CHAT_MSG_CHANNEL_NOTICE_USER",
-	-- Van a su pestana privada
-	"CHAT_MSG_WHISPER",
-	"CHAT_MSG_WHISPER_INFORM",
-	"CHAT_MSG_AFK",
-	"CHAT_MSG_DND",
-	-- Van a la pestana Grupo
-	"CHAT_MSG_PARTY",
-	"CHAT_MSG_PARTY_LEADER",
-};
-
 EventWow_Chat = {
 	onlineCount = nil,
-	-- Chat nativo oculto (siempre salvo en modo dev); marco -> padre original
-	nativeHidden = false,
-	nativeParents = {},
 	-- "global" o la clave (nombre en minusculas) de una conversacion
 	activeTab = "global",
 	-- clave -> { name, lines = { {text, r, g, b} }, unread, open }
@@ -93,9 +62,6 @@ EventWow_Chat = {
 	-- [0] = Global, [1..n] = conversaciones (reutilizadas)
 	tabs = {},
 };
-
-local hiddenParent = CreateFrame("Frame", "EventWowChatHiddenParent", UIParent);
-hiddenParent:Hide();
 
 local function EventWow_EscapeText(text)
 	return (string.gsub(text or "", "|", "||"));
@@ -112,96 +78,6 @@ end
 
 local function EventWow_Key(name)
 	return string.lower(name);
-end
-
--- Ocultar el chat nativo ------------------------------------------------------------------------
-
--- Reversible (modo dev): se guarda el padre original de cada marco y las pestanas solo se ocultan
--- mientras EventWow_Chat.nativeHidden
-local function EventWow_HideNativeChatFrame(frame)
-	if ( not frame ) then
-		return;
-	end
-	if ( not EventWow_Chat.nativeParents[frame] ) then
-		EventWow_Chat.nativeParents[frame] = frame:GetParent();
-		local tab = _G[frame:GetName().."Tab"];
-		if ( tab ) then
-			hooksecurefunc(tab, "Show", function(self)
-				if ( EventWow_Chat.nativeHidden ) then
-					self:Hide();
-				end
-			end);
-		end
-	end
-	if ( EventWow_Chat.nativeHidden ) then
-		frame:SetParent(hiddenParent);
-		local tab = _G[frame:GetName().."Tab"];
-		if ( tab ) then
-			tab:Hide();
-		end
-	end
-end
-
-local function EventWow_HideNativeChat()
-	EventWow_Chat.nativeHidden = true;
-	for i = 1, NUM_CHAT_WINDOWS do
-		EventWow_HideNativeChatFrame(_G["ChatFrame"..i]);
-	end
-	for _, name in ipairs(EVENTWOW_NATIVE_CHAT_FRAMES) do
-		EventWow_HideNativeChatFrame(_G[name]);
-	end
-
-	-- Ventanas temporales (p.ej. una pestana por susurro)
-	local openTemporaryWindow = FCF_OpenTemporaryWindow;
-	FCF_OpenTemporaryWindow = function(...)
-		local frame = openTemporaryWindow(...);
-		EventWow_HideNativeChatFrame(frame);
-		return frame;
-	end
-
-	-- Intro / "/" abren nuestra caja en vez de la nativa
-	local openChat = ChatFrame_OpenChat;
-	ChatFrame_OpenChat = function(text, chatFrame)
-		local editBox = EventWowChatEditBox;
-		if ( editBox and editBox:IsVisible() ) then
-			editBox:SetFocus();
-			if ( text and text ~= "" ) then
-				editBox:SetText(text);
-			end
-			return editBox;
-		end
-		return openChat(text, chatFrame);
-	end
-
-	-- Canales y susurros fuera del chat nativo (salvo con el panel oculto en modo dev)
-	local function filter()
-		return not (EventWow_IsUnrestricted and EventWow_IsUnrestricted());
-	end
-	for _, event in ipairs(EVENTWOW_CHAT_FILTERED_EVENTS) do
-		ChatFrame_AddMessageEventFilter(event, filter);
-	end
-end
-
--- visible = true en modo dev (EventWow.lua): el chat nativo vuelve a su sitio
-function EventWowChat_SetNativeVisible(visible)
-	if ( EventWow_Chat.nativeHidden == not visible ) then
-		return;
-	end
-	EventWow_Chat.nativeHidden = not visible;
-	for frame, parent in pairs(EventWow_Chat.nativeParents) do
-		if ( visible ) then
-			frame:SetParent(parent);
-			local tab = frame.GetName and _G[frame:GetName().."Tab"];
-			if ( tab and (frame.isDocked or frame:IsShown()) ) then
-				tab:Show();
-			end
-		else
-			EventWow_HideNativeChatFrame(frame);
-		end
-	end
-	if ( visible ) then
-		FCF_DockUpdate();
-	end
 end
 
 -- Pestanas ----------------------------------------------------------------------------------------
@@ -762,13 +638,6 @@ function EventWowChat_Create(parent)
 end
 
 -- Arranque --------------------------------------------------------------------------------------
-
-EventWow_HideNativeChat();
-
--- Todo lo que llega al chat nativo principal (sistema, errores, avisos del servidor, /script print...)
-hooksecurefunc(ChatFrame1, "AddMessage", function(self, text, r, g, b)
-	EventWowChat_AddMessage(text, r, g, b);
-end);
 
 local whisperFrame = CreateFrame("Frame", "EventWowChatWhisperFrame");
 whisperFrame:RegisterEvent("CHAT_MSG_WHISPER");

@@ -56,6 +56,12 @@ void EventWowGames::Validate()
             error = "punto de aparicion invalido";
         else if (game.MinPlayers < 1 || game.MinPlayers > game.MaxPlayers)
             error = "MinPlayers/MaxPlayers invalidos";
+        // Servidor tradicional: aun no hay foto del personaje real. La progresion cambia el nivel de verdad (y bajar
+        // de nivel reinicia talentos) y el inventario de partida usa la mochila del jugador y el oro de WoW.
+        else if (game.MaxLevel)
+            error = "usa progresion de nivel (pendiente en el servidor tradicional)";
+        else if (game.InventorySlots)
+            error = "usa inventario de partida (pendiente en el servidor tradicional)";
 
         if (error)
         {

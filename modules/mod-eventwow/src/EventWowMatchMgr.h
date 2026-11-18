@@ -56,7 +56,7 @@ public:
     bool IsInMatch(Player const* player) const;
 
     EventWowMatch* GetMatch(Player* player) const;
-    // Saca al jugador de la partida (y del bind de la instancia). teleport: llevarlo al lobby si esta dentro
+    // Saca al jugador de la partida (y del bind de la instancia). teleport: llevarlo a su punto de vuelta si esta dentro
     void RemovePlayer(EventWowMatch& match, ObjectGuid guid, bool teleport);
 
     // Eventos de jugador (EventWow_MatchPlayerScript)

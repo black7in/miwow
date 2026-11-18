@@ -22,7 +22,7 @@ struct ItemTemplate;
 //    hacer login el core borra las habilidades que no son de su raza/clase (red de seguridad si no se quitaron).
 //  - Mano izquierda con arma: doble empunadura; arco/escopeta/ballesta: aura 46699 "No necesita municion"
 //    (proyectil de flecha en el SPELL_GO; nuestros disparos hacen dano de hechizo y no piden municion).
-//  - Se quitan (se destruyen) en Unequip. ClearInventory (login, estado base) es la otra red de seguridad.
+//  - Se quitan (se destruyen) en Unequip. Nunca pisan un arma del jugador: si la ranura esta ocupada no se equipa.
 //
 // SetVisible: solo el aspecto (PLAYER_VISIBLE_ITEM_<ranura>_ENTRYID, como la transfiguracion), para el comando de
 // pruebas .eventwow weapon. Un arma con sheath = 0 (arcos de PNJ) no se ve envainada: copias propias (SQL).

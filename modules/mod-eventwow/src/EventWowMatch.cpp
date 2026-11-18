@@ -545,7 +545,7 @@ bool EventWowMatch::IsReadyToClose() const
 // MATCH_STATE <LOADING|WAITING|PICKING|COUNTDOWN|RUNNING|ENDED> <id juego> <segundos>
 //   LOADING: en camino (sigue en el lobby / pantalla de carga); WAITING: dentro, esperando al resto.
 //   PICKING: eleccion de personaje (MATCH_PICK / MATCH_PICKS).
-//   segundos: lo que queda del estado (cuenta atras, temporizador de juego, vuelta al lobby); 0 = sin tiempo
+//   segundos: lo que queda del estado (cuenta atras, temporizador de juego, vuelta a donde estaba); 0 = sin tiempo
 void EventWowMatch::SendState(Player* player) const
 {
     char const* state = "LOADING";
@@ -600,7 +600,7 @@ void EventWowMatch::End(std::string_view summary)
 
 void EventWowMatch::HandlePlayerDied(Player* player)
 {
-    // Al terminar todos vuelven al lobby (y resucitan alli)
+    // Al terminar todos vuelven a donde estaban (resucitados)
     if (_state == EventWowMatchState::Ended)
         return;
 

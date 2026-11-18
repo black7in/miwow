@@ -15,7 +15,8 @@ class Player;
 //  - Dano de arma: no (el motor solo lo lee de la mano equipada); las armas dan stats (poder de ataque...).
 // El jugador no puede equipar nada en partida ni comprar si las N casillas estan llenas (salvo los instantaneos,
 // EventWowShop.h, que no ocupan casilla). Lo que haya mas alla de la casilla N no cuenta (el cliente no lo muestra).
-// Fuera de partida no hay objetos (EventWowLobby::ClearInventory). El estado vive en Player::CustomData.
+// SERVIDOR TRADICIONAL: usa la mochila real del jugador; los juegos con casillas estan desactivados (EventWowGames::Validate)
+// hasta tener inventario propio de partida. El estado vive en Player::CustomData.
 namespace EventWowInventory
 {
     // Mochila nativa (INVENTORY_SLOT_ITEM_START..END)

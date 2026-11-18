@@ -9,7 +9,7 @@
 --
 --   Marcador (arriba a la derecha):  3.º / 8   Vuelta 2/3   Tiempo / Vuelta / Mejor
 --   Aviso grande (centro, arriba):   ¡ÚLTIMA VUELTA! / ¡Te has caído! / ¡META! ...
---   Resultados (centro): tabla de posiciones; al terminar la carrera, boton "Salir al lobby" (ABANDON).
+--   Resultados (centro): tabla de posiciones; al terminar la carrera, boton "Salir" (ABANDON).
 
 EVENTWOW_STR_RACE_POSITION = "%d.º|cff999999 / %d|r";
 EVENTWOW_STR_RACE_LAP = "Vuelta |cffffffff%d/%d|r";
@@ -26,7 +26,7 @@ EVENTWOW_STR_RACE_RESULTS = "Resultados";
 EVENTWOW_STR_RACE_PROVISIONAL = "Clasificación provisional";
 EVENTWOW_STR_RACE_WAITING = "Esperando a que terminen los demás...";
 EVENTWOW_STR_RACE_NOT_FINISHED = "Sin terminar";
-EVENTWOW_STR_RACE_EXIT = "Salir al lobby";
+EVENTWOW_STR_RACE_EXIT = "Salir";
 EVENTWOW_STR_RACE_HEADERS = { "Pos.", "Piloto", "Tiempo", "Mejor vuelta" };
 EVENTWOW_STR_RACE_ITEM = "%s  |cffffffff(tecla %d)|r";
 EVENTWOW_STR_RACE_HIT = "¡%s!";
@@ -329,7 +329,7 @@ EventWow_RegisterHandler("RACE_RESULTS", function(fields)
 	end
 end);
 
--- Fuera de la partida (vuelta al lobby): todo oculto
+-- Fuera de la partida: todo oculto
 EventWow_RegisterListener("MATCH", function()
 	if ( not EventWow_Match.state ) then
 		EventWowRace_Reset();

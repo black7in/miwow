@@ -4,10 +4,10 @@
 --   MATCH_HUD <texto del objetivo>
 --   MATCH_RESPAWN <segundos> (has muerto: reapareces en N; 0 = ya)
 --   MATCH_END <WIN|LOSE|NONE> <texto>
--- y manda ABANDON para volver al lobby. Ver docs/protocolo.md.
+-- y manda ABANDON para salir (el servidor te devuelve a donde estabas). Ver docs/protocolo.md.
 --
--- LOADING: el servidor ya nos esta llevando a la instancia; seguimos en modo lobby (el panel muestra
--- "Entrando..."). Desde WAITING (ya dentro) hasta NONE (de vuelta en el lobby): modo partida
+-- LOADING: el servidor ya nos esta llevando a la instancia; seguimos en modo mundo (el panel muestra
+-- "Entrando..."). Desde WAITING (ya dentro) hasta NONE (de vuelta a donde estabas): modo partida
 -- (EventWow_SetMode, EventWow.lua): mundo visible + este HUD.
 --
 --          +--------------------------------------+
@@ -22,10 +22,10 @@ EVENTWOW_STR_MATCH_PICKING = "Elige tu personaje: |cffffffff%s|r";
 EVENTWOW_STR_MATCH_COUNTDOWN = "La partida empieza en %d";
 EVENTWOW_STR_MATCH_TIME = "Tiempo: |cffffffff%s|r";
 EVENTWOW_STR_MATCH_RUNNING = "¡En juego!";
-EVENTWOW_STR_MATCH_RETURNING = "Volviendo al lobby en %d...";
+EVENTWOW_STR_MATCH_RETURNING = "Volviendo en %d...";
 EVENTWOW_STR_MATCH_ABANDON = "Abandonar";
-EVENTWOW_STR_MATCH_BACK = "Volver al lobby";
-EVENTWOW_STR_MATCH_ABANDON_CONFIRM = "¿Abandonar la partida y volver al lobby?";
+EVENTWOW_STR_MATCH_BACK = "Salir";
+EVENTWOW_STR_MATCH_ABANDON_CONFIRM = "¿Abandonar la partida? Volverás a donde estabas.";
 EVENTWOW_STR_MATCH_GO = "¡YA!";
 EVENTWOW_STR_MATCH_RESPAWN = "Reapareces en %d";
 EVENTWOW_STR_MATCH_RESULT = {
@@ -210,7 +210,7 @@ local function EventWow_LeaveMatch()
 	EventWowMatchHud:Hide();
 	EventWowMatchBigTextFrame:SetScript("OnUpdate", nil);
 	EventWow_HideBigText();
-	EventWow_SetMode("lobby");
+	EventWow_SetMode("world");
 	EventWow_FireListeners("MATCH");
 end
 

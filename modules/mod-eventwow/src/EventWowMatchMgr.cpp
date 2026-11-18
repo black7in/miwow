@@ -29,7 +29,9 @@
 //                        MATCH_FOUND_END <id> ACCEPTED | REQUEUED | REMOVED
 //                        ERROR QUEUE_GROUP_DECLINED <nombre> | QUEUE_GROUP_NOT_ACCEPTED
 //                        MATCH_STATE ... / MATCH_HUD / MATCH_END (EventWowMatch.cpp) | MATCH_STATE NONE
-//                        ERROR QUEUE_UNKNOWN_GAME | QUEUE_GAME_UNAVAILABLE | QUEUE_IN_MATCH | QUEUE_NOT_IN_LOBBY
+//                        ERROR QUEUE_UNKNOWN_GAME | QUEUE_GAME_UNAVAILABLE | QUEUE_IN_MATCH
+//                              | QUEUE_DEAD | QUEUE_IN_COMBAT | QUEUE_IN_FLIGHT | QUEUE_IN_INSTANCE | QUEUE_IN_BG_QUEUE
+//                                (los propios; si es otro miembro del grupo: QUEUE_GROUP_BUSY <nombre>)
 //                              | QUEUE_NOT_LEADER | QUEUE_SOLO_ONLY <max> | QUEUE_GROUP_TOO_BIG <max>
 //                              | QUEUE_GROUP_OFFLINE <nombre> | QUEUE_GROUP_BUSY <nombre>
 //                              | QUEUE_GROUP_CANCELLED <nombre> | QUEUE_GROUP_LOGOUT <nombre> | QUEUE_GROUP_CHANGED <nombre>
@@ -39,6 +41,10 @@ namespace
     // Estado por jugador en Player::CustomData (se pierde con el logout, igual que la cola y la partida)
     std::string const QueueKey = "EventWowQueue";
     std::string const MatchKey = "EventWowMatch";
+    // Vuelve de una partida a su punto de vuelta: MATCH_STATE NONE al llegar (OnPlayerMapChanged)
+    std::string const ReturningKey = "EventWowReturning";
+
+    struct ReturningFlag : public DataMap::Base { };
 
     struct QueueSlot : public DataMap::Base
     {
@@ -153,8 +159,9 @@ bool EventWowMatchMgr::Enqueue(Player* player, EventWowGameInfo const& game)
         if (GetMatchSlot(member))
             return self ? fail("QUEUE_IN_MATCH") : fail("QUEUE_GROUP_BUSY", member->GetName());
 
-        if (!EventWowLobby::IsInLobby(member) && !EventWowDevMode::IsActive(member))
-            return self ? fail("QUEUE_NOT_IN_LOBBY") : fail("QUEUE_GROUP_BUSY", member->GetName());
+        if (!EventWowDevMode::IsActive(member))
+            if (char const* error = EventWowLobby::CanJoinFrom(member))
+                return self ? fail(error) : fail("QUEUE_GROUP_BUSY", member->GetName());
 
         QueueSlot const* memberSlot = GetQueueSlot(member);
         if (memberSlot && memberSlot->ProposalId)
@@ -639,6 +646,17 @@ void EventWowMatchMgr::SendToMatch(EventWowMatch& match, Player* player)
     player->CustomData.Erase(QueueKey);
     SendQueueStatus(player);
 
+    // Pudo entrar en una mazmorra, morir o entrar en combate mientras esperaba en la cola
+    if (!EventWowDevMode::IsActive(player))
+    {
+        if (char const* error = EventWowLobby::CanJoinFrom(player))
+        {
+            RemovePlayer(match, player->GetGUID(), false);
+            EventWowMessage("ERROR").Add(error).Send(player);
+            return;
+        }
+    }
+
     EventWowGameInfo const& game = match.GetGame();
     MatchSlot* slot = player->CustomData.GetDefault<MatchSlot>(MatchKey);
     slot->MatchId = match.GetId();
@@ -649,6 +667,7 @@ void EventWowMatchMgr::SendToMatch(EventWowMatch& match, Player* player)
     // La instancia es de dificultad normal; TELE_TO_GM_MODE salta PlayerCannotEnter (banda sin grupo,
     // requisitos de acceso, limite de instancias por hora). InstanceMap::CannotEnter lo decide nuestro hook.
     player->SetDungeonDifficulty(DUNGEON_DIFFICULTY_NORMAL);
+    EventWowLobby::SaveReturnPoint(player);
     match.SendState(player);
     Position const arrival = match.ArrivalPositionFor(player);
     if (!player->TeleportTo(game.MapId, arrival.GetPositionX(), arrival.GetPositionY(),
@@ -760,7 +779,10 @@ void EventWowMatchMgr::RemovePlayer(EventWowMatch& match, ObjectGuid guid, bool 
         return;
 
     if (teleport && player->GetInstanceId() == match.GetInstanceId() && !EventWowDevMode::IsActive(player))
-        EventWowLobby::ReturnToLobby(player);  // MATCH_STATE NONE al llegar (OnPlayerMapChanged)
+    {
+        player->CustomData.GetDefault<ReturningFlag>(ReturningKey);
+        EventWowLobby::ReturnFromMatch(player);  // MATCH_STATE NONE al llegar (OnPlayerMapChanged)
+    }
     else
         SendNoMatch(player);  // se queda donde esta (modo dev, o aun no habia llegado)
 }
@@ -778,9 +800,13 @@ void EventWowMatchMgr::OnPlayerMapChanged(Player* player)
     MatchSlot* slot = GetMatchSlot(player);
     if (!slot)
     {
-        // Vuelta al lobby tras una partida (al hacer login lo manda el ConnectListener)
-        if (EventWowLobby::IsInLobby(player) && EventWowProtocol::IsConnected(player->GetGUID()))
-            SendNoMatch(player);
+        // Vuelta de una partida (al hacer login lo manda el ConnectListener)
+        if (player->CustomData.Get<ReturningFlag>(ReturningKey))
+        {
+            player->CustomData.Erase(ReturningKey);
+            if (EventWowProtocol::IsConnected(player->GetGUID()))
+                SendNoMatch(player);
+        }
         return;
     }
 
@@ -797,7 +823,6 @@ void EventWowMatchMgr::OnPlayerMapChanged(Player* player)
             return;
 
         slot->Arrived = true;
-        EventWowLobby::SetVisibility(player, false);
         if (!EventWowDevMode::IsActive(player))
             EventWowLobby::RestoreBaseState(player);
         match->HandlePlayerArrived(player);
@@ -807,18 +832,10 @@ void EventWowMatchMgr::OnPlayerMapChanged(Player* player)
     // Ha acabado en otro mapa (p. ej. liberar espiritu en una mazmorra, teleport de GM): fuera de la partida
     LOG_DEBUG("module.eventwow", "EventWow: {} salio de la instancia de la partida {} (mapa {})",
         player->GetName(), match->GetId(), player->GetMapId());
-    // Al lobby siempre (resucitado): el cementerio de una mazmorra puede estar en el mismo mapa que el lobby
+    // Se queda donde ha llegado (piedra de hogar, teleport...) con el estado base (resucitado si era un espiritu)
     RemovePlayer(*match, player->GetGUID(), false);
-    if (EventWowDevMode::IsActive(player))
-        return;
-
-    if (EventWowLobby::IsInLobby(player))
-    {
+    if (!EventWowDevMode::IsActive(player))
         EventWowLobby::RestoreBaseState(player);
-        EventWowLobby::SetVisibility(player, true);
-    }
-    else
-        EventWowLobby::ReturnToLobby(player);
 }
 
 void EventWowMatchMgr::OnPlayerDied(Player* player)
@@ -875,7 +892,7 @@ bool EventWowMatchMgr::GetDestinationInstance(Player* player, uint32 mapId, uint
     if (!slot || slot->MapId != mapId)
         return false;
 
-    // Sin InstanceSave el core crearia una instancia nueva (0): OnPlayerMapChanged lo devolvera al lobby
+    // Sin InstanceSave el core crearia una instancia nueva (0): OnPlayerMapChanged lo sacara de la partida
     if (!sInstanceSaveMgr->GetInstanceSave(slot->InstanceId))
     {
         LOG_ERROR("module.eventwow", "EventWow: la instancia {} de la partida {} ya no existe", slot->InstanceId, slot->MatchId);
@@ -949,7 +966,7 @@ namespace
         sEventWowMatchMgr.DeclineProposal(player, GetProposalArg(args));
     }
 
-    // ABANDON: salir de la partida (vuelve al lobby)
+    // ABANDON: salir de la partida (vuelve a donde estaba)
     void HandleAbandon(Player* player, EventWowProtocol::Args const& /*args*/)
     {
         EventWowMatch* match = sEventWowMatchMgr.GetMatch(player);

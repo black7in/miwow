@@ -61,7 +61,7 @@ void AddSC_eventwow_game_test()
     EventWowGameInfo game;
     game.Id = "test";
     game.Name = "Prueba";
-    game.Description = "Minijuego de prueba en solitario: aguanta 30 segundos en la instancia y vuelve al lobby.";
+    game.Description = "Minijuego de prueba en solitario: aguanta 30 segundos en la instancia y vuelve a donde estabas.";
     game.Icon = "Interface\\Icons\\INV_Misc_QuestionMark";
     game.MinPlayers = 1;
     game.MaxPlayers = 1;
@@ -74,7 +74,7 @@ void AddSC_eventwow_game_test()
     group.Id = "test_group";
     group.Name = "Prueba en grupo";
     group.Description = "Minijuego de prueba para 1-5 jugadores: busca partida solo o con tu grupo, aguantad 30 segundos "
-        "en la instancia y volved al lobby.";
+        "en la instancia y volved a donde estabais.";
     group.Icon = "Interface\\Icons\\Spell_Holy_PrayerOfFortitude";
     group.MaxPlayers = 5;
     group.MaxPartySize = 5;
@@ -83,7 +83,7 @@ void AddSC_eventwow_game_test()
     EventWowGameInfo vehicle = game;
     vehicle.Id = "test_vehicle";
     vehicle.Name = "Prueba en moto";
-    vehicle.Description = "Prototipo de vehiculo en solitario: conduce la moto durante 60 segundos y vuelve al lobby.";
+    vehicle.Description = "Prototipo de vehiculo en solitario: conduce la moto durante 60 segundos y vuelve a donde estabas.";
     vehicle.Icon = "Interface\\Icons\\Spell_Nature_Swiftness";
     vehicle.Factory = []() { return std::make_unique<EventWowGameTest>(60s); };
 

@@ -13,10 +13,12 @@ struct EventWowCharacterInfo;
 //  - Atributos: cada punto suma las stats de eventwow_character_attribute (desde nivel 2). Maximo = MaxLevel menos
 //    los rangos de basicas y definitiva (con 4 x 4 + 3 y nivel 30: 11).
 //  - Un rango = un hechizo propio (spell_ranks): se cambia el aprendido por el siguiente (EventWowDisguise::ReplaceSpell).
-//  - XP: OnPlayerGiveXP la multiplica (EventWowGameInfo::XpRate) y la corta en MaxLevel. Sin XP fuera (PLAYER_FLAGS_NO_XP_GAIN).
-//  - Bloqueados con progresion: talentos (siempre salvo modo dev), logros y correo de recompensa de nivel.
+//  - XP: OnPlayerGiveXP la multiplica (EventWowGameInfo::XpRate) y la corta en MaxLevel.
+//  - Bloqueados con progresion: talentos (salvo modo dev), logros y correo de recompensa de nivel.
 // El estado vive en Player::CustomData. Stop() (lo llama EventWowDisguise::Remove) quita los atributos y devuelve
-// el nivel base (StartPlayerLevel); el login tambien lo devuelve si se desconecto a mitad de partida.
+// el nivel base (StartPlayerLevel).
+// SERVIDOR TRADICIONAL: desactivada (cambia el nivel real; bajar de nivel reinicia talentos) hasta guardar una foto
+// del personaje (nivel, XP) en BD y restaurarla al salir o en el login.
 //
 // Protocolo: MATCH_ABILITIES <nivel> <max> <puntos> <atrib> <atrib max> <atrib mejorable 0/1> <stats atrib "clave:valor,...">
 //            <n> (<rango> <rango max ahora> <rango total> <mejorable 0/1> <hechizo actual> <hechizo siguiente>) x n

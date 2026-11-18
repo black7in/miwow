@@ -275,7 +275,7 @@ EventWow_RegisterHandler("PARKOUR_RANK", function(fields)
 	EventWowParkourRank:SetHeight(40 + math.max(1, count) * 16);
 end);
 
--- Fuera de la partida (vuelta al lobby): todo oculto
+-- Fuera de la partida: todo oculto
 EventWow_RegisterListener("MATCH", function()
 	if ( not EventWow_Match.state ) then
 		EventWowParkour_Reset();

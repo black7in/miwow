@@ -1,29 +1,19 @@
--- EventWow: interfaz dentro del mundo.
+-- EventWow: interfaz dentro del mundo (servidor tradicional + eventos).
 -- Archivo propio, cargado el ultimo en FrameXML.toc (todos los marcos y funciones de Blizzard ya existen).
 -- Al ser FrameXML (no un addon) su codigo es seguro: puede reparentar marcos protegidos y envolver
 -- funciones globales sin propagar taint.
 --
--- Modo lobby ("limbo" invisible): el jugador no ve su personaje ni la zona, solo el panel.
---  - Una portada a pantalla completa tapa el mundo y bloquea el raton sobre el (camara, clics).
---  - Barras, marcos de unidad, minimapa, buffs, seguimiento de misiones... se ocultan reparentandolos
---    a un marco oculto (reversible: el codigo de Blizzard puede hacer Show() sin que se vean).
---  - Los atajos de teclado que abren ventanas (hechizos, talentos, bolsas, mapa...) o usan acciones
---    no hacen nada.
---  - Menu de Esc sin "Macros". "Desconectar" vuelve al login (lo gestiona GlueXML/CharacterSelect.lua).
--- Modo partida (MATCH_STATE del servidor, EventWowMatch.lua): sin portada ni panel, el mundo visible
--- y solo los marcos de EVENTWOW_MATCH_VISIBLE_FRAMES; las ventanas y acciones siguen bloqueadas.
--- De momento sin chat en partida.
+-- Modo "world" (fuera de los eventos): la interfaz nativa queda INTACTA. El panel de eventos (EventWowPanel.lua) es
+-- una ventana que se abre y cierra con el boton del minimapa, /eventwow o Esc.
+-- Modo "match" (MATCH_STATE del servidor, EventWowMatch.lua): mundo + HUD de la partida; de la interfaz nativa solo
+-- se ven los marcos de EVENTWOW_MATCH_VISIBLE_FRAMES y el chat; ventanas y acciones nativas bloqueadas (el personaje
+-- de la partida trae su propia barra). Al salir todo vuelve a su sitio (los marcos se reparentan, no se destruyen).
+-- Modo dev (.gm on o .dev on): en partida, "/eventwow dev" o el boton de arriba quitan las restricciones (solo cliente,
+-- no toca ningun flag).
 
-EVENTWOW_UI_CONFIG = {
-	-- Mismo fondo que las pantallas de Glue (GlueXML/CharacterSelect.lua EVENTWOW_CONFIG)
-	BACKGROUND = "Interface\\Glues\\LoadingScreens\\LoadScreenNorthrendWide",
-	BACKGROUND_TEXCOORD = { 0, 1, 0, 1 },
-	BACKGROUND_SHADE = 0.45,
-};
-
--- Marcos ocultos en el lobby (los hijos van con su padre: MainMenuBar incluye bolsas, micro menu,
+-- Marcos ocultos en partida (los hijos van con su padre: MainMenuBar incluye bolsas, micro menu,
 -- barra de XP/reputacion, barras de forma/mascota/posesion)
-EVENTWOW_LOBBY_HIDDEN_FRAMES = {
+EVENTWOW_MATCH_HIDDEN_FRAMES = {
 	"MainMenuBar",
 	"MultiBarBottomLeft",
 	"MultiBarBottomRight",
@@ -45,8 +35,8 @@ EVENTWOW_LOBBY_HIDDEN_FRAMES = {
 	"CastingBarFrame",
 };
 
--- Botones del minimapa que no se usan en EventWow: ocultos siempre (salvo con el panel oculto en modo dev).
--- Se reparentan porque algunos se muestran solos (correo, cola de BG/mazmorra). Se dejan el zoom y el nombre de zona.
+-- Botones del minimapa ocultos en partida (se reparentan porque algunos se muestran solos: correo, cola de BG/mazmorra).
+-- Se dejan el zoom y el nombre de zona.
 EVENTWOW_MINIMAP_HIDDEN_BUTTONS = {
 	"MiniMapTracking",
 	"GameTimeFrame",
@@ -56,9 +46,10 @@ EVENTWOW_MINIMAP_HIDDEN_BUTTONS = {
 	"MiniMapWorldMapButton",
 	"MiniMapVoiceChatFrame",
 	"MiniMapInstanceDifficulty",
+	"EventWowMinimapButton",
 };
 
--- De EVENTWOW_LOBBY_HIDDEN_FRAMES, los que se ven durante una partida (las barras de accion llegaran con el "disfraz")
+-- De EVENTWOW_MATCH_HIDDEN_FRAMES, los que se ven durante una partida
 EVENTWOW_MATCH_VISIBLE_FRAMES = {
 	PlayerFrame = true,
 	TargetFrame = true,
@@ -75,7 +66,7 @@ EVENTWOW_MATCH_VISIBLE_FRAMES = {
 	PartyMemberFrame4 = true,
 };
 
--- Ocultos SIEMPRE mientras se va disfrazado (EventWow_Character), tambien en modo dev con el panel oculto: tapan la
+-- Ocultos SIEMPRE mientras se va disfrazado (EventWow_Character), tambien en modo dev sin restricciones: tapan la
 -- barra de habilidades del disfraz (EventWowAbilities.lua). La barra de mascota se cuelga entonces de la nuestra.
 EVENTWOW_DISGUISE_HIDDEN_FRAMES = {
 	"MainMenuBar",
@@ -83,8 +74,8 @@ EVENTWOW_DISGUISE_HIDDEN_FRAMES = {
 	"MultiBarBottomRight",
 };
 
--- Funciones globales (llamadas desde Bindings.xml / micro menu) que no hacen nada en el lobby ni en partida
-EVENTWOW_LOBBY_BLOCKED_FUNCTIONS = {
+-- Funciones globales (llamadas desde Bindings.xml / micro menu) que no hacen nada en partida
+EVENTWOW_MATCH_BLOCKED_FUNCTIONS = {
 	-- Ventanas (las bolsas nativas nunca: el inventario de partida es EventWowInventory.lua; OpenBackpack lo
 	-- llama la ventana del vendedor)
 	"ToggleBackpack",
@@ -115,22 +106,23 @@ EVENTWOW_LOBBY_BLOCKED_FUNCTIONS = {
 	"ShapeshiftBar_ChangeForm",
 };
 
--- Ventanas que se abren con ToggleFrame(frame) directamente (Bindings.xml): se cierran al mostrarse
-EVENTWOW_LOBBY_BLOCKED_PANELS = {
+-- Ventanas que se abren con ToggleFrame(frame) directamente (Bindings.xml): en partida se cierran al mostrarse
+EVENTWOW_MATCH_BLOCKED_PANELS = {
 	"QuestLogFrame",
 	"WorldMapFrame",
 };
 
-EVENTWOW_STR_DEV_SHOW_PANEL = "Mostrar panel";
+EVENTWOW_STR_DEV_NATIVE_ON = "Interfaz nativa";
+EVENTWOW_STR_DEV_NATIVE_OFF = "Interfaz de partida";
 EVENTWOW_STR_DEV_ONLY = "Solo en modo dev (.gm on o .dev on).";
 
 EventWow_UI = {
-	-- "lobby" | "match" (nil antes de inicializar)
-	mode = nil,
-	-- Modo dev (.gm on o .dev on, lo avisa el servidor con DEV_MODE): permite ocultar el panel
+	-- "world" | "match"
+	mode = "world",
+	-- Modo dev (.gm on o .dev on, lo avisa el servidor con DEV_MODE)
 	dev = false,
-	-- Panel oculto: interfaz nativa sin restricciones (solo en modo dev; no toca ningun flag)
-	panelHidden = false,
+	-- En partida y en modo dev: interfaz nativa sin restricciones (solo cliente; no toca ningun flag)
+	native = false,
 	savedParents = {},
 };
 
@@ -157,45 +149,14 @@ local function EventWow_RestoreFrame(name)
 	EventWow_UI.savedParents[name] = nil;
 end
 
-local function EventWow_CreateWorldCover()
-	-- Hijo de WorldFrame (no de UIParent): sigue tapando el mundo aunque se oculte la UI (Alt+Z)
-	local f = CreateFrame("Frame", "EventWowWorldCover", WorldFrame);
-	f:SetAllPoints(WorldFrame);
-	f:SetFrameStrata("BACKGROUND");
-	f:SetFrameLevel(0);
-	f:EnableMouse(true);
-	f:EnableMouseWheel(true);
-	f:SetScript("OnMouseWheel", function() end);
-
-	-- Negro de base (por si la imagen no carga o no cubre todo)
-	local base = f:CreateTexture("EventWowWorldCoverBase", "BACKGROUND");
-	base:SetAllPoints(f);
-	base:SetTexture(0, 0, 0, 1);
-
-	local image = f:CreateTexture("EventWowWorldCoverImage", "BORDER");
-	image:SetAllPoints(f);
-	if ( image:SetTexture(EVENTWOW_UI_CONFIG.BACKGROUND) ) then
-		image:SetTexCoord(unpack(EVENTWOW_UI_CONFIG.BACKGROUND_TEXCOORD));
-	else
-		image:Hide();
-	end
-
-	local shade = f:CreateTexture("EventWowWorldCoverShade", "ARTWORK");
-	shade:SetAllPoints(f);
-	shade:SetTexture(0, 0, 0, EVENTWOW_UI_CONFIG.BACKGROUND_SHADE);
-
-	f:Hide();
-	return f;
-end
-
--- Interfaz nativa sin restricciones: modo dev + panel oculto
+-- Interfaz nativa sin restricciones en partida: modo dev + "Interfaz nativa"
 function EventWow_IsUnrestricted()
-	return EventWow_UI.dev and EventWow_UI.panelHidden;
+	return EventWow_UI.dev and EventWow_UI.native;
 end
 
--- Ventanas y acciones bloqueadas (lobby y partida, salvo con el panel oculto en modo dev)
+-- Ventanas y acciones nativas bloqueadas: solo en partida (salvo modo dev con la interfaz nativa)
 function EventWow_IsRestricted()
-	return EventWow_UI.mode ~= nil and not EventWow_IsUnrestricted();
+	return EventWow_UI.mode == "match" and not EventWow_IsUnrestricted();
 end
 
 -- Teclas 1-6 en vehiculo: ActionButtonDown/Up(id) pulsan VehicleMenuBarActionButton<id> si la barra se ve
@@ -210,7 +171,7 @@ local function EventWow_IsVehicleAction(name, id)
 end
 
 local function EventWow_WrapBlockedFunctions()
-	for _, name in ipairs(EVENTWOW_LOBBY_BLOCKED_FUNCTIONS) do
+	for _, name in ipairs(EVENTWOW_MATCH_BLOCKED_FUNCTIONS) do
 		local original = _G[name];
 		if ( original ) then
 			local functionName = name;
@@ -223,14 +184,14 @@ local function EventWow_WrapBlockedFunctions()
 		end
 	end
 
-	-- El servidor vuelve a subir al vehiculo a quien se baja (EventWowDisguise): sin boton de bajarse
+	-- En partida el servidor vuelve a subir al vehiculo a quien se baja (EventWowDisguise): sin boton de bajarse
 	VehicleMenuBarLeaveButton:HookScript("OnShow", function(self)
 		if ( EventWow_IsRestricted() ) then
 			self:Hide();
 		end
 	end);
 
-	for _, name in ipairs(EVENTWOW_LOBBY_BLOCKED_PANELS) do
+	for _, name in ipairs(EVENTWOW_MATCH_BLOCKED_PANELS) do
 		local frame = _G[name];
 		if ( frame ) then
 			frame:HookScript("OnShow", function(self)
@@ -280,24 +241,16 @@ local function EventWow_ApplyPetBar(match)
 	end
 end
 
-local function EventWow_SetupGameMenu()
-	-- Sin "Macros": "Desconectar" sube a su hueco
-	GameMenuButtonMacros:Hide();
-	GameMenuButtonLogout:SetPoint("TOP", GameMenuButtonKeybindings, "BOTTOM", 0, -1);
-	GameMenuButtonRatings:SetPoint("TOP", GameMenuButtonKeybindings, "BOTTOM", 0, -1);
-	GameMenuFrame:SetHeight(GameMenuFrame:GetHeight() - GameMenuButtonMacros:GetHeight() - 1);
-end
-
--- Aplica el modo actual: EventWow_UI.mode ("lobby" | "match") + panel oculto en modo dev
+-- Aplica el modo actual: EventWow_UI.mode ("world" | "match") + interfaz nativa en modo dev
 local function EventWow_ApplyMode()
-	local mode, dev = EventWow_UI.mode, EventWow_IsUnrestricted();
-	local lobby = mode == "lobby" and not dev;
+	local match = EventWow_UI.mode == "match";
+	local restricted = EventWow_IsRestricted();
 
-	for _, name in ipairs(EVENTWOW_LOBBY_HIDDEN_FRAMES) do
-		if ( dev or (mode == "match" and EVENTWOW_MATCH_VISIBLE_FRAMES[name]) ) then
-			EventWow_RestoreFrame(name);
-		else
+	for _, name in ipairs(EVENTWOW_MATCH_HIDDEN_FRAMES) do
+		if ( restricted and not EVENTWOW_MATCH_VISIBLE_FRAMES[name] ) then
 			EventWow_HideFrame(name);
+		else
+			EventWow_RestoreFrame(name);
 		end
 	end
 
@@ -309,15 +262,15 @@ local function EventWow_ApplyMode()
 	end
 
 	for _, name in ipairs(EVENTWOW_MINIMAP_HIDDEN_BUTTONS) do
-		if ( dev ) then
-			EventWow_RestoreFrame(name);
-		else
+		if ( restricted ) then
 			EventWow_HideFrame(name);
+		else
+			EventWow_RestoreFrame(name);
 		end
 	end
 
-	if ( not dev ) then
-		for _, name in ipairs(EVENTWOW_LOBBY_BLOCKED_PANELS) do
+	if ( restricted ) then
+		for _, name in ipairs(EVENTWOW_MATCH_BLOCKED_PANELS) do
 			if ( _G[name] ) then
 				_G[name]:Hide();
 			end
@@ -325,25 +278,22 @@ local function EventWow_ApplyMode()
 		CloseAllBags();
 	end
 
-	if ( lobby ) then
-		EventWowWorldCover:Show();
-		EventWowPanel:Show();
-	else
-		EventWowWorldCover:Hide();
+	-- El panel de eventos no se usa dentro de una partida
+	if ( match ) then
 		EventWowPanel:Hide();
 	end
 
-	EventWow_ApplyPetBar((mode == "match" and not dev) or disguised);
+	EventWow_ApplyPetBar(restricted or disguised);
 
-	EventWowChat_SetNativeVisible(dev);
-	if ( dev ) then
+	if ( match and EventWow_UI.dev ) then
+		EventWowDevButton:SetText(EventWow_UI.native and EVENTWOW_STR_DEV_NATIVE_OFF or EVENTWOW_STR_DEV_NATIVE_ON);
 		EventWowDevButton:Show();
 	else
 		EventWowDevButton:Hide();
 	end
 end
 
--- mode: "lobby" (portada + panel) o "match" (mundo visible + HUD de EventWowMatch.lua)
+-- mode: "world" (interfaz nativa) o "match" (HUD de EventWowMatch.lua)
 function EventWow_SetMode(mode)
 	if ( EventWow_UI.mode == mode ) then
 		return;
@@ -352,12 +302,7 @@ function EventWow_SetMode(mode)
 	EventWow_ApplyMode();
 end
 
--- Compatibilidad
-function EventWow_SetLobbyMode(enabled)
-	EventWow_SetMode(enabled and "lobby" or "match");
-end
-
--- Modo dev (DEV_MODE del servidor). Al salir de el, el panel vuelve siempre.
+-- Modo dev (DEV_MODE del servidor). Al salir de el vuelven las restricciones de partida.
 function EventWow_SetDevMode(enabled)
 	enabled = enabled and true or false;
 	if ( EventWow_UI.dev == enabled ) then
@@ -365,31 +310,30 @@ function EventWow_SetDevMode(enabled)
 	end
 	EventWow_UI.dev = enabled;
 	if ( not enabled ) then
-		EventWow_UI.panelHidden = false;
+		EventWow_UI.native = false;
 	end
 	EventWow_ApplyMode();
 	EventWow_FireListeners("DEV_MODE");
 end
 
--- Ocultar / mostrar el panel (solo en modo dev; solo cliente)
-function EventWow_SetPanelHidden(hidden)
-	hidden = hidden and EventWow_UI.dev and true or false;
-	if ( EventWow_UI.panelHidden == hidden ) then
+-- Interfaz nativa sin restricciones en partida (solo en modo dev; solo cliente)
+function EventWow_SetNativeUI(native)
+	native = native and EventWow_UI.dev and true or false;
+	if ( EventWow_UI.native == native ) then
 		return;
 	end
-	EventWow_UI.panelHidden = hidden;
+	EventWow_UI.native = native;
 	EventWow_ApplyMode();
 end
 
--- Boton flotante con el panel oculto para volver a mostrarlo
+-- Boton flotante en partida (modo dev): interfaz nativa <-> interfaz de partida
 local function EventWow_CreateDevButton()
 	local button = CreateFrame("Button", "EventWowDevButton", UIParent, "UIPanelButtonTemplate");
 	button:SetSize(150, 22);
 	button:SetPoint("TOP", UIParent, "TOP", 0, -2);
 	button:SetFrameStrata("HIGH");
-	button:SetText(EVENTWOW_STR_DEV_SHOW_PANEL);
 	button:SetScript("OnClick", function()
-		EventWow_SetPanelHidden(false);
+		EventWow_SetNativeUI(not EventWow_UI.native);
 	end);
 	button:Hide();
 end
@@ -399,59 +343,24 @@ EventWow_RegisterHandler("DEV_MODE", function(fields)
 	EventWow_SetDevMode(fields[1] == "1");
 end);
 
--- /eventwow: ocultar / mostrar el panel (modo dev)
+-- /eventwow: abrir / cerrar el panel de eventos | /eventwow dev: interfaz nativa en partida (modo dev)
 SLASH_EVENTWOW1 = "/eventwow";
-SlashCmdList["EVENTWOW"] = function()
-	if ( EventWow_UI.dev ) then
-		EventWow_SetPanelHidden(not EventWow_UI.panelHidden);
-	else
-		DEFAULT_CHAT_FRAME:AddMessage(EVENTWOW_STR_DEV_ONLY, 1, 0.2, 0.2);
+SLASH_EVENTWOW2 = "/eventos";
+SlashCmdList["EVENTWOW"] = function(msg)
+	msg = string.lower(strtrim(msg or ""));
+	if ( msg == "dev" ) then
+		if ( EventWow_UI.dev ) then
+			EventWow_SetNativeUI(not EventWow_UI.native);
+		else
+			DEFAULT_CHAT_FRAME:AddMessage(EVENTWOW_STR_DEV_ONLY, 1, 0.2, 0.2);
+		end
+		return;
 	end
+	EventWowPanel_Toggle();
 end
 
--- Sin tutoriales ni consejos para jugadores nuevos (tambien en modo dev). El servidor ademas los marca todos
--- como vistos en cada login (EventWowLobby.cpp); esto cubre lo que el cliente dispare por su cuenta.
-local function EventWow_DisableTutorials()
-	SetCVar("showTutorials", "0");
-	SetCVar("showNewbieTips", "0");
-	TutorialFrame:UnregisterEvent("TUTORIAL_TRIGGER");
-	TutorialFrame_NewTutorial = function() end;
-	TutorialFrame:Hide();
-	TutorialFrameAlertButton:Hide();
-	hooksecurefunc(TutorialFrameAlertButton, "Show", TutorialFrameAlertButton.Hide);
-end
-
--- Nombres en el mundo: los de los personajes (jugadores, incluido el propio). Sin nombres de mascotas,
--- guardianes ni totems. El subtitulo "Esbirro de X" de los vehiculos conducidos se quita en GlobalStrings.lua
--- (el motor lee esos textos al cargarlo: cambiarlos aqui no tiene efecto).
--- Las CVars se guardan en Config.wtf: se fuerzan en cada carga (el jugador no tiene opciones de interfaz).
-EVENTWOW_NAME_CVARS = {
-	UnitNameOwn = "1",
-	UnitNameFriendlyPlayerName = "1",
-	UnitNameEnemyPlayerName = "1",
-	UnitNameFriendlyPetName = "0",
-	UnitNameFriendlyGuardianName = "0",
-	UnitNameFriendlyTotemName = "0",
-	UnitNameEnemyPetName = "0",
-	UnitNameEnemyGuardianName = "0",
-	UnitNameEnemyTotemName = "0",
-};
-
-local function EventWow_SetupUnitNames()
-	for cvar, value in pairs(EVENTWOW_NAME_CVARS) do
-		SetCVar(cvar, value);
-	end
-end
-
-EventWow_SetupUnitNames();
-EventWow_DisableTutorials();
-EventWow_CreateWorldCover();
 EventWow_CreateDevButton();
 EventWow_CreatePetBarHolder();
 -- Al ponerse/quitarse un disfraz (MATCH_CHARACTER) cambian la barra nativa y la de mascota
 EventWow_RegisterListener("CHARACTER", EventWow_ApplyMode);
 EventWow_WrapBlockedFunctions();
-EventWow_SetupGameMenu();
-
--- Se empieza en el lobby; el servidor cambia de modo con MATCH_STATE (EventWowMatch.lua)
-EventWow_SetMode("lobby");

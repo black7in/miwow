@@ -13,8 +13,8 @@
 #include <algorithm>
 #include <deque>
 
-// Chat global del lobby, por el protocolo propio (no canales nativos): los jugadores son invisibles
-// entre si y el servidor controla longitud, frecuencia, silencios y el historial.
+// Chat global de EventWow, por el protocolo propio (ademas de los canales nativos, que funcionan normal):
+// el servidor controla longitud, frecuencia, silencios y el historial.
 //
 //   Cliente -> servidor: CHAT <texto>
 //   Servidor -> cliente: CHAT <unix time> <rango> <nombre> <texto>   (rango: 0 jugador, 1 GM)
@@ -151,31 +151,9 @@ namespace
     }
 }
 
-// Los canales (General, Comercio, Defensa local, personalizados...) no existen en EventWow: se descarta la peticion
-// de unirse (el cliente la manda al entrar y al cambiar de zona), asi ni se reciben ni generan trafico.
-// En modo dev si (AzerothCore normal); al salir de el, EventWowDevMode saca al jugador de todos (CleanupChannels).
-class EventWow_ChatServerScript : public ServerScript
-{
-public:
-    EventWow_ChatServerScript() : ServerScript("EventWow_ChatServerScript", {
-        SERVERHOOK_CAN_PACKET_RECEIVE
-    }) { }
-
-    bool CanPacketReceive(WorldSession* session, WorldPacket const& packet) override
-    {
-        if (packet.GetOpcode() != CMSG_JOIN_CHANNEL || !sEventWowConfig.Enabled)
-            return true;
-
-        Player* player = session->GetPlayer();
-        return player && EventWowDevMode::IsActive(player);
-    }
-};
-
 void AddSC_eventwow_chat()
 {
     EventWowProtocol::RegisterHandler("CHAT", HandleChat);
     EventWowProtocol::RegisterConnectListener(OnConnect);
     EventWowProtocol::RegisterDisconnectListener(OnDisconnect);
-
-    new EventWow_ChatServerScript();
 }

@@ -789,6 +789,13 @@ public:
         if (!target)
             return false;
 
+        // Servidor tradicional: la progresion cambia el nivel real del personaje (y bajar de nivel reinicia talentos)
+        if (arg == "level" || (level && arg != "off"))
+        {
+            handler->SendErrorMessage("EventWow: progresion desactivada en el servidor tradicional (pendiente)");
+            return false;
+        }
+
         if (arg == "level")
         {
             if (!level || !*level || *level > TestMaxLevel || !EventWowProgress::IsActive(target))

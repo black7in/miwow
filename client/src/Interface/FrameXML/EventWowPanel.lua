@@ -1,18 +1,21 @@
--- EventWow: panel del lobby (minijuegos + chat global). Generico: todo lo que muestra llega del servidor
+-- EventWow: panel de eventos (minijuegos + chat global). Generico: todo lo que muestra llega del servidor
 -- (GAMES, QUEUE_STATUS...), el cliente no conoce ningun minijuego. Ver docs/protocolo.md.
 --
 --  +-----------------------------------------------------------+
---  | EVENTWOW                                 <nombre>  [Menu] |  barra superior
+--  | EVENTWOW                                    <nombre>  [X] |  barra superior
 --  +----------------------+------------------------------------+
 --  | MINIJUEGOS (lista)   | detalle + Buscar partida / en cola |
 --  +----------------------+------------------------------------+
 --  | CHAT GLOBAL (EventWowChat.lua)                            |
 --  +-----------------------------------------------------------+
--- Visible solo en modo lobby (EventWow_SetMode, EventWow.lua).
--- Ocupa toda la pantalla (UIParent) en cualquier resolucion: el reparto interior es proporcional
--- (EventWowPanel_Layout) y el numero de filas de la lista depende del alto disponible.
+-- Ventana centrada (se arrastra por la barra superior) que se abre y cierra con el boton del minimapa,
+-- /eventwow o Esc; cerrada dentro de una partida (EventWow_SetMode, EventWow.lua). El reparto interior es
+-- proporcional (EventWowPanel_Layout) y el numero de filas de la lista depende del alto disponible.
 
 EVENTWOW_PANEL = {
+	WIDTH = 960,          -- tamano de la ventana (menos si la pantalla no da: SCREEN_MARGIN por lado)
+	HEIGHT = 640,
+	SCREEN_MARGIN = 40,
 	MARGIN = 8,
 	GAP = 6,
 	TOP_BAR_HEIGHT = 36,
@@ -27,14 +30,17 @@ EVENTWOW_PANEL = {
 		tile = true, tileSize = 16, edgeSize = 14,
 		insets = { left = 3, right = 3, top = 3, bottom = 3 },
 	},
-	COLOR_PANEL = { 0.04, 0.05, 0.08, 0.6 },  -- deja ver la portada del lobby
+	COLOR_PANEL = { 0.04, 0.05, 0.08, 0.94 },
 	COLOR_SECTION = { 0, 0, 0, 0.45 },
 	COLOR_BORDER = { 0.35, 0.35, 0.4, 1 },
 };
 
 EVENTWOW_STR_PANEL_TITLE = "EVENTWOW";
-EVENTWOW_STR_PANEL_MENU = "Menú";
-EVENTWOW_STR_PANEL_HIDE = "Ocultar panel";
+EVENTWOW_STR_PANEL_MINIMAP_TITLE = "Eventos";
+EVENTWOW_STR_PANEL_MINIMAP_HINT = "Clic: abrir o cerrar el panel (/eventwow)";
+EVENTWOW_STR_PANEL_MINIMAP_QUEUED = "Buscando partida: %s";
+EVENTWOW_STR_PANEL_MINIMAP_MATCH = "En partida";
+EVENTWOW_STR_PANEL_IN_MATCH = "No disponible durante una partida.";
 EVENTWOW_STR_PANEL_GAMES = "MINIJUEGOS";
 EVENTWOW_STR_PANEL_CONNECTING = "Conectando con el servidor...";
 EVENTWOW_STR_PANEL_NO_GAMES = "No hay minijuegos disponibles.";
@@ -226,6 +232,7 @@ function EventWowPanel_Update()
 	end
 	EventWowPanel_UpdateList();
 	EventWowPanel_UpdateDetail();
+	EventWowPanel_UpdateMinimapButton();
 end
 
 function EventWowPanel_SelectGame(id)
@@ -246,32 +253,24 @@ local function EventWow_CreateTopBar(panel)
 	title:SetPoint("LEFT", bar, "LEFT", 12, 0);
 	title:SetText(EVENTWOW_STR_PANEL_TITLE);
 
-	local menu = CreateFrame("Button", "EventWowPanelMenuButton", bar, "UIPanelButtonTemplate");
-	menu:SetSize(80, 22);
-	menu:SetPoint("RIGHT", bar, "RIGHT", -8, 0);
-	menu:SetText(EVENTWOW_STR_PANEL_MENU);
-	menu:SetScript("OnClick", function()
-		if ( GameMenuFrame:IsShown() ) then
-			PlaySound("igMainMenuQuit");
-			HideUIPanel(GameMenuFrame);
-		else
-			PlaySound("igMainMenuOpen");
-			ShowUIPanel(GameMenuFrame);
-		end
+	local close = CreateFrame("Button", "EventWowPanelCloseButton", bar, "UIPanelCloseButton");
+	close:SetPoint("RIGHT", bar, "RIGHT", 2, 0);
+	close:SetScript("OnClick", function()
+		EventWowPanel:Hide();
 	end);
 
 	local name = bar:CreateFontString("EventWowPanelPlayerName", "ARTWORK", "GameFontHighlight");
-	name:SetPoint("RIGHT", menu, "LEFT", -12, 0);
+	name:SetPoint("RIGHT", close, "LEFT", -8, 0);
 
-	-- Solo en modo dev (.gm on o .dev on): interfaz nativa sin tocar ningun flag
-	local hide = CreateFrame("Button", "EventWowPanelHideButton", bar, "UIPanelButtonTemplate");
-	hide:SetSize(120, 22);
-	hide:SetPoint("LEFT", title, "RIGHT", 16, 0);
-	hide:SetText(EVENTWOW_STR_PANEL_HIDE);
-	hide:SetScript("OnClick", function()
-		EventWow_SetPanelHidden(true);
+	-- Arrastrar la ventana por la barra
+	bar:EnableMouse(true);
+	bar:RegisterForDrag("LeftButton");
+	bar:SetScript("OnDragStart", function()
+		EventWowPanel:StartMoving();
 	end);
-	hide:Hide();
+	bar:SetScript("OnDragStop", function()
+		EventWowPanel:StopMovingOrSizing();
+	end);
 end
 
 function EventWowPanel_UpdatePlayerName()
@@ -439,14 +438,26 @@ function EventWowPanel_Layout()
 	EventWowPanel_UpdateList();
 end
 
+-- Tamano de la ventana: EVENTWOW_PANEL.WIDTH x HEIGHT, o menos si la pantalla no da
+function EventWowPanel_Resize()
+	local margin = EVENTWOW_PANEL.SCREEN_MARGIN * 2;
+	local width = math.min(EVENTWOW_PANEL.WIDTH, UIParent:GetWidth() - margin);
+	local height = math.min(EVENTWOW_PANEL.HEIGHT, UIParent:GetHeight() - margin);
+	EventWowPanel:SetSize(math.floor(width), math.floor(height));
+end
+
 local function EventWow_CreatePanel()
-	-- Toda la pantalla: sin borde, fondo semitransparente sobre la portada del lobby
 	local panel = CreateFrame("Frame", "EventWowPanel", UIParent);
-	panel:SetAllPoints(UIParent);
+	panel:SetPoint("CENTER", UIParent, "CENTER", 0, 0);
 	panel:SetFrameStrata("MEDIUM");
+	panel:SetToplevel(true);
 	panel:EnableMouse(true);
-	panel:SetBackdrop({ bgFile = "Interface\\ChatFrame\\ChatFrameBackground" });
-	panel:SetBackdropColor(unpack(EVENTWOW_PANEL.COLOR_PANEL));
+	panel:SetMovable(true);
+	panel:SetClampedToScreen(true);
+	EventWow_ApplyBackdrop(panel, EVENTWOW_PANEL.COLOR_PANEL);
+	EventWowPanel_Resize();
+	-- Esc la cierra (CloseSpecialWindows)
+	tinsert(UISpecialFrames, "EventWowPanel");
 
 	EventWow_CreateTopBar(panel);
 	EventWow_CreateGameList(panel);
@@ -465,11 +476,113 @@ local function EventWow_CreatePanel()
 
 	panel:SetScript("OnSizeChanged", EventWowPanel_Layout);
 	panel:SetScript("OnShow", function()
+		PlaySound("igCharacterInfoOpen");
+		EventWowPanel_Resize();
 		EventWowPanel_Layout();
 		EventWowPanel_UpdatePlayerName();
 		EventWowPanel_Update();
 	end);
+	panel:SetScript("OnHide", function()
+		PlaySound("igCharacterInfoClose");
+		EventWowChatEditBox:ClearFocus();
+	end);
 	panel:Hide();
+end
+
+-- Abrir / cerrar (boton del minimapa, /eventwow). Dentro de una partida no se abre.
+function EventWowPanel_Toggle()
+	if ( EventWowPanel:IsShown() ) then
+		EventWowPanel:Hide();
+	elseif ( EventWow_UI.mode == "match" ) then
+		UIErrorsFrame:AddMessage(EVENTWOW_STR_PANEL_IN_MATCH, 1, 0.2, 0.2, 1.0);
+	else
+		EventWowPanel:Show();
+	end
+end
+
+-- Boton del minimapa -------------------------------------------------------------------------------
+
+EVENTWOW_MINIMAP_BUTTON = {
+	ICON = "Interface\\Icons\\INV_BannerPVP_02",
+	ANGLE = -70,    -- grados (0 = derecha, 90 = arriba): abajo a la derecha, entre el zoom y el borde inferior
+	RADIUS = 80,
+	COLOR_QUEUED = { 0.2, 1, 0.2 },
+};
+
+local function EventWow_MinimapButtonTooltip(button)
+	GameTooltip:SetOwner(button, "ANCHOR_LEFT");
+	GameTooltip:SetText(EVENTWOW_STR_PANEL_MINIMAP_TITLE);
+	if ( EventWow_UI and EventWow_UI.mode == "match" ) then
+		GameTooltip:AddLine(EVENTWOW_STR_PANEL_MINIMAP_MATCH, 1, 1, 1);
+	elseif ( EventWow_Panel.queue ) then
+		local game = EventWow_FindGame(EventWow_Panel.queue.gameId);
+		local color = EVENTWOW_MINIMAP_BUTTON.COLOR_QUEUED;
+		GameTooltip:AddLine(format(EVENTWOW_STR_PANEL_MINIMAP_QUEUED, game and game.name or EventWow_Panel.queue.gameId),
+			color[1], color[2], color[3]);
+	end
+	GameTooltip:AddLine(EVENTWOW_STR_PANEL_MINIMAP_HINT, 0.8, 0.8, 0.8);
+	GameTooltip:Show();
+end
+
+-- Borde verde mientras se busca partida (o se entra en una); tooltip al dia
+function EventWowPanel_UpdateMinimapButton()
+	local button = EventWowMinimapButton;
+	if ( not button ) then
+		return;
+	end
+	local busy = EventWow_Panel.queue ~= nil or (EventWowMatch_IsLoading and EventWowMatch_IsLoading());
+	if ( busy ) then
+		local color = EVENTWOW_MINIMAP_BUTTON.COLOR_QUEUED;
+		button.border:SetVertexColor(color[1], color[2], color[3]);
+	else
+		button.border:SetVertexColor(1, 1, 1);
+	end
+	if ( GameTooltip:IsOwned(button) ) then
+		EventWow_MinimapButtonTooltip(button);
+	end
+end
+
+local function EventWow_CreateMinimapButton()
+	local button = CreateFrame("Button", "EventWowMinimapButton", Minimap);
+	button:SetSize(31, 31);
+	button:SetFrameStrata("MEDIUM");
+	button:SetFrameLevel(8);
+	local angle = math.rad(EVENTWOW_MINIMAP_BUTTON.ANGLE);
+	button:SetPoint("CENTER", Minimap, "CENTER",
+		EVENTWOW_MINIMAP_BUTTON.RADIUS * math.cos(angle), EVENTWOW_MINIMAP_BUTTON.RADIUS * math.sin(angle));
+	button:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight", "ADD");
+
+	local background = button:CreateTexture(nil, "BACKGROUND");
+	background:SetSize(20, 20);
+	background:SetPoint("TOPLEFT", button, "TOPLEFT", 7, -5);
+	background:SetTexture("Interface\\Minimap\\UI-Minimap-Background");
+
+	local icon = button:CreateTexture(nil, "ARTWORK");
+	icon:SetSize(17, 17);
+	icon:SetPoint("TOPLEFT", button, "TOPLEFT", 7, -6);
+	icon:SetTexture(EVENTWOW_MINIMAP_BUTTON.ICON);
+	icon:SetTexCoord(0.08, 0.92, 0.08, 0.92);
+	button.icon = icon;
+
+	local border = button:CreateTexture(nil, "OVERLAY");
+	border:SetSize(53, 53);
+	border:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0);
+	border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder");
+	button.border = border;
+
+	button:SetScript("OnMouseDown", function(self)
+		self.icon:SetPoint("TOPLEFT", self, "TOPLEFT", 8, -7);
+	end);
+	button:SetScript("OnMouseUp", function(self)
+		self.icon:SetPoint("TOPLEFT", self, "TOPLEFT", 7, -6);
+	end);
+	button:SetScript("OnClick", function()
+		EventWowPanel_Toggle();
+	end);
+	button:SetScript("OnEnter", EventWow_MinimapButtonTooltip);
+	button:SetScript("OnLeave", function()
+		GameTooltip:Hide();
+	end);
 end
 
 -- Protocolo -------------------------------------------------------------------------------------
@@ -493,12 +606,5 @@ EventWow_RegisterListener("CONNECTED", function()
 	EventWowPanel_Update();
 end);
 EventWow_RegisterListener("GAMES", EventWowPanel_Update);
-EventWow_RegisterListener("DEV_MODE", function()
-	if ( EventWow_UI.dev ) then
-		EventWowPanelHideButton:Show();
-	else
-		EventWowPanelHideButton:Hide();
-	end
-end);
-
 EventWow_CreatePanel();
+EventWow_CreateMinimapButton();

@@ -1,29 +1,33 @@
 #ifndef MOD_EVENTWOW_LOBBY_H
 #define MOD_EVENTWOW_LOBBY_H
 
+#include "Define.h"
+
 class Player;
 
-// Lobby: "limbo" invisible donde el personaje queda aparcado mientras el jugador usa el panel
-// (EventWowLobby.cpp). Helpers usados tambien al entrar/salir de un minijuego.
+// Entrada y salida de los eventos en un servidor tradicional (EventWowLobby.cpp). No hay lobby: el jugador busca
+// partida desde el mundo y al acabar vuelve a donde estaba.
+//  - Punto de vuelta = "entry point" nativo del core (el de los campos de batalla, tabla character_entry_point):
+//    se guarda en la BD con el personaje, asi que sobrevive a un logout o a una caida del servidor.
+//  - Login dentro del mapa de un evento (se desconecto en la partida): aparece en su punto de vuelta (o en su hogar).
 namespace EventWowLobby
 {
-    // Distancia al punto ancla que cuenta como "en el lobby" (mismo mapa)
-    constexpr float Radius = 250.0f;
+    // nullptr = puede apuntarse desde donde esta; si no, codigo de ERROR del protocolo (vivo, sin combate, fuera
+    // de mazmorras/campos de batalla, sin vuelo, sin cola de campo de batalla)
+    char const* CanJoinFrom(Player const* player);
 
-    bool IsInLobby(Player const* player);
+    // Mapa que usa algun evento del catalogo
+    bool IsEventMap(uint32 mapId);
 
-    // En el lobby los jugadores solo son visibles para GMs (sin trafico de visibilidad entre ellos).
-    // No toca a las cuentas GM (su modo GM / invisibilidad lo gestiona el core).
-    void SetVisibility(Player* player, bool inLobby);
+    // Guarda la posicion actual como punto de vuelta (Player::SetEntryPoint) antes de ir a la partida
+    void SaveReturnPoint(Player* player);
 
-    // Estado base del personaje: vivo, vida completa, sin auras, combate, disfraz, oro ni objetos
+    // Estado base al entrar/salir de una partida: vivo, vida completa, sin combate, sin disfraz ni bonificaciones,
+    // sin montura ni forma y sin beneficios temporales. NUNCA toca objetos, oro, nivel, talentos ni auras pasivas.
     void RestoreBaseState(Player* player);
 
-    // Sin equipo, mochila, bolsas ni oro (el oro y los objetos solo existen dentro de una partida: tienda)
-    void ClearInventory(Player* player);
-
-    // Restaura el estado base, lo hace invisible y lo lleva al punto ancla del lobby
-    bool ReturnToLobby(Player* player);
+    // Restaura el estado base y lo lleva a su punto de vuelta (o a su hogar)
+    bool ReturnFromMatch(Player* player);
 }
 
 #endif

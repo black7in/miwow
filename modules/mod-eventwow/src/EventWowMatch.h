@@ -21,7 +21,7 @@ enum class EventWowMatchState : uint8
     Picking,    // todos dentro: eleccion de personaje (solo si el juego la usa, GetPickTime())
     Countdown,  // todos dentro: cuenta atras
     Running,
-    Ended       // resultado en pantalla; al terminar, vuelta al lobby
+    Ended       // resultado en pantalla; al terminar, vuelta a donde estaba
 };
 
 enum class EventWowMatchResult : uint8
@@ -33,10 +33,10 @@ enum class EventWowMatchResult : uint8
 
 // Clase base de un minijuego (framework). Un objeto por partida, creado por la factoria del juego
 // (EventWowGameInfo::Factory) y gestionado por EventWowMatchMgr, que se encarga de la cola, la instancia,
-// los teleports y la vuelta al lobby. El minijuego solo implementa los On*() y usa los helpers protegidos.
+// los teleports y la vuelta a donde estaba. El minijuego solo implementa los On*() y usa los helpers protegidos.
 //
 // Ciclo: Loading -> (todos dentro o EventWow.Match.LoadTimeout) -> [Picking] -> Countdown -> OnStart() -> Running
-//        -> End() -> Ended -> (EventWow.Match.ReturnDelay) -> todos al lobby y se destruye.
+//        -> End() -> Ended -> (EventWow.Match.ReturnDelay) -> todos a donde estaban y se destruye.
 // Si no queda nadie, la partida se cierra sola. Todo corre en el hilo del mundo (WorldScript::OnUpdate
 // y manejadores del protocolo): guardar ObjectGuid, no punteros a Player.
 class EventWowMatch

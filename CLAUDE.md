@@ -10,6 +10,45 @@ Login -> "Tu nombre" -> Lobby -> Panel de minijuegos -> Cola (solo/grupo) -> Ins
 El personaje es solo un contenedor: nunca se ve en las pantallas previas al mundo;
 en cada minijuego se le da modelo, hechizos y stats temporales.
 
+> **Rama `tradicional` (desde 2026-11-18)**: servidor WoW normal (razas, clases, niveles, mazmorras...) + los
+> eventos. Decision del usuario: rama propia SIN interruptor de configuracion. Lo de "contenedor/lobby" de este
+> documento describe `main`. Regla de oro: **nunca tocar de forma destructiva el personaje real** (objetos, oro,
+> nivel, talentos, auras pasivas); lo que se cambie y se guarde en BD necesita foto + restauracion en el login.
+> Plan: 1) quitar lo destructivo y lo de plataforma (servidor) | 2) cliente: Glue original, panel que se abre y
+> cierra sobre la interfaz normal, `GlobalStrings` restaurado, textos de error nuevos | 3) moneda propia de partida
+> (la tienda usa el oro de WoW) | 4) heroes: neutralizar el personaje (`Player::_RemoveAllItemMods` /
+> `_ApplyAllItemMods`, beneficios, mascotas, formas, competencias de arma temporales), foto del nivel en BD.
+> Paso 1 HECHO (SIN COMPILAR NI PROBAR):
+> - Fuera: login/teletransporte al lobby, invisibilidad, `ClearInventory` (login y estado base), nivel forzado y
+>   `PLAYER_FLAGS_NO_XP_GAIN`, tutoriales, bloqueo de canales, raza/clase fijas (`EventWowCharacter.cpp` borrado,
+>   `EventWow.Character.*`/`EventWow.Lobby.*` fuera), overrides de plataforma (personajes por cuenta, mascaras,
+>   `StartPlayerLevel`, `AlwaysMaxSkillForLevel`, `PlayerStart.CustomSpells`, `SkipCinematics`). Quedan
+>   `AddonChannel`, `Instance.UnloadDelay`, `GM.LoginState = 0`. Talentos/correo de nivel: bloqueados solo con progresion.
+> - SQL del contenedor borrado (playercreateinfo, druida con todas las armas, druida sin reliquia, logout instantaneo) y
+>   SQL que lo deshace: `db-world/2026_11_18_02_eventwow_tradicional_revert.sql`, `db-auth/2026_11_18_00_..._rbac.sql`
+>   (aplicados a la BD de desarrollo; parche regenerado sin ChrClasses/SkillRaceClassInfo).
+> - `EventWowLobby` = entrada/salida de eventos: `CanJoinFrom` (vivo, sin combate, sin vuelo, fuera de instancias, sin
+>   cola de BG; errores `QUEUE_DEAD/IN_COMBAT/IN_FLIGHT/IN_INSTANCE/IN_BG_QUEUE`, tambien al teleportar),
+>   `SaveReturnPoint` = `Player::SetEntryPoint` (entry point nativo de los BG, se guarda en `character_entry_point`),
+>   `ReturnFromMatch` = estado base + `TeleportToEntryPoint`. Login dentro de un mapa de evento -> punto de vuelta
+>   (u hogar). Estado base: `RemoveArenaAuras` + montura + forma (antes `RemoveAllAuras`, que quita pasivas).
+>   Salir de la instancia por otro medio (piedra de hogar...) -> se queda alli con el estado base.
+> - Juegos con `MaxLevel` (progresion) o `InventorySlots` desactivados en `Validate` (asedio, test_shop) y
+>   `.eventwow hero <id> <nivel>` / `level` rechazados, hasta los pasos 3-4.
+> - `mod_eventwow.conf` desplegado actualizado; el de `main` guardado en `server/mod_eventwow.conf.main.bak`.
+> Paso 2 HECHO (cliente, SIN PROBAR; parche regenerado):
+> - Glue original (borrados `GlueXML/CharacterSelect.lua` y `CharacterCreate.lua`) y `GlobalStrings.lua` original.
+> - `EventWow.lua`: modos `"world"` (interfaz nativa intacta) | `"match"` (lo de antes: marcos ocultos, ventanas y
+>   acciones bloqueadas). Fuera: portada del lobby, tutoriales desactivados, CVars de nombres forzadas, menu sin Macros.
+>   Modo dev en partida: boton arriba / `/eventwow dev` = interfaz nativa (`EventWow_SetNativeUI`).
+> - Panel = ventana centrada 960x640 (menos si no cabe), arrastrable, Esc/X la cierra; boton en el minimapa
+>   (`EventWowMinimapButton`, borde verde en cola, tooltip con la cola) y `/eventwow` o `/eventos`. Cerrada en partida.
+> - Chat: el nativo funciona normal (sin ocultar, sin filtros, Intro nativo). El del panel solo trae el Global de
+>   EventWow + pestanas de susurros/grupo (duplican lo nativo) y ya no copia ChatFrame1.
+> - Textos de error `QUEUE_DEAD/IN_COMBAT/IN_FLIGHT/IN_INSTANCE/IN_BG_QUEUE`; "Volver/Salir al lobby" -> "Salir".
+> - Pendiente: cola de evento + invitacion de BG/LFG (bloquear unas con otras), mascotas al entrar. Personajes de prueba
+>   druida 80 (Test, Bla, War) BORRADOS de la BD de desarrollo (2026-11-18, a peticion del usuario).
+
 ## Estructura
 
 ```
