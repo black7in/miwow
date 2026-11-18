@@ -8,7 +8,7 @@
 
 EVENTWOW_PROTOCOL = {
 	PREFIX = "EWOW",
-	VERSION = 8,
+	VERSION = 10,
 	-- 255 (limite del core) - "EWOW\t" - flag, con margen
 	MAX_CHUNK = 240,
 	DEBUG = true,

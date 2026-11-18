@@ -57,6 +57,7 @@ public:
     void Init(uint32 id, EventWowGameInfo const* game, uint32 instanceId, GuidVector players);
     void Update(Milliseconds diff);
     void HandlePlayerArrived(Player* player);
+    Position ArrivalPositionFor(Player* player) { return GetArrivalPosition(player); }
     // Ya no esta en la partida (abandono, logout, teleport fuera); el gestor se encarga de moverlo
     void HandlePlayerLeft(ObjectGuid guid);
     // Murio dentro de la instancia (hook OnPlayerJustDied: puede llegar desde el hilo del mapa)
@@ -81,6 +82,12 @@ protected:
     virtual void OnPlayerArrived(Player* /*player*/) { }
     virtual void OnStart() { }
     virtual void OnUpdate(Milliseconds /*diff*/) { }
+    // Cada tick en CUALQUIER estado (carga, cuenta atras, en juego, resultado), despues de OnUpdate.
+    // Para lo que el juego mantiene fuera de Running (p. ej. las motos quietas en la parrilla).
+    virtual void OnTick(Milliseconds /*diff*/) { }
+    // Tiempo de la pantalla de resultado (Ended) antes de volver todos al lobby. Por defecto
+    // EventWow.Match.ReturnDelay; el boton "Volver al lobby" (ABANDON) sale antes.
+    virtual Seconds GetEndDelay() const;
     // Por defecto, fin de la partida con los resultados que haya
     virtual void OnTimerExpired() { End(); }
     virtual void OnPlayerLeft(ObjectGuid /*guid*/) { }
@@ -89,6 +96,9 @@ protected:
     // GetRespawnPosition() a los 5 s; cada juego decide su regla (checkpoint, eliminado, esperar...).
     virtual void OnPlayerDied(Player* player) { RespawnPlayer(player, 5s); }
     virtual Position const& GetRespawnPosition(Player* player) const;
+    // Donde aparece cada jugador al entrar en la instancia (antes de disfrazarse: su vehiculo se invoca ahi).
+    // Se llama una vez por jugador al crear la partida, en el orden de la cola. Por defecto el Start del juego.
+    virtual Position GetArrivalPosition(Player* player);
     // Personaje (EventWowCharacters.h) con el que se disfraza al llegar a la instancia. 0 = ninguno (el juego
     // lo elegira despues con SetCharacter, p. ej. tras una fase de seleccion). Por defecto: el primero que
     // ofrece el juego en eventwow_game_character (juegos donde todos son iguales, como una carrera).

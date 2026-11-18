@@ -21,6 +21,7 @@ void AddSC_eventwow_hero_spells();
 void AddSC_eventwow_progress();
 
 // Minijuegos (games/). Se registran antes que las maquetas: el orden es el del panel.
+void AddSC_eventwow_game_race();
 void AddSC_eventwow_game_siege();
 void AddSC_eventwow_game_test();
 
@@ -30,6 +31,7 @@ void Addmod_eventwowScripts()
     AddSC_eventwow_character();
     AddSC_eventwow_lobby();
     AddSC_eventwow_protocol();
+    AddSC_eventwow_game_race();
     AddSC_eventwow_game_siege();
     AddSC_eventwow_game_test();
     AddSC_eventwow_games();

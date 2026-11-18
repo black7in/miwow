@@ -161,6 +161,14 @@ void EventWowMatch::Update(Milliseconds diff)
         case EventWowMatchState::Ended:
             break;
     }
+
+    if (!_players.empty())
+        OnTick(diff);
+}
+
+Seconds EventWowMatch::GetEndDelay() const
+{
+    return sEventWowConfig.MatchReturnDelay;
 }
 
 void EventWowMatch::HandlePlayerArrived(Player* player)
@@ -537,7 +545,7 @@ void EventWowMatch::End(std::string_view summary)
         EventWowMessage("MATCH_END").Add(GetResultName(result)).Add(summary).Send(player);
     });
 
-    SetState(EventWowMatchState::Ended, sEventWowConfig.MatchReturnDelay);
+    SetState(EventWowMatchState::Ended, GetEndDelay());
 }
 
 // Muerte ----------------------------------------------------------------------------------------
@@ -552,6 +560,11 @@ void EventWowMatch::HandlePlayerDied(Player* player)
 }
 
 Position const& EventWowMatch::GetRespawnPosition(Player* /*player*/) const
+{
+    return _game->Start;
+}
+
+Position EventWowMatch::GetArrivalPosition(Player* /*player*/)
 {
     return _game->Start;
 }

@@ -17,6 +17,12 @@
       "name": "Circuito",
       "piece": "plaga",
       "checkpoints": 8,
+      "props": [
+        {"model": "World\\EXPANSION01\\DOODADS\\GENERIC\\DRAENEI\\Draenei_Arches\\Tech_Arch02.m2",
+         "at": "meta", "side": "center", "angle": "across", "scale": 2.7},
+        {"model": "World\\EXPANSION01\\DOODADS\\GENERIC\\DRAENEI\\Draenei_Arches\\Tech_Arch01.m2",
+         "at": "checkpoints", "side": "both", "offset": -1.5, "angle": "across", "scale": 1.6}
+      ],
       "points": [
         {"p": [-294, -364], "z": -380, "start": true},
         {"p": [0, -368], "z": -380},

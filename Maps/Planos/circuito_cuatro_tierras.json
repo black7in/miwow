@@ -137,10 +137,16 @@
   },
 
   "props": [
-    {"model": "WORLD\\AZEROTH\\ELWYNN\\PASSIVEDOODADS\\LAMPPOST\\LAMPPOST.M2", "from": -180, "to": 180, "every": 30,
+    {"model": "WORLD\\AZEROTH\\ELWYNN\\PASSIVEDOODADS\\LAMPPOST\\LAMPPOST.M2", "from": -165, "to": 165, "every": 30,
      "side": "both", "offset": 5.0},
     {"model": "WORLD\\EXPANSION02\\DOODADS\\GENERIC\\ARGENTCRUSADE\\BANNERS\\ARGENTCURSADE_WINDYPENNANT01.M2",
-     "from": 0, "to": 0, "every": 1, "side": "both", "offset": 1.0, "angle": "inward"}
+     "from": 0, "to": 0, "every": 1, "side": "both", "offset": 1.0, "angle": "inward"},
+    {"model": "World\\EXPANSION02\\DOODADS\\Generic\\ArgentCrusade\\ArgentCrusade_Arch_01.M2",
+     "at": "meta", "side": "center", "angle": "across", "scale": 7.0, "sink": 0.3},
+    {"model": "World\\EXPANSION02\\DOODADS\\Generic\\ArgentCrusade\\Banners\\Tournament_Banner_Gnome01.M2",
+     "from": -50, "to": 50, "every": 20, "side": "both", "offset": 2.0, "angle": "inward", "scale": 1.6},
+    {"model": "World\\EXPANSION02\\DOODADS\\Generic\\ArgentCrusade\\Pennants\\Tournament_Pennant_ArgentCru01.M2",
+     "at": "checkpoints", "side": "both", "offset": 1.0, "angle": "inward", "scale": 2.0}
   ],
   "clear": [],
 

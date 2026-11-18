@@ -638,8 +638,9 @@ void EventWowMatchMgr::CreateMatch(EventWowGameInfo const& game, GuidVector play
         // requisitos de acceso, limite de instancias por hora). InstanceMap::CannotEnter lo decide nuestro hook.
         player->SetDungeonDifficulty(DUNGEON_DIFFICULTY_NORMAL);
         ref.SendState(player);
-        if (!player->TeleportTo(game.MapId, game.Start.GetPositionX(), game.Start.GetPositionY(),
-            game.Start.GetPositionZ(), game.Start.GetOrientation(), TELE_TO_GM_MODE))
+        Position const arrival = ref.ArrivalPositionFor(player);
+        if (!player->TeleportTo(game.MapId, arrival.GetPositionX(), arrival.GetPositionY(),
+            arrival.GetPositionZ(), arrival.GetOrientation(), TELE_TO_GM_MODE))
         {
             LOG_ERROR("module.eventwow", "EventWow: no se pudo teleportar a {} a la partida {}", player->GetName(), matchId);
             RemovePlayer(ref, guid, false);

@@ -42,6 +42,9 @@ namespace EventWowDisguise
     // Periodico (hilo del mundo, EventWowMatch): mantiene al jugador montado en su vehiculo.
     // No hace nada muerto, en modo dev o sin vehiculo.
     void Update(Player* player);
+    // Baja al jugador y hace desaparecer su vehiculo; el siguiente Update invoca uno nuevo donde este el jugador.
+    // Para recolocar a alguien con vehiculo sin Vehicle::TeleportVehicle (que lo baja y lo sube por clic).
+    void DismissVehicle(Player* player);
 
     void SendState(Player* player);
 }

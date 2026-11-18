@@ -523,22 +523,28 @@ class TrackConverter:
         tr = self.track
         rng = self.rng
         # Adornos a lo largo de la pista (farolas, vallas, banderas...)
+        # side "center": sobre la pista (arcos de meta: su +X cruza la pista con angle "across").
+        # at "meta" / "checkpoints": en la meta / en los puntos de control (en vez de from/to/every).
         for prop in p['props']:
-            s0 = prop.get('from', 0.0)
-            s1 = prop.get('to', tr.length)
-            every = prop['every']
-            sides = {'both': (1, -1), 'left': (1,), 'right': (-1,)}[prop.get('side', 'both')]
-            s = s0
-            while s <= s1 + 1e-6:
+            at = prop.get('at')
+            if at == 'meta':
+                stations = [0.0]
+            elif at == 'checkpoints':
+                n = int(p['checkpoints'])
+                stations = [tr.length * c / n for c in range(1, n)]
+            else:
+                stations = list(np.arange(prop.get('from', 0.0), prop.get('to', tr.length) + 1e-6, prop['every']))
+            sides = {'both': (1, -1), 'left': (1,), 'right': (-1,), 'center': (0,)}[prop.get('side', 'both')]
+            for s in stations:
                 x, y, z, a, k = tr.point(tr.s[tr.start] + s)
                 for sd in sides:
-                    off = tr.half[k] + p['shoulder'] + prop.get('offset', 1.5)
+                    off = 0.0 if sd == 0 else tr.half[k] + p['shoulder'] + prop.get('offset', 1.5)
                     nx, ny = -tr.ty[k] * sd, tr.tx[k] * sd
-                    ang = {'along': a, 'across': a + math.pi / 2 * sd, 'inward': a - math.pi / 2 * sd}.get(
+                    ang = {'along': a, 'across': a + math.pi / 2 * (sd or 1), 'inward': a - math.pi / 2 * sd}.get(
                         prop.get('angle', 'along'), a)
-                    self._add(prop['model'], x + nx * off, y + ny * off, ang, prop.get('scale', 1.0),
+                    # a es el rumbo en el plano (0 = este); el del modelo va en orientacion WoW (0 = norte)
+                    self._add(prop['model'], x + nx * off, y + ny * off, ang - math.pi / 2, prop.get('scale', 1.0),
                               sink=prop.get('sink', 0.1))
-                s += every
         # Decoracion aleatoria por ambiente
         spacing = p.get('scatterSpacing', 5.0)
         r = np.arange(-self.half + spacing / 2, self.half, spacing)

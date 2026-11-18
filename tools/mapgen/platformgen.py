@@ -175,6 +175,9 @@ class PlatformConverter:
         for cfg, path in self.paths:
             self._place_path(cfg, path)
         self.track_models = len(self.models)
+        for cfg, path in self.paths:
+            for prop in cfg.get('props', []):
+                self._prop(cfg, path, prop)
         for deco in plan['decor']:
             self._decor(deco)
 
@@ -245,6 +248,22 @@ class PlatformConverter:
                 step *= 0.8
             s += step
         self.piece_count[cfg['name']] = i
+
+    def _prop(self, cfg, path, prop):
+        """Adorno de la pista: at "meta" | "checkpoints"; side "center" (sobre la pista, su +X cruza la pista) o
+        "both" (a cada lado, a offset yardas del borde); se apoya en la superficie (+ z)."""
+        n = int(cfg.get('checkpoints', 8))
+        stations = [0.0] if prop.get('at', 'meta') == 'meta' else [path.length * c / n for c in range(1, n)]
+        piece = self.pieces[cfg['piece']]
+        half = piece['width'] * float(piece['scale']) / 2.0
+        sides = {'center': (0,), 'both': (1, -1), 'left': (1,), 'right': (-1,)}[prop.get('side', 'center')]
+        for s in stations:
+            x, y, z, h = path.at(path.start + s)
+            for sd in sides:
+                off = 0.0 if sd == 0 else half + float(prop.get('offset', 0.0))
+                px, py = x - math.sin(h) * off * sd, y + math.cos(h) * off * sd
+                angle = h + math.pi / 2 if prop.get('angle', 'across') == 'across' else h
+                self._add(prop['model'], px, py, z + float(prop.get('z', 0.0)), angle, float(prop.get('scale', 1.0)))
 
     def _decor(self, deco):
         rng = np.random.default_rng(int(deco.get('seed', self.plan['seed'])))

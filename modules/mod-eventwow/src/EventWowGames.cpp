@@ -115,14 +115,6 @@ void AddSC_eventwow_games()
     // Maquetas para el panel con varios juegos (sin factoria: no se puede buscar partida).
     // Los juegos reales se registran en games/ (AddSC_eventwow_game_*), antes que estos.
     sEventWowGames.Register({
-        "race",
-        "Carrera",
-        "Llega el primero a la meta esquivando los obstáculos del recorrido. (Maqueta: todavía no existe.)",
-        "Interface\\Icons\\Ability_Rogue_Sprint",
-        2,
-        10
-    });
-    sEventWowGames.Register({
         "invasion",
         "Invasión",
         "Resistid juntos oleada tras oleada de enemigos hasta derrotar al jefe final. (Maqueta: todavía no existe.)",

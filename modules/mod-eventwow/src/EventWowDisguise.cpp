@@ -145,7 +145,7 @@ namespace
     }
 
     // Baja al jugador y hace desaparecer el vehiculo (si sigue en su mapa)
-    void DismissVehicle(Player* player, ObjectGuid vehicleGuid)
+    void DismissVehicleOf(Player* player, ObjectGuid vehicleGuid)
     {
         if (player->GetVehicle())
             player->ExitVehicle();
@@ -419,7 +419,7 @@ void EventWowDisguise::Remove(Player* player)
         ApplyAgilityHaste(player, AgilityHasteTypes[i], agilityHaste[i], false);
     ApplyIntellectHaste(player, intellectHaste, false);
 
-    DismissVehicle(player, vehicleGuid);
+    DismissVehicleOf(player, vehicleGuid);
     DismissSummons(player);
 
     EventWowWeapons::Unequip(player, weapons);
@@ -485,6 +485,16 @@ void EventWowDisguise::Update(Player* player)
         player->EnterVehicle(vehicle, 0);
     else
         SummonVehicle(player, slot, character->VehicleEntry);
+}
+
+void EventWowDisguise::DismissVehicle(Player* player)
+{
+    DisguiseSlot* slot = GetSlot(player);
+    if (!slot)
+        return;
+
+    DismissVehicleOf(player, slot->VehicleGuid);
+    slot->VehicleGuid.Clear();
 }
 
 void EventWowDisguise::SendState(Player* player)

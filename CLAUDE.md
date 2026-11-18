@@ -52,6 +52,7 @@ EventWow/
 - Para modificar un archivo: copiarlo de `client/interface-original/...` a `client/src/...` (misma ruta) y editar ahi.
 - Generar parche: `powershell -ExecutionPolicy Bypass -File .\tools\Build-Patch.ps1`
   El usuario copia `client/patches/patch-4.MPQ` a `Data\` del cliente y **prueba manualmente**. No desplegar ni lanzar el cliente.
+  Para eso usa `client/patches/Instalar-Parche.ps1` (copia el parche + borra `Cache`; no versionado): SOLO lo ejecuta el usuario.
 - `Data\patch-4.MPQ` (carpeta con ese nombre) tiene prioridad sobre los MPQ de locale; no usar `patch-esES-N`.
 - Los archivos originales usan **CRLF**: normalizar tras editar (`sed -i 's/\r$//; s/$/\r/' archivo`).
 - Preferir ganchos en Lua sobre editar XML. Toda linea anadida a una funcion original lleva `-- EventWow`;
@@ -342,8 +343,42 @@ Datos clave de la API Glue:
     2600-2699, copia de la del Ojo de la Eternidad: estrellas). 3516 yardas, ocho con CRUCE (el segundo paso va 21 yd
     por debajo del primero: el juego debe usar tambien la z para saber en que tramo esta el jugador). Caer: el core
     mata por debajo de z -500 (pista a -380..-326). SQL `2026_11_17_01`.
-  - Siguiente: juego `carrera` en el servidor (vueltas, puntos de control, posiciones, parrilla, reaparicion al
-    ultimo control si se cae/sale, final con cuenta atras) usando `<id>_pista.json`, y moto propia de carrera.
+  - Juego de carreras FASE 1 (decisiones del usuario 2026-11-17: moto a 28 yd/s, al acabar resultados en pantalla +
+    boton "Salir al lobby", nadie se mueve tras terminar). PRIMERA PRUEBA (2026-11-17, 753, 2 jugadores): la vuelta se
+    quedaba en 1 y las posiciones no cambiaban. Arreglado y PROBADO por el usuario (2026-11-17, "ahora si funciona"):
+    2 vueltas, cuenta atras 10 s, sin `TeleportVehicle` (baja al jugador y lo resube por clic y descoloca el control
+    de la moto) -> `EventWowMatch::GetArrivalPosition` (cada piloto llega a su puesto y la moto se invoca alli), caidas
+    = quitar moto (`EventWowDisguise::DismissVehicle`) + mover jugador + moto nueva; seguimiento con la posicion de la
+    moto; raiz solo en la moto (al jugador montado el core no deja quitarsela).
+    Descripcion original (3 vueltas,
+    al acabar resultados en pantalla + boton "Salir al lobby", nadie se mueve tras terminar):
+    - `games/EventWowGameRace.cpp`: juegos `carrera` (752) y `carrera_estelar` (753), 1-8 pilotos. Lee
+      `<DataDir>/maps/<id>_pista.json` al arrancar (sin el, el juego sale "no disponible"). Seguimiento por ventana
+      alrededor de la muestra anterior (3D: cruces) -> avance, vueltas, posiciones, direccion contraria. Parrilla de 8
+      (ahora por GetArrivalPosition), motos con raiz (UNIT_STATE_ROOT en el vehiculo) en carga/cuenta atras (10 s)/
+      tras llegar/resultado; con moto nueva la raiz se reenvia a los 500 ms. Caer (z < suelo - FallDepth) o salirse (borde +
+      OffTrackMargin) -> ultimo punto bueno, quieto 2 s. Primero en llegar -> 30 s para el resto. Resultado 90 s
+      (`GetEndDelay`). Framework: `EventWowMatch::OnTick` (todos los estados) y `GetEndDelay`.
+    - SQL `2026_11_17_02`: moto 9500001 (Chopper a speed_run 4, sin hechizos), personaje 3 "Piloto". Protocolo v9
+      (`RACE_INFO/RACE/RACE_EVENT/RACE_RESULTS`), cliente `EventWowRace.lua`. Maqueta "race" quitada del panel.
+    - Meta decorada: 752 arco del Torneo Argenta x7 (colision solo en los pilares, abertura ~27 yd) + estandartes +
+      banderines en los controles (props `at`/`side: center` en trackgen); 753 arco tecnologico draenei (sin
+      colision) + pilones en los controles (props de platformgen).
+    - FASE 2 poderes (PROBADA por el usuario 2026-11-18, incluido: `Powers` hasta 5 en los huecos 1-5 de la barra;
+      cajas/manchas por el TRAMO recorrido entre dos posiciones (el cliente avisa ~cada 0,5 s yendo recto = ~14 yd de
+      salto); Escudo sin mecanica (la base 17 tenia SHIELD y los vehiculos mecanicos son inmunes). Diseno: filas de 4
+      cajas cada 180 yd (desde 150 yd hasta 80 yd antes de la meta; 752: 56 cajas, 753: 76), reaparecen a los 4 s.
+      Poder al azar ponderado por posicion (`PowerWeights`) en `m_spells[0..4]` de la moto + `VehicleSpellInitialize`
+      (teclas 1-5; con 5 la caja se queda); se conservan si la moto cambia (caida). Hechizos `data/spells/carrera.toml` (9502000-9502012):
+      Cohete (al de delante, o al de detras si va primero; proyectil 9502010 UNIT_TARGET_ANY + script), Turbo (+60 %
+      3 s), Mancha de aceite (criatura 9500011 detras, 40 s), Escudo (10 s, para el siguiente golpe), Rayo (frena -50 %
+      4 s a todos los de delante). Golpes = la moto golpeada se lanza el efecto a si misma (Derrape 9502011 aturdir
+      1,5 s / Electrocutado 9502012): sin hostilidad, alcanza tambien al mismo grupo. Scripts
+      `spell_eventwow_race_power` / `_missile` en `EventWowGameRace.cpp`. Caja = criatura 9500010 (CrateCreatureBasic).
+      SQL `2026_11_17_03` + `eventwow_spells_carrera.sql` (aplicados a la BD de desarrollo). Protocolo v10
+      (`RACE_EVENT ITEM/HIT/BLOCK`). Para combates de verdad entre jugadores (otros eventos): zona con
+      `AREA_FLAG_ARENA` (0x80) en `areatable_dbc` = todos contra todos nativo (salvo mismo grupo: el core lo comprueba antes).
+    - Siguiente: placas de aceleracion; fase 3 trampas; fase 4 modo "carrera de la muerte".
 - Mapas propios desde Warcraft 3 (ver `docs/mapas.md`). Decision del usuario: los mapas los disena el (y un amigo) en
   el World Editor de WC3 1.26 (no usa Noggit) y se convierten. Diseno PROPIO: no se replican mapas de terceros
   (p. ej. X Hero Siege); el usuario y su amigo hicieron uno inspirado en el genero.
