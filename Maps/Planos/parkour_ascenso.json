@@ -1,0 +1,891 @@
+{
+  "type": "parkour",
+  "_comentario": "Mapa 754 Ascenso: parkour en el cielo de Nagrand, entre islas flotantes. Cinco secciones con un punto de control (isla) al empezar cada una; cada seccion son tramos: caminos, subidas de sillas, bajadas, zigzag y callejones sin salida. Ver tools/mapgen/parkourgen.py.",
+  "seed": 754,
+  "adts": 3,
+  "bounds": 740,
+  "templates": {
+    "isla": {
+      "_comentario": "Roca flotante de Nagrand (500 yd a escala 1, cupula con la cima en 37,2 en el centro). Cara = caja de la isla (separacion y radio del punto de control); el borde real de cada salto se mide en la colision (surface).",
+      "model": "World\\EXPANSION01\\DOODADS\\NAGRAND\\Rocks\\Nagrand_RockFloating_Huge01.m2",
+      "scale": 0.1,
+      "walk": {
+        "cx": 0,
+        "cy": 0,
+        "top": 37.2,
+        "length": 490,
+        "width": 420
+      },
+      "surface": true,
+      "dress": [
+        {
+          "models": [
+            "World\\EXPANSION01\\DOODADS\\NAGRAND\\Trees\\NagrandTree01.m2",
+            "World\\EXPANSION01\\DOODADS\\NAGRAND\\Trees\\NagrandTree02.m2",
+            "World\\EXPANSION01\\DOODADS\\NAGRAND\\Trees\\NagrandTree03.m2"
+          ],
+          "count": 2,
+          "ring": [
+            0.7,
+            0.9
+          ],
+          "scale": [
+            0.3,
+            0.4
+          ],
+          "avoid": 55,
+          "sink": 0.5
+        },
+        {
+          "models": [
+            "World\\EXPANSION01\\DOODADS\\NAGRAND\\Bush\\NagrandBush01.m2",
+            "World\\EXPANSION01\\DOODADS\\NAGRAND\\Bush\\NagrandBush02.m2",
+            "World\\EXPANSION01\\DOODADS\\NAGRAND\\Bush\\NagrandBush03.m2"
+          ],
+          "count": 7,
+          "ring": [
+            0.25,
+            0.95
+          ],
+          "scale": [
+            0.7,
+            1.3
+          ],
+          "avoid": 25
+        },
+        {
+          "models": [
+            "World\\CRITTER\\butterflies\\ButterflyOrange01.m2"
+          ],
+          "count": 3,
+          "ring": [
+            0.2,
+            0.7
+          ],
+          "scale": [
+            0.8,
+            1.2
+          ],
+          "sink": -2.5
+        },
+        {
+          "models": [
+            "World\\EXPANSION01\\DOODADS\\SILVERMYST\\LIGHTSHAFT\\silvermyst_lightshaft.m2"
+          ],
+          "count": 1,
+          "ring": [
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1
+          ],
+          "sink": 1
+        }
+      ]
+    }
+  },
+  "start": {
+    "use": "isla",
+    "scale": 0.14,
+    "at": [
+      -600,
+      -600,
+      60
+    ],
+    "heading": 45
+  },
+  "sections": [
+    {
+      "name": "La Taberna Flotante",
+      "gap": [
+        0.3,
+        0.5
+      ],
+      "dz": [
+        -0.3,
+        0.9
+      ],
+      "turn": 30,
+      "pieces": {
+        "mesa_larga": {
+          "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\TABLES\\DwarvenTableLarge.m2",
+          "scale": 3,
+          "weight": 2
+        },
+        "mesa": {
+          "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\TABLES\\DwarvenTableAverage02.m2",
+          "scale": 3,
+          "weight": 2
+        },
+        "barril": {
+          "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\BARRELS\\DwarvenBarrel01.m2",
+          "scale": 3,
+          "weight": 3
+        },
+        "caja": {
+          "model": "World\\GENERIC\\DARKIRONDWARF\\PASSIVE DOODADS\\Crates\\DarkIronCrate01.m2",
+          "scale": 2,
+          "weight": 2,
+          "align": "random"
+        },
+        "taburete": {
+          "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\Chairs\\DwarvenChair03.m2",
+          "scale": 3,
+          "weight": 2,
+          "align": "side"
+        },
+        "banco": {
+          "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\Benches\\IronForgeBench_ornate01.m2",
+          "scale": 3,
+          "weight": 1,
+          "align": "across"
+        }
+      },
+      "segments": [
+        {
+          "type": "run",
+          "jumps": 10
+        },
+        {
+          "type": "climb",
+          "jumps": 8,
+          "pieces": {
+            "silla": {
+              "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\Chairs\\DwarvenChair02.m2",
+              "scale": 3,
+              "weight": 2,
+              "align": "side"
+            },
+            "silla3": {
+              "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\Chairs\\DwarvenChair03.m2",
+              "scale": 3,
+              "weight": 2,
+              "align": "side"
+            }
+          }
+        },
+        {
+          "type": "run",
+          "jumps": 6
+        },
+        {
+          "type": "deadend",
+          "jumps": [
+            4,
+            6
+          ]
+        },
+        {
+          "type": "zigzag",
+          "jumps": 6
+        },
+        {
+          "type": "descent",
+          "jumps": 4
+        },
+        {
+          "type": "run",
+          "jumps": 8
+        },
+        {
+          "type": "deadend",
+          "jumps": [
+            5,
+            7
+          ],
+          "pieces": {
+            "silla": {
+              "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\Chairs\\DwarvenChair02.m2",
+              "scale": 3,
+              "weight": 2,
+              "align": "side"
+            },
+            "silla3": {
+              "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\Chairs\\DwarvenChair03.m2",
+              "scale": 3,
+              "weight": 2,
+              "align": "side"
+            }
+          },
+          "dz": [
+            1.05,
+            1.3
+          ],
+          "gap": [
+            0.15,
+            0.35
+          ]
+        },
+        {
+          "type": "climb",
+          "jumps": 8,
+          "pieces": {
+            "silla": {
+              "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\Chairs\\DwarvenChair02.m2",
+              "scale": 3,
+              "weight": 2,
+              "align": "side"
+            },
+            "silla3": {
+              "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\Chairs\\DwarvenChair03.m2",
+              "scale": 3,
+              "weight": 2,
+              "align": "side"
+            },
+            "barril": {
+              "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\BARRELS\\DwarvenBarrel01.m2",
+              "scale": 3,
+              "weight": 3
+            }
+          }
+        },
+        {
+          "type": "run",
+          "jumps": 6
+        }
+      ]
+    },
+    {
+      "name": "La Biblioteca Arcana",
+      "rest": {
+        "use": "isla"
+      },
+      "gap": [
+        0.4,
+        0.6
+      ],
+      "dz": [
+        -0.2,
+        1.0
+      ],
+      "turn": 35,
+      "pieces": {
+        "estante": {
+          "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\Bookshelves\\BookshelfDwarvenSimple03.m2",
+          "scale": 2.5,
+          "weight": 3,
+          "align": "across"
+        },
+        "estanteria": {
+          "model": "World\\AZEROTH\\KARAZAHN\\PASSIVEDOODADS\\BookShelves\\KarazahnBookshelfSmall.m2",
+          "scale": 2,
+          "weight": 2,
+          "align": "random"
+        },
+        "armario": {
+          "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\WARDROBE\\WardrobeDwarvenSimple01.m2",
+          "scale": 2.5,
+          "weight": 2,
+          "align": "random"
+        },
+        "mesa": {
+          "model": "World\\AZEROTH\\KARAZAHN\\PASSIVEDOODADS\\Tables\\KarazahnTableBig.m2",
+          "scale": 2,
+          "weight": 1
+        }
+      },
+      "segments": [
+        {
+          "type": "run",
+          "jumps": 8
+        },
+        {
+          "type": "zigzag",
+          "jumps": 8
+        },
+        {
+          "type": "climb",
+          "jumps": 10,
+          "pieces": {
+            "silla": {
+              "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\Chairs\\DwarvenChair02.m2",
+              "scale": 3,
+              "weight": 2,
+              "align": "side"
+            },
+            "silla3": {
+              "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\Chairs\\DwarvenChair03.m2",
+              "scale": 3,
+              "weight": 2,
+              "align": "side"
+            }
+          }
+        },
+        {
+          "type": "deadend",
+          "jumps": [
+            4,
+            7
+          ]
+        },
+        {
+          "type": "run",
+          "jumps": 8
+        },
+        {
+          "type": "descent",
+          "jumps": 5
+        },
+        {
+          "type": "deadend",
+          "jumps": [
+            5,
+            7
+          ]
+        },
+        {
+          "type": "run",
+          "jumps": 10
+        },
+        {
+          "type": "climb",
+          "jumps": 8,
+          "pieces": {
+            "silla": {
+              "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\Chairs\\DwarvenChair02.m2",
+              "scale": 3,
+              "weight": 2,
+              "align": "side"
+            },
+            "estanteria": {
+              "model": "World\\AZEROTH\\KARAZAHN\\PASSIVEDOODADS\\BookShelves\\KarazahnBookshelfSmall.m2",
+              "scale": 2,
+              "weight": 2,
+              "align": "random"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "El Taller Goblin",
+      "rest": {
+        "use": "isla"
+      },
+      "gap": [
+        0.45,
+        0.7
+      ],
+      "dz": [
+        -0.3,
+        1.1
+      ],
+      "turn": 40,
+      "pieces": {
+        "maquina": {
+          "model": "World\\GENERIC\\GNOME\\PASSIVE DOODADS\\GNOMEMACHINE\\GnomeMachine05.m2",
+          "scale": 2,
+          "weight": 2,
+          "align": "random"
+        },
+        "carro": {
+          "model": "World\\GENERIC\\GOBLIN\\PASSIVEDOODADS\\GOBLINROCKETCARTS\\GoblinRocketCart01.m2",
+          "scale": 2,
+          "weight": 2,
+          "align": "random"
+        },
+        "caja": {
+          "model": "World\\Expansion02\\Doodads\\Generic\\IronDwarf\\ID_Crate.M2",
+          "scale": 2,
+          "weight": 2,
+          "align": "random"
+        },
+        "mesa": {
+          "model": "World\\GENERIC\\GNOME\\PASSIVE DOODADS\\FURNITURE\\GnomeTable03.m2",
+          "scale": 2,
+          "weight": 1,
+          "align": "random"
+        },
+        "tuberia": {
+          "model": "World\\EXPANSION02\\DOODADS\\Generic\\GNOME\\Gnome_Pipe_05.M2",
+          "scale": 1,
+          "weight": 2,
+          "align": "random"
+        }
+      },
+      "segments": [
+        {
+          "type": "run",
+          "jumps": 8
+        },
+        {
+          "type": "descent",
+          "jumps": 4
+        },
+        {
+          "type": "climb",
+          "jumps": 10,
+          "pieces": {
+            "silla": {
+              "model": "World\\Expansion02\\Doodads\\Generic\\IronDwarf\\ID_ChairMedium.M2",
+              "scale": 3,
+              "weight": 2,
+              "align": "side"
+            },
+            "caja": {
+              "model": "World\\Expansion02\\Doodads\\Generic\\IronDwarf\\ID_Crate.M2",
+              "scale": 2,
+              "weight": 2,
+              "align": "random"
+            }
+          }
+        },
+        {
+          "type": "deadend",
+          "jumps": [
+            5,
+            7
+          ],
+          "pieces": {
+            "silla": {
+              "model": "World\\Expansion02\\Doodads\\Generic\\IronDwarf\\ID_ChairMedium.M2",
+              "scale": 3,
+              "weight": 2,
+              "align": "side"
+            }
+          },
+          "dz": [
+            1.05,
+            1.3
+          ],
+          "gap": [
+            0.15,
+            0.35
+          ]
+        },
+        {
+          "type": "zigzag",
+          "jumps": 8
+        },
+        {
+          "type": "run",
+          "jumps": 10
+        },
+        {
+          "type": "deadend",
+          "jumps": [
+            4,
+            6
+          ]
+        },
+        {
+          "type": "climb",
+          "jumps": 8,
+          "pieces": {
+            "silla": {
+              "model": "World\\Expansion02\\Doodads\\Generic\\IronDwarf\\ID_ChairMedium.M2",
+              "scale": 3,
+              "weight": 2,
+              "align": "side"
+            }
+          }
+        },
+        {
+          "type": "run",
+          "jumps": 8
+        }
+      ]
+    },
+    {
+      "name": "Ruinas en el Vacío",
+      "rest": {
+        "use": "isla"
+      },
+      "gap": [
+        0.5,
+        0.75
+      ],
+      "dz": [
+        -0.3,
+        1.1
+      ],
+      "turn": 45,
+      "pieces": {
+        "columna": {
+          "model": "World\\Expansion02\\Doodads\\Generic\\Titan\\TI_RoadColumnBroken.M2",
+          "scale": 0.28,
+          "weight": 3,
+          "align": "random"
+        },
+        "pilar": {
+          "model": "World\\KHAZMODAN\\LOCHMODAN\\PASSIVEDOODADS\\TitanRuins\\TitanRuinsPillar01.m2",
+          "scale": 0.35,
+          "weight": 2,
+          "align": "random"
+        },
+        "muro": {
+          "model": "World\\Expansion02\\Doodads\\ZulDrak\\TrollRuins\\ZulDrak_WallEnd_01.M2",
+          "scale": 0.3,
+          "weight": 2,
+          "align": "random"
+        },
+        "losa": {
+          "model": "World\\KALIMDOR\\SILITHUS\\PASSIVEDOODADS\\Ruins\\SilithusRuinsWall03.m2",
+          "scale": 0.35,
+          "weight": 2,
+          "align": "random"
+        }
+      },
+      "segments": [
+        {
+          "type": "run",
+          "jumps": 8
+        },
+        {
+          "type": "climb",
+          "jumps": 10,
+          "pieces": {
+            "columna": {
+              "model": "World\\Expansion02\\Doodads\\Generic\\Titan\\TI_RoadColumnBroken.M2",
+              "scale": 0.28,
+              "weight": 3,
+              "align": "random"
+            },
+            "pilar": {
+              "model": "World\\KHAZMODAN\\LOCHMODAN\\PASSIVEDOODADS\\TitanRuins\\TitanRuinsPillar01.m2",
+              "scale": 0.35,
+              "weight": 2,
+              "align": "random"
+            }
+          }
+        },
+        {
+          "type": "deadend",
+          "jumps": [
+            5,
+            7
+          ]
+        },
+        {
+          "type": "descent",
+          "jumps": 6
+        },
+        {
+          "type": "zigzag",
+          "jumps": 8
+        },
+        {
+          "type": "deadend",
+          "jumps": [
+            4,
+            6
+          ]
+        },
+        {
+          "type": "run",
+          "jumps": 10
+        },
+        {
+          "type": "climb",
+          "jumps": 10,
+          "pieces": {
+            "silla": {
+              "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\Chairs\\DwarvenChair02.m2",
+              "scale": 3,
+              "weight": 2,
+              "align": "side"
+            },
+            "silla3": {
+              "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\Chairs\\DwarvenChair03.m2",
+              "scale": 3,
+              "weight": 2,
+              "align": "side"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "La Cima",
+      "rest": {
+        "use": "isla"
+      },
+      "gap": [
+        0.55,
+        0.82
+      ],
+      "dz": [
+        -0.2,
+        1.2
+      ],
+      "turn": 45,
+      "pieces": {
+        "barril": {
+          "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\BARRELS\\DwarvenBarrel01.m2",
+          "scale": 3,
+          "weight": 2
+        },
+        "estante": {
+          "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\Bookshelves\\BookshelfDwarvenSimple03.m2",
+          "scale": 2.5,
+          "weight": 2,
+          "align": "random"
+        },
+        "tuberia": {
+          "model": "World\\EXPANSION02\\DOODADS\\Generic\\GNOME\\Gnome_Pipe_05.M2",
+          "scale": 0.8,
+          "weight": 2,
+          "align": "random"
+        },
+        "pilar": {
+          "model": "World\\KHAZMODAN\\LOCHMODAN\\PASSIVEDOODADS\\TitanRuins\\TitanRuinsPillar01.m2",
+          "scale": 0.3,
+          "weight": 2,
+          "align": "random"
+        },
+        "taburete": {
+          "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\Chairs\\DwarvenChair03.m2",
+          "scale": 3,
+          "weight": 1,
+          "align": "side"
+        }
+      },
+      "segments": [
+        {
+          "type": "run",
+          "jumps": 8
+        },
+        {
+          "type": "zigzag",
+          "jumps": 8
+        },
+        {
+          "type": "deadend",
+          "jumps": [
+            5,
+            7
+          ],
+          "pieces": {
+            "silla": {
+              "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\Chairs\\DwarvenChair02.m2",
+              "scale": 3,
+              "weight": 2,
+              "align": "side"
+            },
+            "silla3": {
+              "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\Chairs\\DwarvenChair03.m2",
+              "scale": 3,
+              "weight": 2,
+              "align": "side"
+            }
+          },
+          "dz": [
+            1.05,
+            1.3
+          ],
+          "gap": [
+            0.15,
+            0.35
+          ]
+        },
+        {
+          "type": "climb",
+          "jumps": 12,
+          "pieces": {
+            "silla": {
+              "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\Chairs\\DwarvenChair02.m2",
+              "scale": 3,
+              "weight": 2,
+              "align": "side"
+            },
+            "silla3": {
+              "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\Chairs\\DwarvenChair03.m2",
+              "scale": 3,
+              "weight": 2,
+              "align": "side"
+            }
+          }
+        },
+        {
+          "type": "descent",
+          "jumps": 4
+        },
+        {
+          "type": "deadend",
+          "jumps": [
+            5,
+            8
+          ]
+        },
+        {
+          "type": "run",
+          "jumps": 8
+        },
+        {
+          "type": "climb",
+          "jumps": 12,
+          "pieces": {
+            "silla": {
+              "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\Chairs\\DwarvenChair02.m2",
+              "scale": 3,
+              "weight": 2,
+              "align": "side"
+            },
+            "silla3": {
+              "model": "World\\GENERIC\\DWARF\\PASSIVE DOODADS\\Chairs\\DwarvenChair03.m2",
+              "scale": 3,
+              "weight": 2,
+              "align": "side"
+            },
+            "silla_hierro": {
+              "model": "World\\Expansion02\\Doodads\\Generic\\IronDwarf\\ID_ChairMedium.M2",
+              "scale": 3,
+              "weight": 2,
+              "align": "side"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "finish": {
+    "use": "isla",
+    "scale": 0.16,
+    "dress": [
+      {
+        "models": [
+          "World\\EXPANSION01\\DOODADS\\NAGRAND\\Trees\\NagrandTree01.m2",
+          "World\\EXPANSION01\\DOODADS\\NAGRAND\\Trees\\NagrandTree03.m2"
+        ],
+        "count": 4,
+        "ring": [
+          0.7,
+          0.9
+        ],
+        "scale": [
+          0.35,
+          0.45
+        ],
+        "avoid": 40,
+        "sink": 0.5
+      },
+      {
+        "models": [
+          "World\\EXPANSION01\\DOODADS\\NAGRAND\\Bush\\NagrandBush01.m2",
+          "World\\EXPANSION01\\DOODADS\\NAGRAND\\Bush\\NagrandBush02.m2",
+          "World\\EXPANSION01\\DOODADS\\NAGRAND\\Bush\\NagrandBush03.m2"
+        ],
+        "count": 12,
+        "ring": [
+          0.25,
+          0.95
+        ],
+        "scale": [
+          0.7,
+          1.3
+        ],
+        "avoid": 20
+      },
+      {
+        "models": [
+          "World\\CRITTER\\butterflies\\ButterflyOrange01.m2"
+        ],
+        "count": 6,
+        "ring": [
+          0.1,
+          0.7
+        ],
+        "scale": [
+          0.8,
+          1.2
+        ],
+        "sink": -2.5
+      },
+      {
+        "models": [
+          "World\\EXPANSION01\\DOODADS\\GENERIC\\DRAENEI\\Glow\\DR_rays_blue.m2"
+        ],
+        "count": 1,
+        "ring": [
+          0,
+          0
+        ],
+        "scale": [
+          0.8,
+          0.8
+        ],
+        "sink": -20
+      }
+    ]
+  },
+  "decor": [
+    {
+      "_comentario": "Islas flotantes de Nagrand (WMO, con y sin cascadas): solo cliente, lejos de la ruta.",
+      "wmo": true,
+      "models": [
+        "World\\wmo\\Outland\\FloatingRocks\\Nagrand_RockFloating_01.wmo",
+        "World\\wmo\\Outland\\FloatingRocks\\Nagrand_RockFloating_02.wmo",
+        "World\\wmo\\Outland\\FloatingRocks\\Nagrand_RockFloating_Waterfalls.wmo"
+      ],
+      "count": 70,
+      "distance": [
+        35,
+        500
+      ],
+      "z": [
+        -120,
+        40
+      ],
+      "seed": 21
+    },
+    {
+      "_comentario": "Rocas flotantes grandes de Nagrand (el mismo modelo que las islas de la ruta), casi sin inclinar.",
+      "models": [
+        "World\\EXPANSION01\\DOODADS\\NAGRAND\\Rocks\\Nagrand_RockFloating_Huge01.m2"
+      ],
+      "count": 40,
+      "scale": [
+        0.08,
+        0.4
+      ],
+      "distance": [
+        35,
+        700
+      ],
+      "z": [
+        -220,
+        20
+      ],
+      "tilt": 6,
+      "seed": 22
+    },
+    {
+      "models": [
+        "World\\EXPANSION01\\DOODADS\\BLADESEDGE\\ROCKS\\BladesEdge_FloatingSmall01.m2",
+        "World\\EXPANSION01\\DOODADS\\BLADESEDGE\\ROCKS\\BladesEdge_FloatingSmall02.m2"
+      ],
+      "count": 150,
+      "scale": [
+        0.4,
+        1.6
+      ],
+      "distance": [
+        25,
+        400
+      ],
+      "z": [
+        -70,
+        50
+      ],
+      "seed": 23
+    },
+    {
+      "_comentario": "Luciernagas a lo largo de la ruta.",
+      "models": [
+        "World\\EXPANSION02\\DOODADS\\HOWLINGFJORD\\FIREFX\\BurntStoneTreeFireFlies_VFX.m2"
+      ],
+      "every": 20,
+      "scale": [
+        0.15,
+        0.2
+      ],
+      "z": [
+        -3,
+        2
+      ],
+      "seed": 24
+    }
+  ]
+}

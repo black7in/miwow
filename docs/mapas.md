@@ -179,3 +179,49 @@ servidor (`<DataDir>/maps/<id>_pista.json`: `[s, X, Y, Z, media anchura]` cada 2
   encima/debajo; el resumen avisa si la altura libre entre superficies baja de 18 yardas.
 - `decor`: rocas flotantes a distancia de la pista. Cielo: fila de `light_dbc` (2600-2699) en el SQL del mapa.
 - Caer al vacio: el core mata por debajo de z -500 (`MIN_HEIGHT`, sin planos de altura minima): pistas cerca de -400.
+
+## Recorridos de parkour (sin terreno)
+
+`tools/mapgen/parkourgen.py`, plano JSON con `"type": "parkour"` (mapgen lo detecta). Ejemplo: 754
+`Maps/Planos/parkour_ascenso.json` (juego `parkour`, `EventWowGameParkour.cpp`).
+
+- Sin terreno, como `platformgen` (ADT todo agujeros + `.map` con agujeros). La ruta son modelos M2 cualesquiera
+  (mesas, barriles, estanterias, maquinas, columnas...) colocados como decoracion del ADT (colision en cliente y vmaps).
+- **Cara pisable** de cada modelo: el nivel plano MAS ALTO con al menos el 40 % del area del mayor (una mesa da el
+  tablero, no el suelo de las patas; un barril, la tapa). Se coloca el centro de esa cara en el punto de la ruta.
+- **Catalogo** de candidatos: `tools/mapgen/catalog.py --wow-data <Data> --filter "chair|table" --out cat.csv`
+  (colision, cara pisable mas alta, area, medidas; los modelos sin colision se atraviesan). Ojo con modelos
+  "gigantes": `Karazahn_Rubble_Floating.m2` es todo el escombro de Karazhan (480 yardas).
+- **Saltos** (fisica del cliente): impulso 7,9555 yd/s, gravedad 19,2911 (`Movement::gravity` del core), carrera
+  7 yd/s -> altura maxima 1,64 yd, alcance en llano 5,8 yd. Cada salto: hueco borde a borde = `gap` (fraccion del
+  alcance para ese desnivel `dz`). El resumen avisa de los saltos > 80 % (dificiles) y > 92 % (casi imposibles).
+- **Secciones**: `jumps`, `gap`, `dz`, `turn` y `pieces` (modelo, escala, peso, `align`); la ruta se genera con
+  semilla, girando hacia el centro cerca del borde (`bounds`), separada de los tramos lejanos 20 yd en 2D si estan a
+  menos de 30 yd de altura (sin atajos entre secciones) y con vuelta atras si se encierra. Cada seccion empieza en
+  una plataforma `rest` = punto de control (la 1a en `start`); al final, `finish`.
+- Salida para el servidor: `<DataDir>/maps/<id>_parkour.txt` (`checkpoint X Y Z O radio caida nombre` /
+  `finish X Y Z O radio`; caida = cara mas baja de la seccion - 8 yd). Vista previa: planta + perfil de altura.
+- **Islas** (plantilla `isla` del plano): roca flotante de Nagrand `Nagrand_RockFloating_Huge01.m2` (500 yd a escala
+  1, cupula con la cima en z 37,2 sobre el centro; colision tosca de 350 triangulos). Su cara se da a mano (`walk`) y
+  con `surface: true` el borde de cada salto se MIDE en la colision (desde el centro hasta que el suelo se acaba o cae
+  mas de 4 yd): el hueco del salto se cuenta desde donde de verdad termina la isla y desde su altura (el borde esta
+  ~3 yd por debajo del centro). `dress`: arboles, matas, mariposas y un haz de luz encima, sobre la superficie real.
+- **Decoracion**: M2 por distancia a la ruta (borde a borde, con el radio del modelo), WMO (`wmo: true`: islas de
+  Nagrand con cascadas `World\wmo\Outland\FloatingRocks\Nagrand_RockFloating_*.wmo`; MODF + MWMO en el ADT, sin
+  escala; SOLO cliente: los vmaps no incluyen WMO, asi que solo como decoracion inalcanzable) y efectos cada N
+  piezas de la ruta (`every`: luciernagas).
+- **Tramos** (`segments` de cada seccion): `run` (camino), `climb` (subida escalon a escalon casi al maximo del
+  salto, p. ej. sillas), `descent` (caidas de 2-4 yd), `zigzag` (giros fuertes alternos) y `deadend` (callejon sin
+  salida: un ramal de 4-8 saltos que sale hacia un lado de la pieza actual y se acaba; se genera al final, lejos del
+  resto de la ruta para que no sea un atajo, y por encima de la altura de caida). Valores por tipo en `TRAMOS`.
+- `align: "side"`: lo que sobresale de la cara (respaldo de una silla; se mide en la colision) queda a un lado del
+  camino. Ojo: `DwarvenChair01` no sirve (su "cara" es el canto del respaldo); sillas buenas: `DwarvenChair02/03`,
+  `ID_ChairMedium` a escala 3.
+- Si la plataforma que cierra una seccion (siguiente punto de control o meta) no cabe, se deshacen saltos y se
+  prueba otro camino (antes fallaba la generacion).
+- 754 `EventWowParkour` "Ascenso" (SQL `2026_11_18_01_eventwow_map_parkour.sql`, zona 5004, luz 2601 = cielo de
+  Nagrand, LightParams 396/491 de la luz 418): 3x3 ADT. Salida en una isla, una isla por punto de control: Taberna
+  Flotante (muebles enanos x3), Biblioteca Arcana (estanterias y armarios), Taller Goblin (maquinas, carros,
+  tuberias), Ruinas en el Vacio (columnas titanicas), La Cima; meta en una isla mayor. Cada seccion mezcla caminos,
+  subidas de sillas, bajadas, zigzag y 2 callejones sin salida: 279 piezas + 56 en 10 callejones, z 56..152; 70
+  islas WMO + 40 rocas de Nagrand + 150 rocas pequenas alrededor.

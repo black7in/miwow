@@ -58,6 +58,30 @@ void EventWowMatch::Init(uint32 id, EventWowGameInfo const* game, uint32 instanc
     _state = EventWowMatchState::Loading;
     _stateTimer = sEventWowConfig.MatchLoadTimeout;
     _timerActive = true;
+
+    // Sesion abierta: ya en marcha; cada uno tiene su propio plazo para llegar
+    if (game->OpenSession)
+    {
+        _state = EventWowMatchState::Running;
+        _stateTimer = 0ms;
+        _timerActive = false;
+        for (ObjectGuid const& guid : _players)
+            _joining[guid] = sEventWowConfig.MatchLoadTimeout;
+    }
+}
+
+void EventWowMatch::AddPlayer(ObjectGuid guid)
+{
+    if (HasPlayer(guid))
+        return;
+
+    _players.push_back(guid);
+    _joining[guid] = sEventWowConfig.MatchLoadTimeout;
+}
+
+std::size_t EventWowMatch::GetFreeSlots() const
+{
+    return _players.size() < _game->MaxPlayers ? _game->MaxPlayers - _players.size() : 0;
 }
 
 bool EventWowMatch::TickTimer(Milliseconds diff)
@@ -83,6 +107,28 @@ void EventWowMatch::Update(Milliseconds diff)
 
     bool const expired = TickTimer(diff);
     UpdateRespawns(diff);
+
+    // Sesion abierta: quien no llega a tiempo queda fuera
+    if (!_joining.empty())
+    {
+        GuidVector late;
+        for (auto& [guid, remaining] : _joining)
+        {
+            if (remaining > diff)
+                remaining -= diff;
+            else
+                late.push_back(guid);
+        }
+
+        for (ObjectGuid const& guid : late)
+        {
+            _joining.erase(guid);
+            sEventWowMatchMgr.RemovePlayer(*this, guid, false);
+        }
+
+        if (_players.empty())
+            return;
+    }
 
     _disguiseTimer += diff;
     if (_disguiseTimer >= 1s)
@@ -173,8 +219,8 @@ Seconds EventWowMatch::GetEndDelay() const
 
 void EventWowMatch::HandlePlayerArrived(Player* player)
 {
-    if (_state == EventWowMatchState::Loading)
-        _arrived.insert(player->GetGUID());
+    _arrived.insert(player->GetGUID());
+    _joining.erase(player->GetGUID());
 
     SendState(player);
     SendHud(player);
@@ -472,6 +518,7 @@ void EventWowMatch::HandlePlayerLeft(ObjectGuid guid)
 
     _players.erase(itr);
     _arrived.erase(guid);
+    _joining.erase(guid);
     _results.erase(guid);
     _respawns.erase(guid);
     _picks.erase(guid);
@@ -507,14 +554,15 @@ void EventWowMatch::SendState(Player* player) const
         case EventWowMatchState::Loading:
             state = _arrived.count(player->GetGUID()) ? "WAITING" : "LOADING";
             break;
+        case EventWowMatchState::Running:
+            // Sesion abierta: quien aun no ha llegado esta cargando aunque la partida ya este en marcha
+            state = _joining.count(player->GetGUID()) ? "LOADING" : "RUNNING";
+            break;
         case EventWowMatchState::Picking:
             state = "PICKING";
             break;
         case EventWowMatchState::Countdown:
             state = "COUNTDOWN";
-            break;
-        case EventWowMatchState::Running:
-            state = "RUNNING";
             break;
         case EventWowMatchState::Ended:
             state = "ENDED";

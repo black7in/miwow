@@ -90,6 +90,12 @@
       "directory": "EventWowEspacio",
       "areaId": 5003,
       "source": "Planos/circuito_estelar.json"
+    },
+    {
+      "id": 754,
+      "directory": "EventWowParkour",
+      "areaId": 5004,
+      "source": "Planos/parkour_ascenso.json"
     }
   ]
 }

@@ -44,6 +44,10 @@ EVENTWOW_STR_PANEL_PARTY = "%s  ·  en grupo hasta %d";
 EVENTWOW_STR_PANEL_NO_PARTY = "%s  ·  sin grupos";
 EVENTWOW_STR_PANEL_SEARCH = "Buscar partida";
 EVENTWOW_STR_PANEL_SEARCH_GROUP = "Buscar partida en grupo (%d)";
+-- Sesion siempre abierta (p. ej. el parkour): se entra directamente, sin cola
+EVENTWOW_STR_PANEL_JOIN = "Entrar";
+EVENTWOW_STR_PANEL_JOIN_GROUP = "Entrar en grupo (%d)";
+EVENTWOW_STR_PANEL_OPEN_SESSION = "Sesión abierta (hasta %d)";
 EVENTWOW_STR_PANEL_NOT_LEADER = "Solo el líder busca partida";
 EVENTWOW_STR_PANEL_SOLO_ONLY = "Individual: sal del grupo";
 EVENTWOW_STR_PANEL_GROUP_TOO_BIG = "Grupo demasiado grande (máx. %d)";
@@ -78,6 +82,9 @@ local function EventWow_FindGame(id)
 end
 
 local function EventWow_PlayersText(game)
+	if ( game.openSession ) then
+		return format(EVENTWOW_STR_PANEL_OPEN_SESSION, game.maxPlayers or 1);
+	end
 	if ( (game.maxPlayers or 1) <= 1 ) then
 		return EVENTWOW_STR_PANEL_SOLO;
 	end
@@ -159,7 +166,9 @@ function EventWowPanel_UpdateDetail()
 		EventWowPanelSearchButton:Show();
 		-- En grupo busca el lider por todos (EventWowGroup.lua); el servidor lo vuelve a comprobar
 		local size = EventWowGroup_GetSize();
-		local text, enabled = EVENTWOW_STR_PANEL_SEARCH, hasGame and game.playable and EventWow_Protocol.connected;
+		local open = hasGame and game.openSession;
+		local text, enabled = open and EVENTWOW_STR_PANEL_JOIN or EVENTWOW_STR_PANEL_SEARCH,
+			hasGame and game.playable and EventWow_Protocol.connected;
 		if ( hasGame and not game.playable ) then
 			text = EVENTWOW_STR_PANEL_UNAVAILABLE;
 		elseif ( hasGame and size > 1 ) then
@@ -170,7 +179,7 @@ function EventWowPanel_UpdateDetail()
 			elseif ( size > game.maxPartySize ) then
 				text, enabled = format(EVENTWOW_STR_PANEL_GROUP_TOO_BIG, game.maxPartySize), false;
 			else
-				text = format(EVENTWOW_STR_PANEL_SEARCH_GROUP, size);
+				text = format(open and EVENTWOW_STR_PANEL_JOIN_GROUP or EVENTWOW_STR_PANEL_SEARCH_GROUP, size);
 			end
 		end
 		EventWowPanelSearchButton:SetText(text);

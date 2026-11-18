@@ -56,6 +56,7 @@ opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `Regi
 | `DECLINE` | id propuesta | "Rechazar" (tambien `LEAVE`, logout o cambio de grupo con propuesta pendiente) | `MATCH_FOUND_END` a todos (ver "Partida encontrada") |
 | `PICK` | id personaje | "Elegir" en la fase de eleccion (`MATCH_STATE PICKING`); definitiva | disfraz (`MATCH_CHARACTER`) + `MATCH_PICKS` a todos, o `ERROR PICK_TAKEN/PICK_INVALID`. v7 |
 | `UPGRADE` | casilla 0..n-1 / `attr` | "+" de una habilidad o de Atributos (progresion de heroe, `EventWowProgress`) | `MATCH_ABILITIES` si se pudo; si no (sin puntos, nivel insuficiente, rango maximo), nada. v8 |
+| `PARKOUR_RESTART` | - | "Reiniciar" en el parkour | vuelta a la salida, cronometro a cero: `PARKOUR_EVENT RESTART` + `PARKOUR`. v12 |
 
 ### Servidor -> cliente
 
@@ -63,7 +64,7 @@ opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `Regi
 |---|---|---|
 | `WELCOME` | version, rango (0 jugador, 1 GM) | handshake correcto |
 | `ERROR` | codigo, detalle... | textos en `EVENTWOW_ERROR_TEXTS` (EventWowProtocol.lua); `UNKNOWN_OP <op>` |
-| `GAMES` | n, luego n x (id, icono, min, max, nombre, descripcion, jugable 0/1, grupo max, casillas) | catalogo de minijuegos (no jugable = maqueta, "Proximamente"; casillas = inventario de partida, 0 = sin objetos; v6) |
+| `GAMES` | n, luego n x (id, icono, min, max, nombre, descripcion, jugable 0/1, grupo max, casillas, sesion abierta 0/1) | catalogo de minijuegos (no jugable = maqueta, "Proximamente"; casillas = inventario de partida, 0 = sin objetos; v6. v12: sesion abierta = sin cola, el panel dice "Entrar" y se entra directo en una partida en marcha con hueco) |
 | `CHAT` | unix time, rango, nombre, texto | chat global; al conectar llegan los ultimos 50 (historial) |
 | `ONLINE` | n | jugadores conectados (cada vez que alguien conecta/desconecta) |
 | `QUEUE_STATUS` | `QUEUED` id segundos jugadores-de-la-entrada / `NONE` | estado de la cola (tambien al conectar) |
@@ -82,6 +83,10 @@ opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `Regi
 | `RACE` | vuelta, vueltas, posicion, corredores, ms carrera, ms vuelta actual, ms mejor vuelta, contraria 0/1, terminado 0/1 | marcador de la carrera, cada 500 ms a cada corredor; el cliente hace avanzar el reloj entre mensajes. v9 |
 | `RACE_EVENT` | `LAP` vuelta ms / `FINAL_LAP` / `FELL` / `FINISH` posicion ms / `WINNER` nombre segundos / `ITEM` hechizo hueco / `HIT` hechizo / `BLOCK` / `MOUNT` | avisos: nueva vuelta, ultima vuelta, caida (vuelve al ultimo punto bueno, quieto 2 s), has llegado, alguien ha ganado (quedan N s). v9. v10: poder recogido (hasta 5 acumulados, huecos 1-5 de la barra de la moto), golpe recibido (derrape/frenado), el escudo ha parado un golpe. v11: "¡Todos a sus motos!" (cuenta atras: llegan a pie y se montan a la vez) |
 | `RACE_RESULTS` | final 0/1, n, luego n x (posicion, nombre, ms total / 0 = sin terminar, ms mejor vuelta) | clasificacion: provisional cada vez que alguien llega (el cliente la muestra si ya has llegado), final al acabar (con boton "Salir al lobby" = `ABANDON`). v9 |
+| `PARKOUR_INFO` | n, nombres de las n secciones | empieza el parkour (`EventWowGameParkour`, juego `parkour`, sesion abierta): al llegar a la instancia. v12 |
+| `PARKOUR` | seccion 1..n, caidas, ms, estado (0 en la salida, 1 corriendo, 2 en la meta), ms mejor (0 = ninguno) | marcador personal: al cambiar algo y cada 10 s; el cliente hace avanzar el reloj si estado = 1. v12 |
+| `PARKOUR_EVENT` | `CHECKPOINT` seccion / `FALL` / `FINISH` ms record 0/1 / `PLAYER_FINISH` nombre ms / `RESTART` | avisos: punto de control, caida (vuelta al ultimo punto de control), has llegado a la cima, otro jugador de la sesion ha llegado, reinicio. v12 |
+| `PARKOUR_RANK` | n, luego n x (nombre, ms) | mejores tiempos de la sesion (hasta 10; se pierden al cerrarse la sesion). v12 |
 | `DEV_MODE` | 0/1 | modo dev (`.gm on` o `.dev on`; se comprueba cada 250 ms). Al conectar y en cada cambio. En modo dev el cliente permite ocultar el panel (solo cliente) |
 
 ## Susurros y canales (fuera del protocolo)

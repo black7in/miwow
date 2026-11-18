@@ -184,6 +184,13 @@ bool EventWowMatchMgr::Enqueue(Player* player, EventWowGameInfo const& game)
     for (Player* member : members)
         Dequeue(member);
 
+    // Sesion abierta: sin cola, directamente a una partida en marcha
+    if (game.OpenSession)
+    {
+        JoinOpenSession(game, members);
+        return true;
+    }
+
     QueueEntry entry;
     entry.Since = GameTime::GetGameTime();
     for (Player* member : members)
@@ -585,7 +592,7 @@ void EventWowMatchMgr::UpdateQueues()
 
 // Partidas --------------------------------------------------------------------------------------
 
-void EventWowMatchMgr::CreateMatch(EventWowGameInfo const& game, GuidVector players)
+EventWowMatch* EventWowMatchMgr::CreateMatch(EventWowGameInfo const& game, GuidVector players)
 {
     std::unique_ptr<EventWowMatch> match = game.Factory();
     uint32 const instanceId = sMapMgr->GenerateInstanceId();
@@ -601,7 +608,7 @@ void EventWowMatchMgr::CreateMatch(EventWowGameInfo const& game, GuidVector play
                 EventWowMessage("ERROR").Add("MATCH_CREATE_FAILED").Send(player);
             }
         }
-        return;
+        return nullptr;
     }
 
     uint32 const matchId = _nextMatchId++;
@@ -618,34 +625,74 @@ void EventWowMatchMgr::CreateMatch(EventWowGameInfo const& game, GuidVector play
 
     for (ObjectGuid const& guid : players)
     {
-        Player* player = ObjectAccessor::FindConnectedPlayer(guid);
-        if (!player)
-        {
+        if (Player* player = ObjectAccessor::FindConnectedPlayer(guid))
+            SendToMatch(ref, player);
+        else
             ref.HandlePlayerLeft(guid);
+    }
+
+    return &ref;
+}
+
+void EventWowMatchMgr::SendToMatch(EventWowMatch& match, Player* player)
+{
+    player->CustomData.Erase(QueueKey);
+    SendQueueStatus(player);
+
+    EventWowGameInfo const& game = match.GetGame();
+    MatchSlot* slot = player->CustomData.GetDefault<MatchSlot>(MatchKey);
+    slot->MatchId = match.GetId();
+    slot->MapId = game.MapId;
+    slot->InstanceId = match.GetInstanceId();
+    slot->Arrived = false;
+
+    // La instancia es de dificultad normal; TELE_TO_GM_MODE salta PlayerCannotEnter (banda sin grupo,
+    // requisitos de acceso, limite de instancias por hora). InstanceMap::CannotEnter lo decide nuestro hook.
+    player->SetDungeonDifficulty(DUNGEON_DIFFICULTY_NORMAL);
+    match.SendState(player);
+    Position const arrival = match.ArrivalPositionFor(player);
+    if (!player->TeleportTo(game.MapId, arrival.GetPositionX(), arrival.GetPositionY(),
+        arrival.GetPositionZ(), arrival.GetOrientation(), TELE_TO_GM_MODE))
+    {
+        LOG_ERROR("module.eventwow", "EventWow: no se pudo teleportar a {} a la partida {}", player->GetName(),
+            match.GetId());
+        RemovePlayer(match, player->GetGUID(), false);
+        EventWowMessage("ERROR").Add("MATCH_TELEPORT_FAILED").Send(player);
+    }
+}
+
+void EventWowMatchMgr::JoinOpenSession(EventWowGameInfo const& game, std::vector<Player*> const& members)
+{
+    // La sesion en marcha del juego con hueco para todos (la mas llena: asi se juntan los jugadores)
+    EventWowMatch* best = nullptr;
+    for (auto const& [id, match] : _matches)
+    {
+        if (&match->GetGame() != &game || match->GetState() != EventWowMatchState::Running)
             continue;
-        }
 
-        player->CustomData.Erase(QueueKey);
-        SendQueueStatus(player);
+        if (match->GetFreeSlots() < members.size())
+            continue;
 
-        MatchSlot* slot = player->CustomData.GetDefault<MatchSlot>(MatchKey);
-        slot->MatchId = matchId;
-        slot->MapId = game.MapId;
-        slot->InstanceId = instanceId;
-        slot->Arrived = false;
+        if (!best || match->GetPlayers().size() > best->GetPlayers().size())
+            best = match.get();
+    }
 
-        // La instancia es de dificultad normal; TELE_TO_GM_MODE salta PlayerCannotEnter (banda sin grupo,
-        // requisitos de acceso, limite de instancias por hora). InstanceMap::CannotEnter lo decide nuestro hook.
-        player->SetDungeonDifficulty(DUNGEON_DIFFICULTY_NORMAL);
-        ref.SendState(player);
-        Position const arrival = ref.ArrivalPositionFor(player);
-        if (!player->TeleportTo(game.MapId, arrival.GetPositionX(), arrival.GetPositionY(),
-            arrival.GetPositionZ(), arrival.GetOrientation(), TELE_TO_GM_MODE))
-        {
-            LOG_ERROR("module.eventwow", "EventWow: no se pudo teleportar a {} a la partida {}", player->GetName(), matchId);
-            RemovePlayer(ref, guid, false);
-            EventWowMessage("ERROR").Add("MATCH_TELEPORT_FAILED").Send(player);
-        }
+    if (!best)
+    {
+        GuidVector players;
+        for (Player* member : members)
+            players.push_back(member->GetGUID());
+
+        CreateMatch(game, std::move(players));
+        return;
+    }
+
+    LOG_INFO("module.eventwow", "EventWow: {} jugador(es) entran en la partida {} de '{}' ({} dentro)",
+        members.size(), best->GetId(), game.Id, best->GetPlayers().size());
+    for (Player* member : members)
+    {
+        best->AddPlayer(member->GetGUID());
+        SendToMatch(*best, member);
     }
 }
 

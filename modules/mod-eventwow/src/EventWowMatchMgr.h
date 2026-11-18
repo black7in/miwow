@@ -28,6 +28,8 @@ class Group;
 //    EventWow.Queue.AcceptTimeout. Si todos aceptan se crea la partida. Si alguien rechaza (o cancela, se
 //    desconecta, cambia su grupo) o no acepta a tiempo, se cancela: su entrada sale de la cola y el resto
 //    vuelve a ella automaticamente con su antiguedad.
+//  - Juegos de sesion abierta (EventWowGameInfo::OpenSession, p. ej. el parkour): sin cola ni confirmacion, se entra
+//    directamente en una partida en marcha con hueco (el grupo entero en la misma) o en una nueva.
 //  - Cada partida tiene su propia instancia de un mapa de mazmorra: el modulo crea el InstanceSave y los
 //    hooks del core OnPlayerOverrideInstanceDestination / OnPlayerOverrideInstanceEnter mandan ahi a sus
 //    jugadores sin grupos ni binds, sin limite de jugadores del mapa, y no dejan entrar a nadie mas (salvo GMs).
@@ -96,7 +98,12 @@ private:
     // miembros, con el nombre de culprit); el resto vuelve a la cola
     void FailProposal(uint32 proposalId, GuidSet const& failed, char const* reason, std::string const& culprit);
     Proposal* GetProposal(Player const* player);
-    void CreateMatch(EventWowGameInfo const& game, GuidVector players);
+    // Crea la partida y manda a sus jugadores. Devuelve la partida (nullptr si no se pudo crear)
+    EventWowMatch* CreateMatch(EventWowGameInfo const& game, GuidVector players);
+    // Prepara al jugador (sale de la cola, MatchSlot) y lo teleporta a la instancia de la partida
+    void SendToMatch(EventWowMatch& match, Player* player);
+    // Sesion abierta (EventWowGameInfo::OpenSession): a una partida en marcha con hueco, o a una nueva
+    void JoinOpenSession(EventWowGameInfo const& game, std::vector<Player*> const& members);
     void CloseMatch(uint32 matchId);
     bool IsMatchInstance(uint32 instanceId) const;
 

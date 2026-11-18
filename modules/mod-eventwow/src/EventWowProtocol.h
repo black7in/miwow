@@ -27,7 +27,7 @@ class Player;
 namespace EventWowProtocol
 {
     constexpr std::string_view Prefix = "EWOW";
-    constexpr uint32 Version = 11;
+    constexpr uint32 Version = 12;
 
     // Campos del mensaje sin el opcode. Apuntan al mensaje recibido: solo validos durante la llamada.
     using Args = std::vector<std::string_view>;

@@ -8,7 +8,7 @@
 
 EVENTWOW_PROTOCOL = {
 	PREFIX = "EWOW",
-	VERSION = 11,
+	VERSION = 12,
 	-- 255 (limite del core) - "EWOW\t" - flag, con margen
 	MAX_CHUNK = 240,
 	DEBUG = true,
@@ -51,7 +51,8 @@ EventWow_Protocol = {
 	helloSent = false,
 	connected = false,
 	isGM = false,
-	-- Catalogo recibido (GAMES): { id, icon, minPlayers, maxPlayers, name, description, playable, maxPartySize, inventorySlots }
+	-- Catalogo recibido (GAMES): { id, icon, minPlayers, maxPlayers, name, description, playable, maxPartySize, inventorySlots,
+	--   openSession }
 	games = {},
 };
 
@@ -187,12 +188,12 @@ EventWow_RegisterHandler("ERROR", function(fields)
 	UIErrorsFrame:AddMessage(text, 1, 0.2, 0.2, 1.0);
 end);
 
--- GAMES <n> (<id> <icono> <min> <max> <nombre> <descripcion> <jugable 0/1> <grupo max> <casillas>) x n
+-- GAMES <n> (<id> <icono> <min> <max> <nombre> <descripcion> <jugable 0/1> <grupo max> <casillas> <sesion abierta 0/1>) x n
 EventWow_RegisterHandler("GAMES", function(fields)
 	local count = tonumber(fields[1]) or 0;
 	local games = {};
 	for i = 1, count do
-		local base = 1 + (i - 1) * 9;
+		local base = 1 + (i - 1) * 10;
 		tinsert(games, {
 			id = fields[base + 1],
 			icon = fields[base + 2],
@@ -203,6 +204,7 @@ EventWow_RegisterHandler("GAMES", function(fields)
 			playable = fields[base + 7] == "1",
 			maxPartySize = tonumber(fields[base + 8]) or 1,
 			inventorySlots = tonumber(fields[base + 9]) or 0,
+			openSession = fields[base + 10] == "1",
 		});
 	end
 	EventWow_Protocol.games = games;

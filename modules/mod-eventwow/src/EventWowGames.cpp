@@ -67,7 +67,8 @@ void EventWowGames::Validate()
 
 namespace
 {
-    // GAMES <n> (<id> <icono> <min> <max> <nombre> <descripcion> <jugable 0/1> <grupo max> <casillas>) x n
+    // GAMES <n> (<id> <icono> <min> <max> <nombre> <descripcion> <jugable 0/1> <grupo max> <casillas> <sesion abierta 0/1>)
+    //   x n
     void SendGameList(Player* player)
     {
         auto const& games = sEventWowGames.GetAll();
@@ -77,7 +78,7 @@ namespace
         for (EventWowGameInfo const& game : games)
             message.Add(game.Id).Add(game.Icon).Add(game.MinPlayers).Add(game.MaxPlayers)
                 .Add(game.Name).Add(game.Description).Add(game.IsPlayable() ? 1 : 0).Add(game.MaxPartySize)
-                .Add(game.InventorySlots);
+                .Add(game.InventorySlots).Add(game.OpenSession ? 1 : 0);
 
         message.Send(player);
     }

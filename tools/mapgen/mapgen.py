@@ -26,6 +26,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import parkourgen               # noqa: E402
 import platformgen              # noqa: E402
 import trackgen                 # noqa: E402
 import vmaps                    # noqa: E402
@@ -1020,7 +1021,19 @@ def main():
             with open(source, encoding='utf-8') as f:
                 plan_type = json.load(f).get('type', 'track')
         track = plan_type is not None
-        if plan_type == 'platforms':
+        if plan_type == 'parkour':
+            # Recorrido de saltos con modelos M2 sobre el vacio, por secciones (parkourgen.py)
+            conv = parkourgen.ParkourConverter(info, source, args.wow_data)
+            for line in conv.summary():
+                print(line)
+            if args.preview:
+                os.makedirs(args.preview, exist_ok=True)
+                conv.preview(os.path.join(args.preview, '%s_plano.png' % directory))
+                print('  Vista previa: %s' % args.preview)
+            if args.server:
+                write(os.path.join(args.server, 'maps', '%03d_parkour.txt' % info['id']),
+                      conv.parkour_lines().encode('utf-8'))
+        elif plan_type == 'platforms':
             # Pista de piezas M2 sobre el vacio, sin terreno (platformgen.py)
             conv = platformgen.PlatformConverter(info, source, args.wow_data)
             for line in conv.summary():

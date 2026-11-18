@@ -154,6 +154,7 @@ EventWowSocial.lua
 EventWowPanel.lua
 EventWowMatch.lua
 EventWowRace.lua
+EventWowParkour.lua
 EventWowPick.lua
 EventWowAbilities.lua
 EventWowStats.lua

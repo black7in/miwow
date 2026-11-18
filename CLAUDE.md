@@ -404,6 +404,12 @@ Datos clave de la API Glue:
       con la moto cayendo (posicion del vehiculo, ventana de busqueda, `Frozen`).
     - Despues (sin fecha): placas con otro modelo (el usuario buscara uno, quiza flechas propias); fase 3 trampas;
       fase 4 modo "carrera de la muerte"; montaje con retraso desde `Update` sin resolver (ver arriba).
+- **Parkour (juego `parkour`, mapa 754 "Ascenso"): PAUSADO el 2026-11-18**. Estado completo, decisiones, historial
+  de pruebas y pendientes en **`docs/parkour-estado.md`** (leerlo al reanudar). Resumen: sesion siempre abierta
+  (sin cola, "Entrar"; `EventWowGameInfo::OpenSession`), cielo e islas de Nagrand, ruta generada por
+  `tools/mapgen/parkourgen.py` con tramos (subidas de sillas, bajadas, zigzag, callejones sin salida). El escenario
+  gusta; la ruta la ultima vez fue "regular" (preguntar que mejorar). Falta: interactivos, efectos, ranking guardado.
+  Herramientas reutilizables: `tools/mapgen/catalog.py` (cara pisable de los M2) y WMO en los ADT (MODF, solo cliente).
 - Mapas propios desde Warcraft 3 (ver `docs/mapas.md`). Decision del usuario: los mapas los disena el (y un amigo) en
   el World Editor de WC3 1.26 (no usa Noggit) y se convierten. Diseno PROPIO: no se replican mapas de terceros
   (p. ej. X Hero Siege); el usuario y su amigo hicieron uno inspirado en el genero.

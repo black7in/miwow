@@ -55,6 +55,11 @@ public:
 
     // --- Usado por EventWowMatchMgr ---
     void Init(uint32 id, EventWowGameInfo const* game, uint32 instanceId, GuidVector players);
+    // Sesion abierta (EventWowGameInfo::OpenSession): un jugador mas en camino a la partida ya en marcha. Si no llega
+    // en EventWow.Match.LoadTimeout, queda fuera.
+    void AddPlayer(ObjectGuid guid);
+    // Plazas libres (sesion abierta)
+    std::size_t GetFreeSlots() const;
     void Update(Milliseconds diff);
     void HandlePlayerArrived(Player* player);
     Position ArrivalPositionFor(Player* player) { return GetArrivalPosition(player); }
@@ -178,6 +183,8 @@ private:
     Milliseconds _disguiseTimer = 0ms;
     // Efectos de las casillas de inventario (EventWowInventory), cada 250 ms
     Milliseconds _inventoryTimer = 0ms;
+    // Sesion abierta: jugadores en camino -> tiempo que les queda para llegar
+    std::unordered_map<ObjectGuid, Milliseconds> _joining;
 };
 
 #endif

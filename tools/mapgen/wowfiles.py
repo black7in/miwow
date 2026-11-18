@@ -85,6 +85,8 @@ class TileData:
         self.holes = {}         # (cr, cc) -> agujeros del MCNK (16 bits, 4x4 de 2x2 celdas; 0xFFFF = sin terreno)
         self.models = []        # rutas M2 (MMDX)
         self.doodads = []       # Doodad: colocaciones (MDDF), incluidas las de modelos que solo rozan este ADT
+        self.wmo_names = []     # rutas WMO (MWMO)
+        self.wmos = []          # MapObject: colocaciones de WMO (MODF); solo cliente (los vmaps no los incluyen)
 
 
 class Doodad:
@@ -107,6 +109,22 @@ class Doodad:
         yaw = (np.degrees(self.angle) - 180.0) % 360.0
         return struct.pack('<II3f3fHH', self.model, self.unique_id, ZERO - self.y, self.z, ZERO - self.x,
                            self.rot_x, yaw, self.rot_z, int(round(self.scale * 1024)), 0)
+
+
+class MapObject:
+    """WMO colocado (sin escala en 3.3.5). x, y, z del mundo; angle como Doodad; radius = radio de su caja (para
+    la caja de MODF y para saber que chunks toca)."""
+
+    def __init__(self, name, unique_id, x, y, z, angle, radius):
+        self.name, self.unique_id = name, unique_id
+        self.x, self.y, self.z, self.angle, self.radius = x, y, z, angle, radius
+
+    def modf(self):
+        yaw = (np.degrees(self.angle) - 180.0) % 360.0
+        px, py, pz = ZERO - self.y, self.z, ZERO - self.x       # coordenadas de colocacion, como MDDF
+        r = self.radius
+        return struct.pack('<II3f3f3f3fHHHH', self.name, self.unique_id, px, py, pz, 0.0, yaw, 0.0,
+                           px - r, py - r, pz - r, px + r, py + r, pz + r, 0, 0, 0, 0)
 
 
 def _mh2o(tile):
@@ -173,7 +191,9 @@ def _mcnk(tile, cr, cc):
     cx0, cy0 = cx0 - cr * CHUNK, cy0 - cc * CHUNK
     refs = [i for i, d in enumerate(tile.doodads)
             if cx0 - CHUNK - d.radius <= d.x <= cx0 + d.radius and cy0 - CHUNK - d.radius <= d.y <= cy0 + d.radius]
-    mcrf = struct.pack('<%dI' % len(refs), *refs)
+    wrefs = [i for i, w in enumerate(tile.wmos)
+             if cx0 - CHUNK - w.radius <= w.x <= cx0 + w.radius and cy0 - CHUNK - w.radius <= w.y <= cy0 + w.radius]
+    mcrf = struct.pack('<%dI' % (len(refs) + len(wrefs)), *(refs + wrefs))     # modelos y luego WMO
 
     sub = bytearray()
     offsets = {}
@@ -189,7 +209,7 @@ def _mcnk(tile, cr, cc):
         0x8000, cc, cr, len(layers), len(refs),
         offsets['MCVT'], offsets['MCNR'], offsets['MCLY'], offsets['MCRF'], offsets['MCAL'], 8 + len(mcal),
         0, 0,                       # MCSH
-        tile.area_id, 0, tile.holes.get((cr, cc), 0),     # area, objetos de mapa, agujeros
+        tile.area_id, len(wrefs), tile.holes.get((cr, cc), 0),     # area, WMO referenciados, agujeros
         0, 0, 0, 0,                 # textura de baja calidad
         0, 0, offsets['MCSE'], 0, 0, 0,
         x - cr * CHUNK, y - cc * CHUNK, base,
@@ -206,8 +226,15 @@ def build_adt(tile):
     for name in tile.models:
         mmid.append(len(mmdx))
         mmdx += name.encode('ascii') + b'\0'
-    empties = [chunk('MMDX', mmdx), chunk('MMID', struct.pack('<%dI' % len(mmid), *mmid)), chunk('MWMO'),
-               chunk('MWID'), chunk('MDDF', b''.join(d.mddf() for d in tile.doodads)), chunk('MODF')]
+    mwmo = b''
+    mwid = []
+    for name in tile.wmo_names:
+        mwid.append(len(mwmo))
+        mwmo += name.encode('ascii') + b'\0'
+    empties = [chunk('MMDX', mmdx), chunk('MMID', struct.pack('<%dI' % len(mmid), *mmid)), chunk('MWMO', mwmo),
+               chunk('MWID', struct.pack('<%dI' % len(mwid), *mwid)),
+               chunk('MDDF', b''.join(d.mddf() for d in tile.doodads)),
+               chunk('MODF', b''.join(w.modf() for w in tile.wmos))]
     mh2o = chunk('MH2O', _mh2o(tile)) if tile.water.any() else b''
     mcnks = [_mcnk(tile, cr, cc) for cr in range(16) for cc in range(16)]
 

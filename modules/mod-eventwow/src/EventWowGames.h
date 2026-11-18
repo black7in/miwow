@@ -32,6 +32,11 @@ struct EventWowGameInfo
     // puntos para sus habilidades. 0 = sin niveles (el personaje lleva el rango 1 de todo). XpRate multiplica la XP.
     uint8 MaxLevel = 0;
     float XpRate = 1.0f;
+    // Sesion siempre abierta (p. ej. el parkour): sin cola ni confirmacion; al buscar partida se entra directamente
+    // en una partida del juego que ya este en marcha con hueco (MaxPlayers = maximo por instancia) o se crea una.
+    // La partida empieza ya en Running (sin carga comun, eleccion ni cuenta atras: no hay OnStart), cada jugador
+    // entra y sale cuando quiere (OnPlayerArrived / OnPlayerLeft) y se cierra cuando no queda nadie.
+    bool OpenSession = false;
 
     // Partida: mapa de mazmorra/banda (con instance_template) donde se crea una instancia por partida,
     // punto de aparicion y factoria de la clase del minijuego (EventWowMatch.h).
