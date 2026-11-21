@@ -1,0 +1,26 @@
+# /etc/systemd/system/wow-web.service
+#   sudo systemctl daemon-reload && sudo systemctl enable --now wow-web
+#   journalctl -u wow-web -f        (logs; journald ya los rota)
+[Unit]
+Description=Cliente web WoW 3.3.5a (servidor de archivos + proxy WS->TCP)
+After=network.target
+
+[Service]
+Type=simple
+User=wow
+WorkingDirectory=/srv/wow/servidor
+Environment=NODE_ENV=production
+Environment=CONFIG=/srv/wow/servidor/config.json
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=3
+# Endurecimiento básico
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/srv/wow/userdata /srv/wow/servidor
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

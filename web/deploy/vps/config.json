@@ -1,0 +1,18 @@
+{
+  "host": "127.0.0.1",
+  "port": 8080,
+  "locale": "esES",
+  "realmlist": "127.0.0.1",
+  "tcpRoutes": { "3724": "127.0.0.1", "8085": "127.0.0.1" },
+  "webDir": "/srv/wow/web",
+  "theirManifest": "/srv/wow/web/game-manifest.txt",
+  "gameIndex": "/srv/wow/servidor/game-index.txt",
+  "clientDir": "/srv/wow/cliente",
+  "userDir": "/srv/wow/userdata",
+  "trustProxy": true,
+  "basicAuth": "pruebas:CAMBIA-ESTA-CLAVE",
+  "maxWsPerIp": 6,
+  "wsIdleTimeoutSec": 900,
+  "maxUserdataMB": 20,
+  "logRequests": false
+}

@@ -29,3 +29,24 @@ desktop.ini
 # Temporales de tools/mapgen
 /tools/mapgen/_work/
 __pycache__/
+
+# Cliente web (ver docs/cliente-web.md)
+# Binarios de Last Havens (Wow.js/Wow.wasm/manifest): son suyos, se usan con permiso pero no se versionan
+/web/cliente/
+# Referencia de terceros: su APK y el Lua extraido del wasm (regenerable: node web/herramientas/extraer-lua.js)
+/web/referencia/lasthavens.apk
+/web/referencia/lua-lasthavens/
+# Estado local del servidor web: dependencias, datos de jugadores, secreto de cookies, config con claves
+/web/servidor/node_modules/
+/web/servidor/userdata/
+/web/servidor/.cookie-secret
+/web/servidor/config.json
+# Salidas de los scripts de despliegue
+/web/paquete/
+/web/deploy/logs/
+/web/deploy/worker/.wrangler/
+/web/deploy/worker/node_modules/
+# Credenciales de Cloudflare: NUNCA en el repo
+token*.txt
+# Plantilla del vhost de Apache del VPS de pruebas (no tiene datos secretos)
+!/web/deploy/vps-pruebas/juego.conf

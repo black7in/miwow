@@ -1,0 +1,15 @@
+name = "wotlk-web"
+main = "src/index.js"
+compatibility_date = "2025-06-01"
+workers_dev = true
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "wotlk-cliente"
+
+[vars]
+# Cambialo cada vez que reinicies el tunel rapido (cloudflared tunnel --url ...)
+ORIGIN = "https://CAMBIAR.trycloudflare.com"
+LOCALE = "esES"
+
+# BASIC_AUTH va como secreto:  npx wrangler secret put BASIC_AUTH   ->  usuario:clave

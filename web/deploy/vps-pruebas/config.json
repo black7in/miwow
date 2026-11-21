@@ -1,0 +1,18 @@
+{
+  "host": "127.0.0.1",
+  "port": 8080,
+  "clientDir": "/opt/miwow-juego/cliente",
+  "gameIndex": "",
+  "locale": "esES",
+  "realmlist": "127.0.0.1",
+  "tcpRoutes": { "3724": "127.0.0.1:3725", "8086": "127.0.0.1" },
+  "webDir": "/opt/miwow-juego/cliente-web",
+  "theirManifest": "/opt/miwow-juego/cliente-web/game-manifest.txt",
+  "userDir": "/opt/miwow-juego/userdata",
+  "trustProxy": true,
+  "basicAuth": "pruebas:CAMBIA-ESTA-CLAVE",
+  "maxWsPerIp": 6,
+  "wsIdleTimeoutSec": 900,
+  "maxUserdataMB": 20,
+  "logRequests": false
+}

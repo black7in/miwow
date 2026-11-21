@@ -1,0 +1,25 @@
+# /etc/systemd/system/miwow-juego.service  (VPS de pruebas, ver docs/despliegue-vps-pruebas.md)
+#   sudo systemctl daemon-reload && sudo systemctl enable --now miwow-juego
+#   journalctl -u miwow-juego -f
+[Unit]
+Description=MiWoW cliente web (archivos del juego + proxy WebSocket->TCP)
+After=network.target
+
+[Service]
+Type=simple
+User=miwow
+WorkingDirectory=/opt/miwow-juego/servidor
+Environment=NODE_ENV=production
+Environment=CONFIG=/opt/miwow-juego/servidor/config.json
+ExecStart=/usr/local/bin/node server.js
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/miwow-juego/userdata /opt/miwow-juego/servidor
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

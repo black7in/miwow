@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MiWoW</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/favicon.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="theme-color" content="#111014">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; color: #ffd100; font: 14px Georgia, serif; }
+  #canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; outline: none; }
+  #loading { position: fixed; left: 0; right: 0; top: 40%; text-align: center; pointer-events: none; }
+  #status { margin-top: 8px; color: #ccc; font-size: 12px; }
+  #wow-text { position: fixed; left: -9999px; top: 0; opacity: 0; }
+  #safe { position: fixed; inset: 0; pointer-events: none; }
+  #log { position: fixed; left: 4px; bottom: 4px; max-width: 60vw; max-height: 30vh; overflow: auto; font: 11px monospace; color: #8f8; background: #0008; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div id="safe"></div>
+<canvas id="canvas" tabindex="-1" oncontextmenu="event.preventDefault()"></canvas>
+<input id="wow-text" type="text" autocomplete="off" autocapitalize="off" spellcheck="false">
+<div id="loading">Cargando cliente…<div id="status"></div></div>
+<div id="log"></div>
+<script>
+  if (!crossOriginIsolated) document.getElementById('loading').textContent = 'ERROR: la página no está aislada (falta COOP/COEP), no habrá hilos.';
+  // Límite de memoria del WASM. Sin esto pide hasta 4 GB y Firefox puede fallar
+  // con "out of memory" (sobre todo tras varias recargas).
+  window.wowMemoryMB = 2048;
+  // Modo táctil: el cliente pregunta "window.wowTouch" (su página /play lo pone).
+  // Automático en pantallas táctiles; forzar con ?touch=1 o desactivar con ?touch=0.
+  const touchParam = new URLSearchParams(location.search).get('touch');
+  window.wowTouch = touchParam !== null
+    ? touchParam === '1'
+    : matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+  const logEl = document.getElementById('log');
+  const show = (t) => { logEl.textContent += t + '\n'; logEl.scrollTop = 1e9; };
+  var Module = {
+    canvas: document.getElementById('canvas'),
+    locateFile: (p) => '/' + p,
+    print: (t) => { console.log(t); show(t); },
+    printErr: (t) => { console.warn(t); show('! ' + t); },
+    setStatus: (t) => { document.getElementById('status').textContent = t; },
+    onRuntimeInitialized: () => { document.getElementById('loading').style.display = 'none'; },
+    onAbort: (w) => { show('ABORT: ' + w); },
+  };
+  window.addEventListener('error', (e) => show('JS error: ' + e.message));
+</script>
+<script src="/Wow.js"></script>
+</body>
+</html>

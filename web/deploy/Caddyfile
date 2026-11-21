@@ -1,0 +1,16 @@
+# Caddy pone HTTPS automático (Let's Encrypt). Cambia el dominio.
+# Instalar: https://caddyserver.com/docs/install  ->  /etc/caddy/Caddyfile  ->  systemctl reload caddy
+wow.tudominio.com {
+	encode zstd gzip {
+		match {
+			header Content-Type text/*
+			header Content-Type application/javascript*
+			header Content-Type application/wasm
+			header Content-Type application/json*
+		}
+	}
+	reverse_proxy 127.0.0.1:8080 {
+		# WebSocket funciona solo; X-Forwarded-For/Proto se envían por defecto
+		flush_interval -1
+	}
+}

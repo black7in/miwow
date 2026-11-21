@@ -155,6 +155,25 @@ en cada minijuego se le da modelo, hechizos y stats temporales.
 > - CONTENIDO DE PRUEBA en el SQL world: misiones 9500000-9500003 (sin objetivos, QuestSortID -400),
 >   premios (bolsas) y tienda (5 bolsas/tabardo).
 
+> **Cliente web y movil (2026-11-21, decision del usuario: integrarlo en el proyecto)**: cliente 3.3.5a en wasm de Last
+> Havens (permiso verbal, sin fuentes) + nuestro backend, todo traido de `D:\EmulacionWow\ExplorandoCliente` a `web/`
+> (esa carpeta ya NO se usa; su `token-cloudflareR2.txt` NUNCA se lee ni se copia). Documentacion: `docs/cliente-web.md`.
+> - `web/cliente/` (binarios suyos) y `web/referencia/` (APK, Lua extraido) no versionados. `extraer-lua.js` vuelca su Lua.
+>   Deploy en `web/deploy/` (R2, tunel, VPS, Worker).
+> - **Regla del usuario: el cliente web = el de PC.** Glue ORIGINAL en ambos y nada de Last Havens a la vista;
+>   lo nuestro (login propio futuro incluido) va en `patch-4.MPQ`, que cargan los dos. `parchear.js` desactiva su login,
+>   seleccion/creacion tactiles, catalogo de addons, FAQ, encuestas, creadores, "Go in now", canal world, Discord
+>   (`do return end` en la primera sentencia del tramo). SIN PROBAR en el navegador (2026-11-21).
+> - **VPS de pruebas** (`ssh MiWow`, sudo; `docs/despliegue-vps-pruebas.md`): Apache + certbot, web Astro en
+>   `miwow.duckdns.org`, cliente web en `https://juego.miwow.duckdns.org/play` (`miwow-juego.service`, `/opt/miwow-juego`,
+>   MPQ del disco, sin R2), publicar con `web\deploy\publicar-vps.ps1 [-Parche]`. COMPARTIDO con `wow-arcano.com` y SU
+>   AzerothCore (3724/8085): no tocarlos; el nuestro ira en 3725/8086 con BD propias (`tcpRoutes` traduce 3724 -> 3725).
+> - El wasm carga interfaz modificada (`signature check OFF`). Solo lee MPQ EMPAQUETADOS (la carpeta `patch-4.MPQ` no:
+>   comprobado por el usuario; lo empaqueta el a mano). El tamano del MPQ debe cambiar en cada version (cache por tamano).
+> - Su Lua tactil va incrustado (no sale de `FrameXML.toc`: convive con el nuestro) y solo actua con `webTouch`/mando;
+>   en tactil toca `VehicleMenuBar`, barras, `UIParent:SetScale`... -> pendiente adaptar `MiWow.lua` (modo partida) y
+>   las ventanas al modo tactil. Pendiente: primera prueba de nuestro parche en el navegador, Warden, texturas TouchUI.
+
 ## Estructura
 
 ```
@@ -181,6 +200,7 @@ EventWow/                     repo (la carpeta conserva el nombre antiguo; el se
   Maps/
     maps.json                 lista de mapas propios (id, carpeta, mapa de WC3 fuente, escala)
     Warcraft/                 mapas de Warcraft 3 (fuente, los hace el usuario en el World Editor 1.26)
+  web/                        cliente web/movil (wasm de Last Havens) + server.js + Worker/R2/VPS - ver docs/cliente-web.md
   tools/
     Merge-Interface.ps1       consolida Interface de los MPQ extraidos respetando el orden de carga
     Build-Patch.ps1           copia client/src -> client/patches/patch-4.MPQ (+ DBC con Build-Dbc.ps1 + mapas con mapgen)
