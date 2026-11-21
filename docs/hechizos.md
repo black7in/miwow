@@ -104,7 +104,7 @@ Encaja a medias con nosotros:
 ## 4. Propuesta: fichas de texto + generador
 
 **Fuente de verdad = archivos de texto en el repo**, uno por heroe (TOML: legible, admite comentarios; Python 3.13
-lo lee sin instalar nada), p. ej. `modules/mod-eventwow/data/spells/cruzado.toml`:
+lo lee sin instalar nada), p. ej. `modules/mod-miwow/data/spells/cruzado.toml`:
 
 ```toml
 [[spell]]
@@ -153,14 +153,14 @@ el codigo de AC (lista de efectos/auras/objetivos y que hace cada uno), la wiki 
 py -I tools/spellgen/spellgen.py dump 10308         ver como esta hecho un hechizo (campos != 0, con nombres)
 py -I tools/spellgen/spellgen.py find martillo      buscar hechizos por nombre (esES)
 py -I tools/spellgen/spellgen.py icon holy          buscar iconos
-py -I tools/spellgen/spellgen.py build              fichas -> data/sql/db-world/eventwow_spells_<ficha>.sql
+py -I tools/spellgen/spellgen.py build              fichas -> data/sql/db-world/miwow_spells_<ficha>.sql
 ```
 
 Despues de `build`: arrancar el worldserver (el updater aplica el SQL; lo reaplica si cambia) o aplicarlo a mano en
 la BD de desarrollo, y `Build-Patch` (lee `spell_dbc` de la BD) para el cliente. Reiniciar el worldserver para que
 el servidor cargue los cambios.
 
-Fichas en `modules/mod-eventwow/data/spells/*.toml`. Claves de `[[spell]]` (escalar = igual en todos los rangos,
+Fichas en `modules/mod-miwow/data/spells/*.toml`. Claves de `[[spell]]` (escalar = igual en todos los rangos,
 lista = una por rango):
 
 | Clave | Que es |
@@ -178,7 +178,7 @@ lista = una por rango):
 | `haste_periodic` | `SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC` (celeridad con hechizos en canalizados, DoT/HoT y lanzamiento de los `none`). Por defecto en todo hechizo no fisico canalizado, periodico o `none` con lanzamiento. OJO: acorta TODAS las auras del hechizo (tambien un aturdimiento/raiz que vaya en el mismo) |
 | `attributes[_ex..]`, `*_add`, `*_remove` | atributos: poner, anadir o quitar bits |
 | `coefficient`, `dot_coefficient`, `ap_coefficient`, `ap_dot_coefficient` | `spell_bonus_data` (<= 0 = calculo por defecto del core) |
-| `script` | SpellScript del modulo (`spell_script_names`), p. ej. `spell_eventwow_death_coil` (`EventWowHeroSpells.cpp`) |
+| `script` | SpellScript del modulo (`spell_script_names`), p. ej. `spell_miwow_death_coil` (`MiWowHeroSpells.cpp`) |
 | `[spell.fields]` | columnas sueltas de `spell_dbc` por nombre (p. ej. `ProcChance = 25`, `ProcCharges = 0`), escalar o lista por rango |
 | `[spell.effectN]` | `type` (SPELL_EFFECT_*, sin prefijo; NONE lo borra), `aura`, `value` o `min`/`max`, `target`, `target_b`, `radius`, `period`, `chain`, `misc`, `misc_b`, `trigger`, `mechanic`, `per_level` (se suma nivel x per_level; por defecto 0: los valores no escalan con el nivel) |
 

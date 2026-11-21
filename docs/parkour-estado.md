@@ -35,13 +35,13 @@ meta / clasificacion, "Reiniciar", dos jugadores en la misma sesion, que los res
     Resultado actual: 279 piezas + 56 en callejones, z 56..152.
   - Decoracion: WMO de islas de Nagrand (solo cliente: sin colision en el servidor; lejos de la ruta), rocas, luciernagas.
   - `tools/mapgen/catalog.py`: mide la cara pisable de todos los M2 del cliente (`_work/catalog.csv`) para elegir piezas.
-- **SQL** `modules/mod-eventwow/data/sql/db-world/2026_11_18_01_eventwow_map_parkour.sql`: mapa 754, zona 5004, luz
+- **SQL** `modules/mod-miwow/data/sql/db-world/2026_11_18_01_miwow_map_parkour.sql`: mapa 754, zona 5004, luz
   2601 (LightParams 396/491 = Nagrand), personaje 50 "Saltador" (gnomo, sin hechizos). Hechizo 9503000 "Caida
-  segura" (`data/spells/parkour.toml` -> `eventwow_spells_parkour.sql`).
-- **Servidor**: `games/EventWowGameParkour.cpp` (lee `754_parkour.txt`; caida = por debajo de la altura de caida de
+  segura" (`data/spells/parkour.toml` -> `miwow_spells_parkour.sql`).
+- **Servidor**: `games/MiWowGameParkour.cpp` (lee `754_parkour.txt`; caida = por debajo de la altura de caida de
   la seccion -> ultimo punto de control; cronometro, mejor tiempo y clasificacion de la sesion). Framework de sesion
-  abierta: `EventWowGameInfo::OpenSession`, `EventWowMatchMgr::JoinOpenSession`, `EventWowMatch::AddPlayer`.
-- **Cliente**: `EventWowParkour.lua` (marcador, avisos, clasificacion, "Reiniciar"); panel con "Entrar".
+  abierta: `MiWowGameInfo::OpenSession`, `MiWowMatchMgr::JoinOpenSession`, `MiWowMatch::AddPlayer`.
+- **Cliente**: `MiWowParkour.lua` (marcador, avisos, clasificacion, "Reiniciar"); panel con "Entrar".
   Protocolo v12 (`docs/protocolo.md`).
 
 ## Ideas pendientes (por orden propuesto)

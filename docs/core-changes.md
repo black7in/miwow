@@ -31,7 +31,7 @@ Repositorio del core: `azerothcore-wotlk/` (fork local, luego remoto privado).
 3. Hooks nuevos genericos (sin logica de EventWow), siguiendo el patron de AC:
    enum `XXXHOOK_*` en `ScriptDefines/XxxScript.h` -> metodo virtual con default -> declaracion en `ScriptMgr.h`
    -> implementacion con `CALL_ENABLED_HOOKS` / `CALL_ENABLED_BOOLEAN_HOOKS` en `ScriptDefines/XxxScript.cpp`
-   -> llamada en el punto del core. La logica va en `mod-eventwow`.
+   -> llamada en el punto del core. La logica va en `mod-miwow`.
 4. Ediciones directas: minimas y marcadas con `// EventWow: <motivo>`.
 5. Registrar cada commit en la tabla de abajo. Marcar si es candidato a PR upstream (hooks genericos).
 

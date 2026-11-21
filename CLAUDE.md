@@ -1,4 +1,4 @@
-# EventWow
+# MiWow (repo EventWow)
 
 Plataforma de minijuegos sobre WoW 3.3.5a (build 12340) + AzerothCore.
 No hay flujo clasico (crear personaje, elegir raza/clase, mundo abierto):
@@ -9,6 +9,15 @@ Login -> "Tu nombre" -> Lobby -> Panel de minijuegos -> Cola (solo/grupo) -> Ins
 
 El personaje es solo un contenedor: nunca se ve en las pantallas previas al mundo;
 en cada minijuego se le da modelo, hechizos y stats temporales.
+
+> **Renombrado EventWow -> MiWow (2026-11-21, rama `tradicional`, decision del usuario: el servidor se llama MiWow)**:
+> modulo `mod-eventwow` -> `mod-miwow` (junction `azerothcore-wotlk/modules/mod-miwow`), clases/archivos `EventWow*` ->
+> `MiWow*` (C++ y Lua), `EVENTWOW_*` -> `MIWOW_*`, config `EventWow.*` / `mod_eventwow.conf` -> `MiWow.*` / `mod_miwow.conf`,
+> comandos `.eventwow` / `/eventwow` -> `.miwow` / `/miwow`, prefijo del protocolo `EWOW` -> `MIWOW`, log `module.miwow`,
+> SQL `*_eventwow_*` -> `*_miwow_*` (registros de `updates` renombrados a mano en la BD de desarrollo, ver
+> `docs/despliegue.md`), scripts `spell_eventwow_*` -> `spell_miwow_*`. NO cambian: carpeta/repo `EventWow`, rama
+> `eventwow` del core y prefijo `[EventWow]` de sus commits, directorios de mapas (`EventWowTest`, `EventWowCarrera`...),
+> texturas de minimapa `eventwow_*.blp`, BD `eventwow_*` (infraestructura), IDs. El diario de abajo usa los nombres de entonces.
 
 > **Rama `tradicional` (desde 2026-11-18)**: servidor WoW normal (razas, clases, niveles, mazmorras...) + los
 > eventos. Decision del usuario: rama propia SIN interruptor de configuracion. Lo de "contenedor/lobby" de este
@@ -98,7 +107,7 @@ en cada minijuego se le da modelo, hechizos y stats temporales.
 ## Estructura
 
 ```
-EventWow/
+EventWow/                     repo (la carpeta conserva el nombre antiguo; el servidor es MiWow)
   CLAUDE.md
   azerothcore-wotlk/          fork de AzerothCore (repo git aparte, rama eventwow) - ver docs/core-changes.md
   server/                     build de CMake/Visual Studio (no versionado)
@@ -107,11 +116,11 @@ EventWow/
       manifest.csv            de que MPQ sale cada archivo
     src/                      archivos de cliente que modificamos/anadimos (misma ruta relativa)
     patches/patch-4.MPQ/      salida generada por Build-Patch (carpeta, no MPQ empaquetado)
-  modules/mod-eventwow/       nuestro modulo C++. azerothcore-wotlk/modules/mod-eventwow es un JUNCTION a esta carpeta
+  modules/mod-miwow/       nuestro modulo C++. azerothcore-wotlk/modules/mod-miwow es un JUNCTION a esta carpeta
                               (no una copia): editar solo aqui. Recrear si falta:
-                              New-Item -ItemType Junction -Path azerothcore-wotlk\modules\mod-eventwow -Target modules\mod-eventwow
-    conf/mod_eventwow.conf.dist   opciones propias + OVERRIDES DEL CORE (pisan worldserver.conf)
-    src/                          scripts (loader: Addmod_eventwowScripts)
+                              New-Item -ItemType Junction -Path azerothcore-wotlk\modules\mod-miwow -Target modules\mod-miwow
+    conf/mod_miwow.conf.dist   opciones propias + OVERRIDES DEL CORE (pisan worldserver.conf)
+    src/                          scripts (loader: Addmod_miwowScripts)
     data/sql/db-{world,characters,auth}/   SQL que el updater de AC aplica al arrancar
   docs/
     despliegue.md             checklist de infraestructura por entorno
@@ -124,7 +133,7 @@ EventWow/
   tools/
     Merge-Interface.ps1       consolida Interface de los MPQ extraidos respetando el orden de carga
     Build-Patch.ps1           copia client/src -> client/patches/patch-4.MPQ (+ DBC con Build-Dbc.ps1 + mapas con mapgen)
-    Build-Dbc.ps1             DBC del cliente = client/DBCs/DBC<locale> + filas EventWow de las tablas *_dbc de la BD world
+    Build-Dbc.ps1             DBC del cliente = client/DBCs/DBC<locale> + filas MiWow de las tablas *_dbc de la BD world
     Diff-Config.ps1           audita worldserver.conf vs .dist (cambios hechos a mano)
     mapgen/                   Python (py + numpy): WC3 -> ADT/WDT del cliente + .map del servidor (docs/mapas.md)
 ```
@@ -140,8 +149,8 @@ EventWow/
   Para eso usa `client/patches/Instalar-Parche.ps1` (copia el parche + borra `Cache`; no versionado): SOLO lo ejecuta el usuario.
 - `Data\patch-4.MPQ` (carpeta con ese nombre) tiene prioridad sobre los MPQ de locale; no usar `patch-esES-N`.
 - Los archivos originales usan **CRLF**: normalizar tras editar (`sed -i 's/\r$//; s/$/\r/' archivo`).
-- Preferir ganchos en Lua sobre editar XML. Toda linea anadida a una funcion original lleva `-- EventWow`;
-  la logica propia va en un bloque `EventWow` al final del archivo.
+- Preferir ganchos en Lua sobre editar XML. Toda linea anadida a una funcion original lleva `-- MiWow`;
+  la logica propia va en un bloque `MiWow` al final del archivo.
 - Para interceptar funciones globales de otros archivos, envolverlas (wrap) desde un archivo que cargue
   despues segun `GlueXML.toc` / `FrameXML.toc`, en vez de copiar el archivo original.
 - No hay interprete Lua instalado: revisar sintaxis a mano. Errores en cliente: `SET scriptErrors "1"`.
@@ -155,30 +164,30 @@ EventWow/
   lo reaplica al arrancar: SQL idempotente). Nunca pedir al usuario que aplique SQL a mano.
 
 ### Servidor (AzerothCore)
-- No modificar el core si se puede evitar: todo en modulos (`mod-eventwow`), hooks de ScriptMgr.
+- No modificar el core si se puede evitar: todo en modulos (`mod-miwow`), hooks de ScriptMgr.
 - Seguir `azerothcore-wotlk/AGENTS.md` y `.agents/docs/cpp-guidelines.md` / `sql-guidelines.md`
   (Allman, 4 espacios, LF, `LOG_*` con `{}`, `sConfigMgr->GetOption` solo al cargar config, guardar `ObjectGuid` no punteros).
 - **No compilar ni correr CMake**: lo hace el usuario.
 - El servidor es la fuente de verdad: validar/forzar todo lo que el cliente pueda falsear (raza, clase, nombre...).
 
 ### Versionado (git)
-- **Dos repos**: `EventWow` (este: modulo, cliente, tools, docs; rama `main`) y `azerothcore-wotlk/` (fork del core).
+- **Dos repos**: `EventWow` (este, carpeta con el nombre antiguo: modulo, cliente, tools, docs; rama `main`) y `azerothcore-wotlk/` (fork del core).
   Ambos solo en local por ahora; el remoto privado se anade despues.
-- Ignorados en EventWow: `azerothcore-wotlk/`, `server/` (build de CMake/VS), `client/interface-original/`
+- Ignorados en MiWow: `azerothcore-wotlk/`, `server/` (build de CMake/VS), `client/interface-original/`
   (Blizzard, regenerable), `client/patches/` (generado), `*.conf` (solo se versionan `.conf.dist`).
 - Core: remoto `upstream` = AzerothCore oficial (push deshabilitado). `master` = espejo de upstream, nunca se commitea.
   Trabajo en la rama **`eventwow`**; actualizar = `rebase` sobre `master`.
-- Tocar el core: hook existente > hook nuevo (generico, patron de AC) > edicion directa marcada `// EventWow:`.
+- Tocar el core: hook existente > hook nuevo (generico, patron de AC) > edicion directa marcada `// MiWow:`.
   Un commit por cambio, prefijo `[EventWow]`. Registrar cada uno en `docs/core-changes.md` (y la version base probada).
 - Commits en ambos repos con el trailer de atribucion de Claude.
 
 ### Configuracion (para poder reproducir produccion)
-- **Juego** (igual en todos los entornos): en `mod_eventwow.conf.dist`. Las claves del core van en la seccion
+- **Juego** (igual en todos los entornos): en `mod_miwow.conf.dist`. Las claves del core van en la seccion
   "OVERRIDES DEL CORE", cada una con su motivo. Funciona porque AC carga `configs/modules/*.conf` despues de
   `worldserver.conf` y la ultima clave gana (`Config.cpp` AddKey; `Main.cpp` LoadAppConfigs -> LoadModulesConfigs ->
   SetInitialWorldSettings). No afecta a authserver ni a lo leido antes de cargar modulos (BD, logs, DataDir).
 - **Infraestructura** (BD, IPs, puertos, rutas, `acore_auth.realmlist`): nunca en el modulo; documentar en `docs/despliegue.md`.
-- **Datos de BD**: SQL en `modules/mod-eventwow/data/sql/db-*/` (nunca en `azerothcore-wotlk/data/sql/`),
+- **Datos de BD**: SQL en `modules/mod-miwow/data/sql/db-*/` (nunca en `azerothcore-wotlk/data/sql/`),
   idempotente (DELETE antes de INSERT).
 - Nunca pedir que se edite `worldserver.conf` para algo de juego. Auditar con `tools/Diff-Config.ps1`.
 

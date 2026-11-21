@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
   Genera la carpeta del parche (formato "carpeta como MPQ") a partir de client\src.
-  Anade los DBC con filas propias de EventWow (Build-Dbc.ps1: lee la BD world, que debe estar arrancada) y los
+  Anade los DBC con filas propias de MiWow (Build-Dbc.ps1: lee la BD world, que debe estar arrancada) y los
   mapas propios (tools\mapgen desde Maps\maps.json: World\Maps del cliente + .map del servidor en ServerDataDir;
   necesita Python con numpy, lanzador "py"). Las mmaps se generan aparte: mmaps_generator <id> (docs\mapas.md).
   El resultado se copia manualmente a Data\ del cliente.

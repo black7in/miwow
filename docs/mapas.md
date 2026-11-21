@@ -25,9 +25,9 @@ mmaps_generator <id> (a mano, tras .map y vmaps) --> <DataDir>\mmaps (caminos de
      ambos), `wallLayer` (nivel de acantilado que es muro construido, ver Conversion; texturas `wallTop`/`wallFace`),
      `wallModels` (modelos M2 sobre esos muros: `model`, `box`, `scale`, `offset`, `terrainHeight`, `simplify`),
      `areaId` (zona de `AreaTable`, ver paso 3; 0 = sin zona).
-3. SQL del modulo (copiar `2026_11_13_10_eventwow_map_test.sql`): `map_dbc` (mazmorra, `InstanceType = 1`; nombre en
+3. SQL del modulo (copiar `2026_11_13_10_miwow_map_test.sql`): `map_dbc` (mazmorra, `InstanceType = 1`; nombre en
    las 16 columnas de idioma), `mapdifficulty_dbc` (ID propio 9500000+, sin reinicio) e `instance_template`.
-   Zona (copiar `2026_11_13_12_eventwow_map_areas.sql`): fila de `areatable_dbc` (ID **5000-5099**: el cliente llega
+   Zona (copiar `2026_11_13_12_miwow_map_areas.sql`): fila de `areatable_dbc` (ID **5000-5099**: el cliente llega
    a 4987; `AreaBit` **3700-3799**: el cliente llega a 3617 y el limite de exploracion es 4095; `ContinentID` = mapa;
    nombre en las 16 columnas) + `map_dbc.AreaTableID` + `areaId` en `maps.json`. Un solo nombre para todo el mapa.
 4. `Build-Patch` (BD arrancada y con el SQL aplicado): genera el parche con Map.dbc + el mapa, y el `.map` y los
@@ -107,11 +107,11 @@ mmaps_generator <id> (a mano, tras .map y vmaps) --> <DataDir>\mmaps (caminos de
   hay mapa de areas). Entrar marca el bit de exploracion (`Player::CheckAreaExploreAndOutdoor`; nivel 80, sin XP).
 - Minimapa: una textura de 256x256 por ADT (BLP2 DXT1 sin mipmaps, como las del cliente): color medio de cada
   textura del terreno (`MINIMAP_COLORS`, medido de sus BLP) mezclado con los mismos pesos, sombreado del relieve (luz
-  del noroeste), agua y la huella de los modelos de muro. Archivos `eventwow_<id>_<tx>_<ty>.blp`, traducidos por
+  del noroeste), agua y la huella de los modelos de muro. Archivos `miwow_<id>_<tx>_<ty>.blp`, traducidos por
   `Textures\Minimap\md5translate.trs`. El `.trs` del parche SUSTITUYE al del cliente, asi que se genera con el
   original + nuestros mapas: el original (no versionado) va en `client\Minimap\md5translate.trs`, extraido de
   `patch-3.MPQ` del cliente (`tools/mapgen/mpq.py`). Sin el, `Build-Patch` avisa y no genera minimapas.
-  En la interfaz: `MinimapCluster` visible en partida, sin sus botones (`EVENTWOW_MINIMAP_HIDDEN_BUTTONS`, EventWow.lua).
+  En la interfaz: `MinimapCluster` visible en partida, sin sus botones (`MIWOW_MINIMAP_HIDDEN_BUTTONS`, MiWow.lua).
 - vmaps (`tools/mapgen/vmaps.py`): la colision de los modelos para el servidor (linea de vision de hechizos y PNJ,
   altura sobre modelos, navmesh). `vmap4_extractor` no sirve: lee los MPQ y nuestro parche es una carpeta. Se escribe
   lo mismo que extractor + assembler (VMAP_4.8): `<id>.vmtree` (BIH de los limites de los modelos), `<id>_<tx>_<ty>.vmtile`
@@ -149,7 +149,7 @@ servidor (`<DataDir>/maps/<id>_pista.json`: `[s, X, Y, Z, media anchura]` cada 2
   del minimapa se calculan del BLP de cada textura.
 - Puntos que imprime: meta, parrilla de 8 (2 columnas escalonadas) y puntos de control repartidos por la vuelta.
 - Sin mmaps: no hacen falta mientras no haya PNJ que anden por el circuito.
-- 752 `EventWowCarrera` = `Planos/circuito_cuatro_tierras.json` (SQL `2026_11_17_00_eventwow_map_carrera.sql`,
+- 752 `EventWowCarrera` = `Planos/circuito_cuatro_tierras.json` (SQL `2026_11_17_00_miwow_map_carrera.sql`,
   zona 5002): pradera (salida) -> bosque (Colinas Pardas) -> puerto nevado (Dun Morogh, con precipicio al lago) ->
   canon (Tierras Inhospitas) -> pradera. 2682 yardas por vuelta, ancho 22-26, 2x2 ADT.
 
@@ -183,7 +183,7 @@ servidor (`<DataDir>/maps/<id>_pista.json`: `[s, X, Y, Z, media anchura]` cada 2
 ## Recorridos de parkour (sin terreno)
 
 `tools/mapgen/parkourgen.py`, plano JSON con `"type": "parkour"` (mapgen lo detecta). Ejemplo: 754
-`Maps/Planos/parkour_ascenso.json` (juego `parkour`, `EventWowGameParkour.cpp`).
+`Maps/Planos/parkour_ascenso.json` (juego `parkour`, `MiWowGameParkour.cpp`).
 
 - Sin terreno, como `platformgen` (ADT todo agujeros + `.map` con agujeros). La ruta son modelos M2 cualesquiera
   (mesas, barriles, estanterias, maquinas, columnas...) colocados como decoracion del ADT (colision en cliente y vmaps).
@@ -219,7 +219,7 @@ servidor (`<DataDir>/maps/<id>_pista.json`: `[s, X, Y, Z, media anchura]` cada 2
   `ID_ChairMedium` a escala 3.
 - Si la plataforma que cierra una seccion (siguiente punto de control o meta) no cabe, se deshacen saltos y se
   prueba otro camino (antes fallaba la generacion).
-- 754 `EventWowParkour` "Ascenso" (SQL `2026_11_18_01_eventwow_map_parkour.sql`, zona 5004, luz 2601 = cielo de
+- 754 `EventWowParkour` "Ascenso" (SQL `2026_11_18_01_miwow_map_parkour.sql`, zona 5004, luz 2601 = cielo de
   Nagrand, LightParams 396/491 de la luz 418): 3x3 ADT. Salida en una isla, una isla por punto de control: Taberna
   Flotante (muebles enanos x3), Biblioteca Arcana (estanterias y armarios), Taller Goblin (maquinas, carros,
   tuberias), Ruinas en el Vacio (columnas titanicas), La Cima; meta en una isla mayor. Cada seccion mezcla caminos,

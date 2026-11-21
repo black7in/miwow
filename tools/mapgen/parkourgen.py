@@ -3,7 +3,7 @@ hecha de modelos M2 (muebles, cajas, columnas...) colocados como decoracion del 
 vmaps del servidor), dividida en secciones con un punto de control al empezar cada una.
 
 Como platformgen: los ADT existen pero todos sus trozos son agujeros (sin suelo); el cielo lo pone una luz del mapa
-(Light.dbc, SQL del modulo). Caer no mata: el juego (EventWowGameParkour.cpp) devuelve al ultimo punto de control
+(Light.dbc, SQL del modulo). Caer no mata: el juego (MiWowGameParkour.cpp) devuelve al ultimo punto de control
 cuando el jugador baja de la "altura de caida" de su seccion.
 
 Saltos (fisica del cliente 3.3.5): impulso vertical `velocity` (7,9555 yd/s), gravedad `gravity` (19,2911 yd/s2,
@@ -51,7 +51,7 @@ da su tablero y no las patas o el suelo de la caja) y su rectangulo. Se coloca p
 el punto de la ruta. Lo que sobresale por encima de la cara (respaldos...) se avisa en el resumen.
 
 Salida para el servidor: <DataDir>/maps/<id>_parkour.txt (lineas "checkpoint X Y Z O radio caida nombre" y
-"finish X Y Z O radio"; ver EventWowGameParkour.cpp).
+"finish X Y Z O radio"; ver MiWowGameParkour.cpp).
 
 Coordenadas del plano: yardas, x = este, y = norte, origen en el centro del mapa (n x n ADT desde el 32_32).
 Expone la interfaz de mapgen.Converter (tiles, build_tile, tile_doodads, minimap, points, models, model_names).
@@ -646,7 +646,7 @@ class ParkourConverter(PlatformConverter):
         return math.atan2(b['y'] - a['y'], b['x'] - a['x'])
 
     def parkour_lines(self):
-        lines = ['# EventWow: parkour del mapa %d (tools/mapgen/parkourgen.py; generado, no editar)' % self.info['id'],
+        lines = ['# MiWow: parkour del mapa %d (tools/mapgen/parkourgen.py; generado, no editar)' % self.info['id'],
                  '# checkpoint X Y Z O radio altura_de_caida nombre  |  finish X Y Z O radio']
         for name, idx, fall in self.sections:
             it = self.items[idx]

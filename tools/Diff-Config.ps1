@@ -1,12 +1,12 @@
 <#
 .SYNOPSIS
   Audita un .conf de AzerothCore contra su .conf.dist: lista las claves cambiadas o anadidas a mano.
-  Sirve para detectar cambios que deberian estar en mod_eventwow.conf (juego) o en docs/despliegue.md
+  Sirve para detectar cambios que deberian estar en mod_miwow.conf (juego) o en docs/despliegue.md
   (infraestructura) antes de pasar a produccion.
 
 .EXAMPLE
   .\tools\Diff-Config.ps1 -Conf "D:\...\configs\worldserver.conf" -Dist "D:\...\configs\worldserver.conf.dist"
-  .\tools\Diff-Config.ps1 -Conf ... -Dist ... -Overrides .\modules\mod-eventwow\conf\mod_eventwow.conf.dist
+  .\tools\Diff-Config.ps1 -Conf ... -Dist ... -Overrides .\modules\mod-miwow\conf\mod_miwow.conf.dist
 #>
 param(
     [Parameter(Mandatory = $true)][string]$Conf,

@@ -1,11 +1,11 @@
 <#
 .SYNOPSIS
-  Genera los DBC del cliente con las filas propias de EventWow (las llama Build-Patch.ps1).
+  Genera los DBC del cliente con las filas propias de MiWow (las llama Build-Patch.ps1).
 
 .DESCRIPTION
   Fuente de verdad = BD world: las tablas *_dbc de AzerothCore (item_dbc, spell_dbc...), que el servidor ya fusiona
   con sus DBC al arrancar (DBCStores.cpp LOAD_DBC). El servidor NO necesita archivos DBC modificados.
-  Este script copia al parche los DBC del cliente que tengan filas de EventWow (ID >= MinId, rango reservado
+  Este script copia al parche los DBC del cliente que tengan filas de MiWow (ID >= MinId, rango reservado
   9500000+) en su tabla, con esas filas anadidas (o sustituidas si el ID ya existia):
 
     client\DBCs\DBC<Locale>\<Archivo>.dbc  +  filas de <archivo>_dbc  ->  <OutDir>\<Archivo>.dbc
@@ -34,7 +34,7 @@ $ErrorActionPreference = "Stop"
 # Tablas con un rango de IDs propio ademas de MinId+ (condicion SQL sobre la primera columna)
 $ExtraRanges = @{
     "map_dbc" = "BETWEEN 750 AND 799"
-    "areatable_dbc" = "BETWEEN 5000 AND 5099"     # zonas de los mapas propios (ver SQL *_eventwow_map_areas)
+    "areatable_dbc" = "BETWEEN 5000 AND 5099"     # zonas de los mapas propios (ver SQL *_miwow_map_areas)
     "light_dbc" = "BETWEEN 2600 AND 2699"          # cielo de los mapas propios (Light.dbc llega a 2538)
 }
 
@@ -97,7 +97,7 @@ function Get-Rows([xml]$xml)
     return , $result
 }
 
-# --- Tablas *_dbc con filas de EventWow ---------------------------------------------------------------------
+# --- Tablas *_dbc con filas de MiWow ---------------------------------------------------------------------
 
 $columnsXml = Invoke-MySqlXml ("SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS " +
     "WHERE TABLE_SCHEMA = '$($db[4])' AND TABLE_NAME LIKE '%\\_dbc' ORDER BY TABLE_NAME, ORDINAL_POSITION")
@@ -123,7 +123,7 @@ foreach ($r in (Get-Rows (Invoke-MySqlXml ($counts -join " UNION ALL "))))
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 if ($used.Count -eq 0)
 {
-    Write-Host "DBC: ninguna tabla *_dbc tiene filas de EventWow (ID >= $MinId)"
+    Write-Host "DBC: ninguna tabla *_dbc tiene filas de MiWow (ID >= $MinId)"
     return
 }
 

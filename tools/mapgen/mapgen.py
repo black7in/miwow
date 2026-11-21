@@ -1,4 +1,4 @@
-"""Convierte mapas de Warcraft 3 (.w3m/.w3x 1.26) en mapas de WoW 3.3.5 para EventWow.
+"""Convierte mapas de Warcraft 3 (.w3m/.w3x 1.26) en mapas de WoW 3.3.5 para MiWow.
 
   py tools\\mapgen\\mapgen.py --client <carpeta del parche> [--server <DataDir del worldserver>] [--only <id>]
 
@@ -116,7 +116,7 @@ DEFAULTS = {
     'wallExtra': 15.0,
     'wallLayer': None,          # nivel de acantilado que es "muro construido": caras verticales + texturas de muro
     'wallModels': None,         # modelos M2 sobre los muros de wallLayer (ver WALL_MODEL_DEFAULTS)
-    'areaId': 0,                # zona (AreaTable, rango 5000-5099, SQL *_eventwow_map_areas) de todo el mapa
+    'areaId': 0,                # zona (AreaTable, rango 5000-5099, SQL *_miwow_map_areas) de todo el mapa
 }
 
 # wallModels en maps.json: el M2 de un tramo de muro y como repartirlo. "box" = caja del M2 en yardas

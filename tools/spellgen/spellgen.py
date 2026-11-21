@@ -1,11 +1,11 @@
-"""EventWow spellgen: hechizos propios desde fichas TOML (ver docs/hechizos.md).
+"""MiWow spellgen: hechizos propios desde fichas TOML (ver docs/hechizos.md).
 
-  py -I tools/spellgen/spellgen.py build            fichas de modules/mod-eventwow/data/spells/*.toml -> SQL
+  py -I tools/spellgen/spellgen.py build            fichas de modules/mod-miwow/data/spells/*.toml -> SQL
   py -I tools/spellgen/spellgen.py dump <id>...     muestra un hechizo del Spell.dbc del cliente (campos != 0)
   py -I tools/spellgen/spellgen.py find <texto>     busca hechizos por nombre (esES)
   py -I tools/spellgen/spellgen.py icon <texto>     busca iconos (SpellIcon.dbc)
 
-Cada ficha genera data/sql/db-world/eventwow_spells_<ficha>.sql (spell_dbc + spell_ranks + spell_bonus_data +
+Cada ficha genera data/sql/db-world/miwow_spells_<ficha>.sql (spell_dbc + spell_ranks + spell_bonus_data +
 spell_script_names),
 idempotente. El updater de AzerothCore la vuelve a aplicar si cambia. Build-Patch lleva las filas al cliente.
 
@@ -23,8 +23,8 @@ ROOT = Path(__file__).resolve().parents[2]
 DBC_DIR = ROOT / "client" / "DBCs" / "DBCesES"
 CORE = ROOT / "azerothcore-wotlk"
 SCHEMA = CORE / "data" / "sql" / "base" / "db_world" / "spell_dbc.sql"
-SPELLS_DIR = ROOT / "modules" / "mod-eventwow" / "data" / "spells"
-SQL_DIR = ROOT / "modules" / "mod-eventwow" / "data" / "sql" / "db-world"
+SPELLS_DIR = ROOT / "modules" / "mod-miwow" / "data" / "spells"
+SQL_DIR = ROOT / "modules" / "mod-miwow" / "data" / "sql" / "db-world"
 
 MIN_ID = 9500000
 # Huecos de texto (16 por campo + mascara). El cliente esES lee el 6; el servidor (DBC en ingles), el 0.
@@ -436,7 +436,7 @@ def build_file(path, spells, enums, indexes):
         ranks = int(spec.get("ranks", 1))
         first = int(spec["id"])
         if first < MIN_ID:
-            raise SpellError(f"{where}: id {first} < {MIN_ID} (rango propio de EventWow)")
+            raise SpellError(f"{where}: id {first} < {MIN_ID} (rango propio de MiWow)")
         for rank in range(ranks):
             sid = first + rank
             if sid in used:
@@ -453,12 +453,12 @@ def build_file(path, spells, enums, indexes):
                 bonus_sql.append("({}, {}, {}, {}, {}, '{}')".format(
                     sid, float(spec.get("coefficient", 0)), float(spec.get("dot_coefficient", 0)),
                     float(spec.get("ap_coefficient", 0)), float(spec.get("ap_dot_coefficient", 0)),
-                    f"EventWow: {spec['name']} {rank + 1}".replace("'", "")))
+                    f"MiWow: {spec['name']} {rank + 1}".replace("'", "")))
 
     ids = sorted(used)
     id_list = ", ".join(str(i) for i in ids)
     columns = spells.columns
-    out = [f"-- EventWow: GENERADO por tools/spellgen desde modules/mod-eventwow/data/spells/{path.name}.",
+    out = [f"-- MiWow: GENERADO por tools/spellgen desde modules/mod-miwow/data/spells/{path.name}.",
            "-- No editar a mano: cambiar la ficha y ejecutar  py -I tools/spellgen/spellgen.py build",
            f"DELETE FROM `spell_dbc` WHERE `ID` IN ({id_list});",
            "INSERT INTO `spell_dbc` (" + ", ".join(f"`{c}`" for c, _ in columns) + ") VALUES"]
@@ -476,7 +476,7 @@ def build_file(path, spells, enums, indexes):
         out.append("INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES" + chr(10)
                    + ("," + chr(10)).join(script_sql) + ";")
 
-    target = SQL_DIR / f"eventwow_spells_{path.stem}.sql"
+    target = SQL_DIR / f"miwow_spells_{path.stem}.sql"
     target.write_text("\n".join(out) + "\n", encoding="utf-8", newline="\n")
     return target, ids
 

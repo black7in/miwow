@@ -1,0 +1,74 @@
+[worldserver]
+
+###################################################################################################
+# MiWow - configuracion del modulo
+#
+# Copiar a configs/modules/mod_miwow.conf (sin .dist).
+#
+# IMPORTANTE: los .conf de modulos se cargan DESPUES de worldserver.conf y sus claves lo pisan
+# (ConfigMgr::AddKey). Por eso las opciones del core que MiWow necesita viven aqui y no en
+# worldserver.conf: este archivo es la lista completa de lo que cambiamos del core.
+# worldserver.conf solo debe llevar infraestructura (BD, IPs, puertos, rutas) - ver docs/despliegue.md
+###################################################################################################
+
+###################################################################################################
+# OPCIONES PROPIAS
+###################################################################################################
+
+#
+#    MiWow.Enable
+#        Description: Activa el modulo.
+#        Default:     1
+
+MiWow.Enable = 1
+
+#
+#    MiWow.Queue.FillWait
+#        Description: Segundos que espera la cola de un minijuego multijugador, con MinPlayers ya
+#                     reunidos, intentando llegar a MaxPlayers antes de crear la partida.
+#        Default:     15
+
+MiWow.Queue.FillWait = 15
+
+#
+#    MiWow.Queue.AcceptTimeout
+#        Description: Segundos para aceptar una partida encontrada (minimo 5). Si alguien rechaza o no
+#                     acepta a tiempo, se cancela: su entrada (el solo o todo su grupo) sale de la cola y
+#                     los que no rechazaron vuelven a ella automaticamente, con su antiguedad.
+#        Default:     20
+
+MiWow.Queue.AcceptTimeout = 20
+
+#
+#    MiWow.Match.LoadTimeout
+#        Description: Segundos para que todos los jugadores de una partida lleguen a la instancia.
+#                     Los que no llegan quedan fuera y la partida empieza con el resto.
+#        Default:     30
+
+MiWow.Match.LoadTimeout = 30
+
+#
+#    MiWow.Match.ReturnDelay
+#        Description: Segundos con el resultado en pantalla antes de volver a donde estaba.
+#        Default:     8
+
+MiWow.Match.ReturnDelay = 8
+
+###################################################################################################
+# OVERRIDES DEL CORE (pisan worldserver.conf)
+###################################################################################################
+
+#
+#    AddonChannel
+#        Motivo: el panel de minijuegos habla con el servidor por addon messages (MiWowProtocol).
+#                Ya es 1 por defecto; se fija aqui para que nadie lo desactive en worldserver.conf.
+
+AddonChannel = 1
+
+#
+#    GM.LoginState
+#        Motivo: .gm on activa el "modo dev" de MiWow igual que .dev on (MiWowDevMode.cpp) y los dos
+#                deben comportarse igual: .dev se quita en cada login, asi que el modo GM tambien empieza
+#                desactivado. .gm on / .dev on cuando haga falta.
+
+GM.LoginState = 0
