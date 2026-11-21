@@ -55,6 +55,75 @@ MiWow.Match.LoadTimeout = 30
 MiWow.Match.ReturnDelay = 8
 
 ###################################################################################################
+# TEMPORADAS DE HERMANDAD (src/guild, definiciones en las tablas miwow_guild_* de la BD world)
+###################################################################################################
+
+#
+#    MiWow.Guild.Enable
+#        Description: Activa las temporadas de hermandad (tablon, puntos, ventajas, intendente).
+#        Default:     1
+#
+MiWow.Guild.Enable = 1
+
+#
+#    MiWow.Guild.Season.Days
+#        Description: Duracion de una temporada sin fila en miwow_guild_season (0 = sin fin).
+#        Default:     30
+#
+MiWow.Guild.Season.Days = 30
+
+#
+#    MiWow.Guild.Season.Announce
+#        Description: Anunciar a todo el servidor el final de la temporada y el podio.
+#        Default:     1
+#
+MiWow.Guild.Season.Announce = 1
+
+#
+#    MiWow.Guild.DailyCap
+#        Description: Puntos de temporada que puede aportar un personaje al dia (0 = sin limite).
+#                     La reputacion personal no tiene limite.
+#        Default:     0
+#
+MiWow.Guild.DailyCap = 0
+
+#
+#    MiWow.Guild.ResetRepOnLeave
+#        Description: Al dejar la hermandad (o ser expulsado) la reputacion personal vuelve a 0.
+#                     La contribucion de la temporada se pierde siempre.
+#        Default:     1
+#
+MiWow.Guild.ResetRepOnLeave = 1
+
+#
+#    MiWow.Guild.Board.Daily
+#    MiWow.Guild.Board.Weekly
+#        Description: Misiones del tablon (al azar entre las de miwow_guild_quest). Rotan con el
+#                     reinicio de misiones diarias / semanales del servidor.
+#        Default:     5, 2
+#
+MiWow.Guild.Board.Daily = 5
+MiWow.Guild.Board.Weekly = 2
+
+#
+#    MiWow.Guild.BoardObject
+#    MiWow.Guild.VendorCreature
+#        Description: Objeto del tablon (da y recoge las misiones de hermandad; el modulo le pone en memoria
+#                     las del tablon) y PNJ intendente (abre la tienda de la hermandad; para comprar hay que
+#                     estar a menos de 10 m de el).
+#        Default:     9500200 (objeto), 9500201 (PNJ)
+#
+MiWow.Guild.BoardObject = 9500200
+MiWow.Guild.VendorCreature = 9500201
+
+#
+#    MiWow.Guild.Vendor.ItemCount
+#        Description: Objetos de la tienda por temporada (al azar entre los de miwow_guild_vendor).
+#        Default:     10
+#
+MiWow.Guild.Vendor.ItemCount = 10
+
+###################################################################################################
 # OVERRIDES DEL CORE (pisan worldserver.conf)
 ###################################################################################################
 

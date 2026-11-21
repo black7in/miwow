@@ -1,0 +1,381 @@
+# MiWow: ventajas (perks) de temporada de hermandad (src/guild/MiWowGuildSeason.cpp, tabla miwow_guild_perk). Basadas
+# en las ventajas de hermandad de Cataclysm. Generar el SQL:
+#   py -I tools/spellgen/spellgen.py build   (despues Build-Patch para el cliente)
+#
+# Rango de IDs: 9504000-9504099.
+#
+# Todas son hechizos PASIVOS (como los raciales) que los miembros de la hermandad aprenden mientras la temporada tenga
+# la ventaja desbloqueada (RefreshPerks; libro de hechizos, pestana General). El aura pasiva no se envia al cliente:
+# no sale en los beneficios. Valen en todas partes (tambien eventos, campos de batalla y arenas). Las ventajas con el
+# mismo efecto son rangos: solo se sabe la mas alta.
+#   - Efecto nativo del aura (lo hace el core): montura, experiencia, reputacion, honor.
+#   - Efecto del modulo (aura DUMMY de marca): el modulo lee el valor del efecto 1 de ESTE hechizo ($s1), asi el
+#     tooltip y lo que se aplica no se separan nunca. El efecto lo dice miwow_guild_perk.Effect.
+# Base comun: Serenata Cantaflor (15366); se cambian los efectos y se hace pasivo.
+
+[[spell]]
+id = 9504000
+base = 15366
+name = "¡A montar!"
+description = "Aumenta un $s1% la velocidad de movimiento con montura. No se acumula con otros efectos similares."
+aura_description = "Velocidad con montura aumentada un $s1%."
+icon = "Ability_Mount_RidingHorse"
+duration = -1
+gcd = 0
+attributes_add = 0x40            # pasivo (SPELL_ATTR0_PASSIVE): libro de hechizos, sin icono de beneficio
+[spell.fields]
+DispelType = 0
+InterruptFlags = 0
+[spell.effect1]
+aura = "MOD_MOUNTED_SPEED_NOT_STACK"
+target = "UNIT_CASTER"
+value = 10
+misc = 0
+[spell.effect2]
+type = "NONE"
+[spell.effect3]
+type = "NONE"
+
+[[spell]]
+id = 9504001
+base = 15366
+name = "Vía rápida"
+rank_text = "Rango 1"
+chain = false
+description = "Aumenta un $s1% la experiencia obtenida al matar enemigos y al completar misiones."
+aura_description = "Experiencia aumentada un $s1%."
+icon = "INV_Misc_Book_11"
+duration = -1
+gcd = 0
+attributes_add = 0x40
+[spell.fields]
+DispelType = 0
+InterruptFlags = 0
+[spell.effect1]
+aura = "MOD_XP_PCT"
+target = "UNIT_CASTER"
+value = 5
+misc = 0
+[spell.effect2]
+aura = "MOD_XP_QUEST_PCT"
+target = "UNIT_CASTER"
+value = 5
+misc = 0
+[spell.effect3]
+type = "NONE"
+
+[[spell]]
+id = 9504002
+base = 15366
+name = "Popularidad"
+rank_text = "Rango 1"
+chain = false
+description = "Aumenta un $s1% la reputación obtenida con todas las facciones."
+aura_description = "Reputación obtenida aumentada un $s1%."
+icon = "Spell_Holy_PrayerofSpirit"
+duration = -1
+gcd = 0
+attributes_add = 0x40
+[spell.fields]
+DispelType = 0
+InterruptFlags = 0
+[spell.effect1]
+aura = "MOD_REPUTATION_GAIN"
+target = "UNIT_CASTER"
+value = 5
+misc = 0
+[spell.effect2]
+type = "NONE"
+[spell.effect3]
+type = "NONE"
+
+[[spell]]
+id = 9504003
+base = 15366
+name = "Flujo de oro"
+rank_text = "Rango 1"
+chain = false
+description = "Cada vez que despojas dinero, la hermandad recibe en su banco un $s1% extra (no se te quita a ti)."
+aura_description = "Un $s1% extra del dinero despojado va al banco de la hermandad."
+icon = "INV_Misc_Coin_02"
+duration = -1
+gcd = 0
+attributes_add = 0x40
+[spell.fields]
+DispelType = 0
+InterruptFlags = 0
+[spell.effect1]
+aura = "DUMMY"
+target = "UNIT_CASTER"
+value = 5
+misc = 0
+[spell.effect2]
+type = "NONE"
+[spell.effect3]
+type = "NONE"
+
+[[spell]]
+id = 9504004
+base = 15366
+name = "Hogar presto"
+description = "Reduce en $s1 min el tiempo de reutilización de la piedra de hogar."
+aura_description = "Piedra de hogar: $s1 min menos de reutilización."
+icon = "INV_Misc_Rune_01"
+duration = -1
+gcd = 0
+attributes_add = 0x40
+[spell.fields]
+DispelType = 0
+InterruptFlags = 0
+[spell.effect1]
+aura = "DUMMY"
+target = "UNIT_CASTER"
+value = 15
+misc = 0
+[spell.effect2]
+type = "NONE"
+[spell.effect3]
+type = "NONE"
+
+[[spell]]
+id = 9504005
+base = 15366
+name = "Reparaciones de hermandad"
+description = "Reduce un $s1% el coste de las reparaciones."
+aura_description = "Reparaciones un $s1% más baratas."
+icon = "Ability_Repair"
+duration = -1
+gcd = 0
+attributes_add = 0x40
+[spell.fields]
+DispelType = 0
+InterruptFlags = 0
+[spell.effect1]
+aura = "DUMMY"
+target = "UNIT_CASTER"
+value = 10
+misc = 0
+[spell.effect2]
+type = "NONE"
+[spell.effect3]
+type = "NONE"
+
+[[spell]]
+id = 9504006
+base = 15366
+name = "Regateo"
+description = "Los vendedores te cobran un $s1% menos."
+aura_description = "Precios de los vendedores un $s1% más bajos."
+icon = "INV_Misc_Coin_17"
+duration = -1
+gcd = 0
+attributes_add = 0x40
+[spell.fields]
+DispelType = 0
+InterruptFlags = 0
+[spell.effect1]
+aura = "DUMMY"
+target = "UNIT_CASTER"
+value = 5
+misc = 0
+[spell.effect2]
+type = "NONE"
+[spell.effect3]
+type = "NONE"
+
+[[spell]]
+id = 9504007
+base = 15366
+name = "Vuelta a la vida"
+description = "Al resucitar recuperas un $s1% más de tu salud y maná máximos."
+aura_description = "Recuperas un $s1% más de salud y maná al resucitar."
+icon = "Spell_Holy_Resurrection"
+duration = -1
+gcd = 0
+attributes_add = 0x40
+[spell.fields]
+DispelType = 0
+InterruptFlags = 0
+[spell.effect1]
+aura = "DUMMY"
+target = "UNIT_CASTER"
+value = 50
+misc = 0
+[spell.effect2]
+type = "NONE"
+[spell.effect3]
+type = "NONE"
+
+[[spell]]
+id = 9504008
+base = 15366
+name = "Correo de hermandad"
+description = "El correo entre miembros de la hermandad llega al instante, también con objetos."
+aura_description = "Correo instantáneo con tu hermandad."
+icon = "INV_Letter_04"
+duration = -1
+gcd = 0
+attributes_add = 0x40
+[spell.fields]
+DispelType = 0
+InterruptFlags = 0
+[spell.effect1]
+aura = "DUMMY"
+target = "UNIT_CASTER"
+value = 0
+misc = 0
+[spell.effect2]
+type = "NONE"
+[spell.effect3]
+type = "NONE"
+
+[[spell]]
+id = 9504009
+base = 15366
+name = "Horas extra"
+description = "Al subir una profesión tienes un $s1% de probabilidad de ganar un punto extra."
+aura_description = "Un $s1% de probabilidad de un punto extra de profesión."
+icon = "Trade_Engineering"
+duration = -1
+gcd = 0
+attributes_add = 0x40
+[spell.fields]
+DispelType = 0
+InterruptFlags = 0
+[spell.effect1]
+aura = "DUMMY"
+target = "UNIT_CASTER"
+value = 10
+misc = 0
+[spell.effect2]
+type = "NONE"
+[spell.effect3]
+type = "NONE"
+
+[[spell]]
+id = 9504010
+base = 15366
+name = "Vía rápida"
+rank_text = "Rango 2"
+chain = false
+description = "Aumenta un $s1% la experiencia obtenida al matar enemigos y al completar misiones."
+aura_description = "Experiencia aumentada un $s1%."
+icon = "INV_Misc_Book_11"
+duration = -1
+gcd = 0
+attributes_add = 0x40
+[spell.fields]
+DispelType = 0
+InterruptFlags = 0
+[spell.effect1]
+aura = "MOD_XP_PCT"
+target = "UNIT_CASTER"
+value = 10
+misc = 0
+[spell.effect2]
+aura = "MOD_XP_QUEST_PCT"
+target = "UNIT_CASTER"
+value = 10
+misc = 0
+[spell.effect3]
+type = "NONE"
+
+[[spell]]
+id = 9504011
+base = 15366
+name = "Mención honorífica"
+rank_text = "Rango 1"
+chain = false
+description = "Aumenta un $s1% el honor obtenido."
+aura_description = "Honor obtenido aumentado un $s1%."
+icon = "Achievement_PVP_A_01"
+duration = -1
+gcd = 0
+attributes_add = 0x40
+[spell.fields]
+DispelType = 0
+InterruptFlags = 0
+[spell.effect1]
+aura = "MOD_HONOR_GAIN_PCT"
+target = "UNIT_CASTER"
+value = 5
+misc = 0
+[spell.effect2]
+type = "NONE"
+[spell.effect3]
+type = "NONE"
+
+[[spell]]
+id = 9504012
+base = 15366
+name = "Popularidad"
+rank_text = "Rango 2"
+chain = false
+description = "Aumenta un $s1% la reputación obtenida con todas las facciones."
+aura_description = "Reputación obtenida aumentada un $s1%."
+icon = "Spell_Holy_PrayerofSpirit"
+duration = -1
+gcd = 0
+attributes_add = 0x40
+[spell.fields]
+DispelType = 0
+InterruptFlags = 0
+[spell.effect1]
+aura = "MOD_REPUTATION_GAIN"
+target = "UNIT_CASTER"
+value = 10
+misc = 0
+[spell.effect2]
+type = "NONE"
+[spell.effect3]
+type = "NONE"
+
+[[spell]]
+id = 9504013
+base = 15366
+name = "Flujo de oro"
+rank_text = "Rango 2"
+chain = false
+description = "Cada vez que despojas dinero, la hermandad recibe en su banco un $s1% extra (no se te quita a ti)."
+aura_description = "Un $s1% extra del dinero despojado va al banco de la hermandad."
+icon = "INV_Misc_Coin_02"
+duration = -1
+gcd = 0
+attributes_add = 0x40
+[spell.fields]
+DispelType = 0
+InterruptFlags = 0
+[spell.effect1]
+aura = "DUMMY"
+target = "UNIT_CASTER"
+value = 10
+misc = 0
+[spell.effect2]
+type = "NONE"
+[spell.effect3]
+type = "NONE"
+
+[[spell]]
+id = 9504014
+base = 15366
+name = "Mención honorífica"
+rank_text = "Rango 2"
+chain = false
+description = "Aumenta un $s1% el honor obtenido."
+aura_description = "Honor obtenido aumentado un $s1%."
+icon = "Achievement_PVP_A_01"
+duration = -1
+gcd = 0
+attributes_add = 0x40
+[spell.fields]
+DispelType = 0
+InterruptFlags = 0
+[spell.effect1]
+aura = "MOD_HONOR_GAIN_PCT"
+target = "UNIT_CASTER"
+value = 10
+misc = 0
+[spell.effect2]
+type = "NONE"
+[spell.effect3]
+type = "NONE"

@@ -148,6 +148,7 @@ LocalizationPost.xml
 # MiWow: ultimo para poder envolver funciones/marcos de todo FrameXML
 MiWowProtocol.lua
 MiWowPanel.lua
+MiWowGuild.lua
 MiWowMatch.lua
 MiWowRace.lua
 MiWowParkour.lua

@@ -262,9 +262,10 @@ local function MiWow_ApplyMode()
 		CloseAllBags();
 	end
 
-	-- El panel de eventos no se usa dentro de una partida
+	-- El panel de eventos y la ventana de hermandad no se usan dentro de una partida
 	if ( match ) then
 		MiWowPanel:Hide();
+		MiWowGuildFrame:Hide();
 	end
 
 	MiWow_ApplyPetBar(restricted);
@@ -328,6 +329,7 @@ MiWow_RegisterHandler("DEV_MODE", function(fields)
 end);
 
 -- /miwow: abrir / cerrar el panel de eventos | /miwow dev: interfaz nativa en partida (modo dev)
+-- /miwow hermandad: ventana de la temporada de hermandad (tambien /temporada, MiWowGuild.lua)
 SLASH_MIWOW1 = "/miwow";
 SLASH_MIWOW2 = "/eventos";
 SlashCmdList["MIWOW"] = function(msg)
@@ -338,6 +340,10 @@ SlashCmdList["MIWOW"] = function(msg)
 		else
 			DEFAULT_CHAT_FRAME:AddMessage(MIWOW_STR_DEV_ONLY, 1, 0.2, 0.2);
 		end
+		return;
+	end
+	if ( msg == "hermandad" or msg == "guild" ) then
+		MiWowGuild_Toggle();
 		return;
 	end
 	MiWowPanel_Toggle();

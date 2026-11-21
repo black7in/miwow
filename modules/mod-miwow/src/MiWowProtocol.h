@@ -27,7 +27,7 @@ class Player;
 namespace MiWowProtocol
 {
     constexpr std::string_view Prefix = "MIWOW";
-    constexpr uint32 Version = 12;
+    constexpr uint32 Version = 13;
 
     // Campos del mensaje sin el opcode. Apuntan al mensaje recibido: solo validos durante la llamada.
     using Args = std::vector<std::string_view>;

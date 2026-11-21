@@ -1,7 +1,7 @@
 # Protocolo cliente <-> servidor (addon messages)
 
 Implementacion: servidor `modules/mod-miwow/src/MiWowProtocol.*`, cliente
-`client/src/Interface/FrameXML/MiWowProtocol.lua`. Version actual: **12**
+`client/src/Interface/FrameXML/MiWowProtocol.lua`. Version actual: **13**
 (`MiWowProtocol::Version` / `MIWOW_PROTOCOL.VERSION`; cambiarla en ambos lados a la vez).
 
 ## Transporte
@@ -54,6 +54,9 @@ opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `Regi
 | `ACCEPT` | id propuesta | "Aceptar" la partida encontrada | `MATCH_FOUND_STATUS` a todos; si es el ultimo, `MATCH_FOUND_END ACCEPTED` + partida |
 | `DECLINE` | id propuesta | "Rechazar" (tambien `LEAVE`, logout o cambio de grupo con propuesta pendiente) | `MATCH_FOUND_END` a todos (ver "Partida encontrada") |
 | `PARKOUR_RESTART` | - | "Reiniciar" en el parkour | vuelta a la salida, cronometro a cero: `PARKOUR_EVENT RESTART` + `PARKOUR`. v12 |
+| `GUILD_INFO` | - | abrir la ventana de hermandad, o `GUILD_DIRTY` con ella abierta (como mucho 1/s) | los 8 `GUILD_*` de "Hermandad", o `ERROR GUILD_DISABLED`. v13 |
+| `GUILD_BUY` | objeto | comprar en la tienda de la hermandad (como mucho 2/s). El servidor comprueba hermandad, intendente a menos de 10 m, objeto de la temporada, rango, oro y hueco | el objeto (nativo, como un vendedor) o el error (chat / error nativo de compra) + `GUILD_DIRTY`. v13 |
+| `GUILD_BOARD_REOPEN` | - | al cerrar la ventana de misiones abierta desde el tablon (el core cierra el gossip al aceptar/entregar; como mucho 2/s) | si sigue a menos de 10 m de un tablon: `GUILD_BOARD_OPEN` + la info + el gossip, como al hacer clic. v13 |
 
 ### Servidor -> cliente
 
@@ -79,6 +82,29 @@ opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `Regi
 | `PARKOUR_EVENT` | `CHECKPOINT` seccion / `FALL` / `FINISH` ms record 0/1 / `PLAYER_FINISH` nombre ms / `RESTART` | avisos: punto de control, caida (vuelta al ultimo punto de control), has llegado a la cima, otro jugador de la sesion ha llegado, reinicio. v12 |
 | `PARKOUR_RANK` | n, luego n x (nombre, ms) | mejores tiempos de la sesion (hasta 10; se pierden al cerrarse la sesion). v12 |
 | `DEV_MODE` | 0/1 | modo dev (`.gm on` o `.dev on`; se comprueba cada 250 ms). Al conectar y en cada cambio. En modo dev el cliente permite ocultar el panel (solo cliente) |
+
+## Hermandad (temporadas, v13)
+
+Servidor `modules/mod-miwow/src/guild/` (`MiWowGuildSeason`, `MiWowGuildScripts`, `MiWowGuildProtocol`), cliente
+`MiWowGuild.lua`. La hermandad, su chat y su lista son los nativos; esto solo anade la temporada. Respuesta a
+`GUILD_INFO` (en este orden; tambien se manda sola al usar el tablon o el intendente):
+
+| OP | Campos | Significado |
+|---|---|---|
+| `GUILD_STATE` | en hermandad 0/1, temporada, nombre, segundos que quedan (0 = sin fin), puntos, puesto (0 = sin puntos), puntos de la siguiente ventaja (0 = ninguna), reputacion, rango, reputacion del rango, siguiente rango ("" = maximo), reputacion del siguiente, contribucion, puntos hoy, limite diario (0 = sin), segundos desde el inicio de la temporada | resumen |
+| `GUILD_RANKS` | n, n x (rango, nombre, reputacion) | rangos de reputacion |
+| `GUILD_PERKS` | n, n x (puntos, hechizo, desbloqueada 0/1) | ventajas (el cliente saca nombre e icono de `GetSpellInfo`) |
+| `GUILD_PRIZES` | n, n x (puesto, objeto, cantidad) | premios del podio de la temporada actual |
+| `GUILD_BOARD` | segundos para la rotacion diaria, semanal, n, n x (mision, tablon 0 diaria/1 semanal, titulo, puntos, reputacion, miembros, reclamada 0/1, estado 0 disponible/1 en curso/2 para entregar/3 hecha/4 bloqueada: no se completo en grupo, hay que abandonarla, nivel (-1 = el del personaje), tipo 0 individual/1 grupo/2 banda) | tablon (diarias primero) |
+| `GUILD_RANKING` | puesto propio, n, n x (hermandad, puntos) | 10 primeras hermandades |
+| `GUILD_MEMBERS` | n, n x (personaje, contribucion, rango) | 10 miembros que mas han aportado |
+| `GUILD_VENDOR` | n, n x (objeto, nombre, rango minimo, precio en cobre, cantidad) | tienda de la hermandad esta temporada |
+
+Avisos sin peticion: `GUILD_DIRTY` (cambiaron puntos, tablon, temporada, miembros, una mision de hermandad del
+personaje o una compra; a los de esa hermandad, al personaje o a todos), `GUILD_BOARD_OPEN` (justo antes del gossip
+del tablon: el cliente muestra su tablon en lugar de la lista nativa; los botones eligen las misiones del gossip con
+`SelectGossipAvailableQuest/ActiveQuest` y la ventana de misiones nativa hace el resto) y `GUILD_SHOP_OPEN` (el
+intendente: abrir la tienda con las compras activas).
 
 ## Chat, susurros, canales y amigos (fuera del protocolo)
 

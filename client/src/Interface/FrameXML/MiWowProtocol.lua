@@ -8,7 +8,7 @@
 
 MIWOW_PROTOCOL = {
 	PREFIX = "MIWOW",
-	VERSION = 12,
+	VERSION = 13,
 	-- 255 (limite del core) - "MIWOW\t" - flag, con margen
 	MAX_CHUNK = 240,
 	DEBUG = true,
@@ -42,6 +42,7 @@ MIWOW_ERROR_TEXTS = {
 	GROUP_TARGET_IN_MATCH = "%s está en una partida.",
 	MATCH_CREATE_FAILED = "No se pudo crear la partida. Inténtalo de nuevo.",
 	MATCH_TELEPORT_FAILED = "No se pudo entrar en la partida.",
+	GUILD_DISABLED = "Las temporadas de hermandad están desactivadas en este servidor.",
 };
 
 MiWow_Protocol = {

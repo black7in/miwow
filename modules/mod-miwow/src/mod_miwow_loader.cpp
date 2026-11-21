@@ -13,6 +13,10 @@ void AddSC_miwow_spell_lock();
 void AddSC_miwow_stats();
 void AddSC_miwow_rewards();
 
+// Temporadas de hermandad (guild/)
+void AddSC_miwow_guild();
+void AddSC_miwow_guild_protocol();
+
 // Minijuegos (games/). Se registran antes que las maquetas: el orden es el del panel.
 void AddSC_miwow_game_parkour();
 void AddSC_miwow_game_race();
@@ -34,4 +38,6 @@ void Addmod_miwowScripts()
     AddSC_miwow_spell_lock();
     AddSC_miwow_stats();
     AddSC_miwow_rewards();
+    AddSC_miwow_guild();
+    AddSC_miwow_guild_protocol();
 }
