@@ -104,6 +104,11 @@ en cada minijuego se le da modelo, hechizos y stats temporales.
 > - Core: rama **`tradicional`** del core = `eventwow` sin `ab105ded2`/`04ab628c7`/`b88f7bc5d` (solo los usaban los
 >   heroes), revertidos en el commit `cc3c9300d`. `main` sigue usando la rama `eventwow` del core.
 
+> **Solo se trabaja en la rama `tradicional`** (decision del usuario 2026-11-21); `main` queda parada.
+
+> **Siguiente sesion (pedido por el usuario 2026-11-21)**: ventajas de hermandad NO pasivas (las descartadas de
+> Cataclysm: resurreccion en masa, invocar al grupo, calderos/festines, vuelos mas rapidos... = hechizos que se lanzan).
+
 > **Temporadas de hermandad (2026-11-21, compilado y probado por el usuario)**: traido de `mod-guild-season` (repo
 > `newserver-wotlk`, solo lectura) a `modules/mod-miwow/src/guild/`, decision del usuario: sin tocar esquemas ni el core.
 > - Definiciones en world (`db-world/2026_11_21_01_miwow_guild.sql`): `miwow_guild_quest` (sustituye a las columnas de
@@ -641,5 +646,5 @@ Despues: grupos/emparejamiento multijugador, minijuegos reales, lobby definitivo
     La "stats exactas por personaje" de arriba queda sustituida por base + bonificaciones.
 
 ### Decisiones abiertas
-- Login: cuenta+contrasena (actual) vs launcher/solo nombre.
-- Lobby definitivo (mapa propio, se podria hacer con tools/mapgen) - de momento Isla de los GM.
+- Ninguna. DESCARTADAS por el usuario (2026-11-21): login por launcher/solo nombre (se queda cuenta+contrasena) y
+  lobby definitivo (en `tradicional` no hay lobby).
