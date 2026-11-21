@@ -54,49 +54,6 @@ EventWow.Match.LoadTimeout = 30
 
 EventWow.Match.ReturnDelay = 8
 
-#
-#    EventWow.Hero.AgilityHaste.Max
-#    EventWow.Hero.AgilityHaste.Half
-#        Description: Heroes disfrazados: la agilidad EXTRA (total - base del contenedor a su nivel) sube la
-#                     velocidad de todos los ataques automaticos (cuerpo a cuerpo, mano izquierda y distancia,
-#                     tambien el disparo de los lanzadores). Unica fuente propia de celeridad de ataque.
-#                     Celeridad % = Max x agilidad / (agilidad + Half): rendimientos decrecientes, nunca pasa de Max.
-#                     +100 % = el doble de golpes por segundo. Max 1770 = arco de 2,8 s a 0,15 s con agilidad infinita.
-#        Default:     1770, 1000
-
-EventWow.Hero.AgilityHaste.Max = 1770
-EventWow.Hero.AgilityHaste.Half = 1000
-
-#
-#    EventWow.Hero.AttackMinInterval
-#        Description: Milisegundos minimos entre ataques automaticos de un heroe: la agilidad no baja de aqui
-#                     (cuenta tambien la celeridad de objetos y auras). 0 = sin suelo.
-#        Default:     150
-
-EventWow.Hero.AttackMinInterval = 150
-
-#
-#    EventWow.Hero.IntellectHaste.Max
-#    EventWow.Hero.IntellectHaste.Half
-#        Description: Heroes disfrazados: el intelecto EXTRA (total - base del contenedor a su nivel) sube la
-#                     celeridad con hechizos: lanzamiento de los hechizos magicos, tiempo global (minimo 1 s del
-#                     motor) y canalizados y DoT/HoT (mismos ticks en menos tiempo; spellgen pone el atributo).
-#                     Los hechizos fisicos (cuerpo a cuerpo/distancia) van con la agilidad.
-#                     Celeridad % = Max x intelecto / (intelecto + Half). Max 300 = lanzamiento entre 4 como mucho.
-#        Default:     300, 1000
-
-EventWow.Hero.IntellectHaste.Max = 300
-EventWow.Hero.IntellectHaste.Half = 1000
-
-#
-#    EventWow.Hero.SpellCastMinTime
-#        Description: Milisegundos minimos de lanzamiento de un heroe tras la celeridad (intelecto, objetos, auras;
-#                     tambien la de distancia). Nunca alarga un hechizo que ya era mas corto ni toca los
-#                     instantaneos. 0 = sin suelo.
-#        Default:     500
-
-EventWow.Hero.SpellCastMinTime = 500
-
 ###################################################################################################
 # OVERRIDES DEL CORE (pisan worldserver.conf)
 ###################################################################################################
@@ -107,13 +64,6 @@ EventWow.Hero.SpellCastMinTime = 500
 #                Ya es 1 por defecto; se fija aqui para que nadie lo desactive en worldserver.conf.
 
 AddonChannel = 1
-
-#
-#    Instance.UnloadDelay
-#        Motivo: cada partida crea su propia instancia y nadie vuelve a ella; al quedar vacia se
-#                descarga en 1 minuto en vez de 30 (memoria con muchas partidas).
-
-Instance.UnloadDelay = 60000
 
 #
 #    GM.LoginState

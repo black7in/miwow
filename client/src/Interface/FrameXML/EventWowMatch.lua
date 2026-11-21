@@ -1,6 +1,5 @@
 -- EventWow: partida en curso (HUD generico). Todo lo que muestra llega del servidor:
---   MATCH_STATE <NONE | LOADING|WAITING|PICKING|COUNTDOWN|RUNNING|ENDED> <id juego> <segundos>
---   (PICKING: eleccion de personaje, ventana propia en EventWowPick.lua)
+--   MATCH_STATE <NONE | LOADING|WAITING|COUNTDOWN|RUNNING|ENDED> <id juego> <segundos>
 --   MATCH_HUD <texto del objetivo>
 --   MATCH_RESPAWN <segundos> (has muerto: reapareces en N; 0 = ya)
 --   MATCH_END <WIN|LOSE|NONE> <texto>
@@ -18,7 +17,6 @@
 --                         3 / ¡VICTORIA!               EventWowMatchBigText (centro)
 
 EVENTWOW_STR_MATCH_WAITING = "Esperando al resto de jugadores...";
-EVENTWOW_STR_MATCH_PICKING = "Elige tu personaje: |cffffffff%s|r";
 EVENTWOW_STR_MATCH_COUNTDOWN = "La partida empieza en %d";
 EVENTWOW_STR_MATCH_TIME = "Tiempo: |cffffffff%s|r";
 EVENTWOW_STR_MATCH_RUNNING = "¡En juego!";
@@ -90,8 +88,6 @@ function EventWowMatch_UpdateHud()
 
 	if ( state == "WAITING" ) then
 		EventWowMatchHudStatus:SetText(EVENTWOW_STR_MATCH_WAITING);
-	elseif ( state == "PICKING" ) then
-		EventWowMatchHudStatus:SetText(format(EVENTWOW_STR_MATCH_PICKING, EventWow_FormatTime(remaining or 0)));
 	elseif ( state == "COUNTDOWN" ) then
 		local seconds = math.ceil(remaining or 0);
 		EventWowMatchHudStatus:SetText(format(EVENTWOW_STR_MATCH_COUNTDOWN, seconds));

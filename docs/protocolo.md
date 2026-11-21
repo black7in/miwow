@@ -39,7 +39,7 @@ Texto en UTF-8.
 ### Conexion
 
 `HELLO` lo gestiona el propio protocolo: si la version coincide, el jugador queda "conectado" (recibe los broadcasts)
-y se llama a los `RegisterConnectListener` (catalogo, historial de chat, `ONLINE`, estado de cola). Cualquier otro
+y se llama a los `RegisterConnectListener` (catalogo, estado de cola). Cualquier otro
 opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `RegisterDisconnectListener`.
 
 ### Cliente -> servidor
@@ -48,14 +48,11 @@ opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `Regi
 |---|---|---|---|
 | `HELLO` | version | primer `PLAYER_ENTERING_WORLD` de cada carga del Lua (login, `/reload`) | `WELCOME` + listeners, o `ERROR VERSION` |
 | `LIST` | - | pedir el catalogo de nuevo | `GAMES` |
-| `CHAT` | texto | chat global (max 200 caracteres; rafaga 3, luego 1 por segundo) | `CHAT` a todos, o `ERROR MUTED/CHAT_RATE/CHAT_TOO_LONG` |
 | `QUEUE` | id juego | "Buscar partida" (solo, o el lider por todo su grupo) | `QUEUE_STATUS` a todos los apuntados, o `ERROR` (ver "Grupos") |
 | `LEAVE` | - | "Cancelar" la cola (sale todo el grupo) | `QUEUE_STATUS NONE` a todos; los demas, `ERROR QUEUE_GROUP_CANCELLED <nombre>` |
 | `ABANDON` | - | "Abandonar" / "Salir" en partida | vuelta a donde estaba (entry point) y `MATCH_STATE NONE` |
 | `ACCEPT` | id propuesta | "Aceptar" la partida encontrada | `MATCH_FOUND_STATUS` a todos; si es el ultimo, `MATCH_FOUND_END ACCEPTED` + partida |
 | `DECLINE` | id propuesta | "Rechazar" (tambien `LEAVE`, logout o cambio de grupo con propuesta pendiente) | `MATCH_FOUND_END` a todos (ver "Partida encontrada") |
-| `PICK` | id personaje | "Elegir" en la fase de eleccion (`MATCH_STATE PICKING`); definitiva | disfraz (`MATCH_CHARACTER`) + `MATCH_PICKS` a todos, o `ERROR PICK_TAKEN/PICK_INVALID`. v7 |
-| `UPGRADE` | casilla 0..n-1 / `attr` | "+" de una habilidad o de Atributos (progresion de heroe, `EventWowProgress`) | `MATCH_ABILITIES` si se pudo; si no (sin puntos, nivel insuficiente, rango maximo), nada. v8 |
 | `PARKOUR_RESTART` | - | "Reiniciar" en el parkour | vuelta a la salida, cronometro a cero: `PARKOUR_EVENT RESTART` + `PARKOUR`. v12 |
 
 ### Servidor -> cliente
@@ -64,21 +61,15 @@ opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `Regi
 |---|---|---|
 | `WELCOME` | version, rango (0 jugador, 1 GM) | handshake correcto |
 | `ERROR` | codigo, detalle... | textos en `EVENTWOW_ERROR_TEXTS` (EventWowProtocol.lua); `UNKNOWN_OP <op>` |
-| `GAMES` | n, luego n x (id, icono, min, max, nombre, descripcion, jugable 0/1, grupo max, casillas, sesion abierta 0/1) | catalogo de minijuegos (no jugable = maqueta, "Proximamente"; casillas = inventario de partida, 0 = sin objetos; v6. v12: sesion abierta = sin cola, el panel dice "Entrar" y se entra directo en una partida en marcha con hueco) |
-| `CHAT` | unix time, rango, nombre, texto | chat global; al conectar llegan los ultimos 50 (historial) |
-| `ONLINE` | n | jugadores conectados (cada vez que alguien conecta/desconecta) |
+| `GAMES` | n, luego n x (id, icono, min, max, nombre, descripcion, jugable 0/1, grupo max, casillas, sesion abierta 0/1) | catalogo de minijuegos (no jugable = maqueta, "Proximamente"; casillas: campo de la rama main, aqui siempre 0 y el cliente lo ignora; v6. v12: sesion abierta = sin cola, el panel dice "Entrar" y se entra directo en una partida en marcha con hueco) |
 | `QUEUE_STATUS` | `QUEUED` id segundos jugadores-de-la-entrada / `NONE` | estado de la cola (tambien al conectar) |
 | `MATCH_FOUND` | id, id juego, segundos para aceptar, total, aceptados, tu 0/1 | partida encontrada: aceptar o rechazar (tambien al conectar si sigue pendiente) |
 | `MATCH_FOUND_STATUS` | id, aceptados, total | alguien ha aceptado |
 | `MATCH_FOUND_END` | id, `ACCEPTED`/`REQUEUED`/`REMOVED` | fin de la confirmacion: a la partida / de vuelta a la cola / fuera de la cola |
-| `MATCH_STATE` | `NONE` / estado, id juego, segundos | partida del jugador (al conectar, en cada cambio y al salir). Estados: `LOADING` (en camino, sigue en modo mundo), `WAITING` (dentro, esperando al resto), `PICKING` (eleccion de personaje, v7), `COUNTDOWN`, `RUNNING`, `ENDED` (resultado; luego vuelta a donde estaba). segundos = lo que queda del estado, 0 = sin tiempo |
+| `MATCH_STATE` | `NONE` / estado, id juego, segundos | partida del jugador (al conectar, en cada cambio y al salir). Estados: `LOADING` (en camino, sigue en modo mundo), `WAITING` (dentro, esperando al resto), `COUNTDOWN`, `RUNNING`, `ENDED` (resultado; luego vuelta a donde estaba). segundos = lo que queda del estado, 0 = sin tiempo |
 | `MATCH_HUD` | texto | objetivo que muestra el HUD (vacio = nada) |
 | `MATCH_END` | `WIN`/`LOSE`/`NONE`, texto | resultado del jugador y resumen |
 | `MATCH_RESPAWN` | segundos | has muerto: reapareces en N s (0 = ya has reaparecido). Morir nunca saca de la partida |
-| `MATCH_CHARACTER` | id, nombre, icono, hechizo... / `0` | disfraz del personaje de minijuego (`EventWowDisguise`): al llegar a la instancia, al quitarlo (`0`) y al reconectar. El cliente pinta la barra de habilidades propia (`EventWowAbilities.lua`, teclas 1..0). v4 |
-| `MATCH_ABILITIES` | nivel, nivel max, puntos, atributos, atributos max, atributos mejorable 0/1, stats por punto de atributos `clave:valor,...`, n, luego n x (rango, rango max ahora, rangos totales, mejorable 0/1, hechizo actual, hechizo siguiente) / `0` | progresion del heroe (`EventWowProgress`, docs/heroes.md): al empezar, en cada subida de nivel o mejora, al reconectar; `0` = sin progresion (todo aprendido). Casillas = las de `MATCH_CHARACTER`, en orden; rango 0 = sin aprender (hechizo actual 0). v8 |
-| `MATCH_PICK` | unico 0/1, n, luego n x (id, nombre, icono, descripcion, hechizos `id,id,...`, vehiculo 0/1) | personajes a elegir (al entrar en `PICKING` y al reconectar). unico = cada personaje solo para un jugador. Ventana `EventWowPick.lua`. v7. No se envia si el juego elige en el mundo (`GetPickPositions`, PNJ con dialogo): solo `MATCH_PICKS` |
-| `MATCH_PICKS` | n, luego n x (nombre jugador, id personaje / 0 = eligiendo) | quien ha elegido que (con `MATCH_PICK`, en cada eleccion y al acabar: los que no eligieron reciben uno al azar) |
 | `RACE_INFO` | vueltas | empieza una carrera (`EventWowGameRace`, juegos `carrera` / `carrera_estelar`): al llegar a la instancia. v9 |
 | `RACE` | vuelta, vueltas, posicion, corredores, ms carrera, ms vuelta actual, ms mejor vuelta, contraria 0/1, terminado 0/1 | marcador de la carrera, cada 500 ms a cada corredor; el cliente hace avanzar el reloj entre mensajes. v9 |
 | `RACE_EVENT` | `LAP` vuelta ms / `FINAL_LAP` / `FELL` / `FINISH` posicion ms / `WINNER` nombre segundos / `ITEM` hechizo hueco / `HIT` hechizo / `BLOCK` / `MOUNT` | avisos: nueva vuelta, ultima vuelta, caida (vuelve al ultimo punto bueno, quieto 2 s), has llegado, alguien ha ganado (quedan N s). v9. v10: poder recogido (hasta 5 acumulados, huecos 1-5 de la barra de la moto), golpe recibido (derrape/frenado), el escudo ha parado un golpe. v11: "¡Todos a sus motos!" (cuenta atras: llegan a pie y se montan a la vez) |
@@ -89,21 +80,17 @@ opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `Regi
 | `PARKOUR_RANK` | n, luego n x (nombre, ms) | mejores tiempos de la sesion (hasta 10; se pierden al cerrarse la sesion). v12 |
 | `DEV_MODE` | 0/1 | modo dev (`.gm on` o `.dev on`; se comprueba cada 250 ms). Al conectar y en cada cambio. En modo dev el cliente permite ocultar el panel (solo cliente) |
 
-## Susurros y canales (fuera del protocolo)
+## Chat, susurros, canales y amigos (fuera del protocolo)
 
-- Los susurros son los nativos del core (`SendChatMessage(..., "WHISPER")`, eventos `CHAT_MSG_WHISPER/_INFORM/AFK/DND`):
-  el cliente los muestra en una pestana por conversacion del chat del panel (filtrados del chat nativo).
-- Canales (General, Comercio...): no existen. `EventWowChat.cpp` descarta `CMSG_JOIN_CHANNEL` salvo en modo dev
-  y al salir del modo dev se abandonan todos (`CleanupChannels`). El cliente filtra `CHAT_MSG_CHANNEL*`.
+Todo nativo de WoW: el panel no tiene chat ni lista de amigos (desde 2026-11-21, rama `tradicional`).
 
 ## Grupos
 
-Grupos **nativos** del core (no van por el protocolo): el panel (`EventWowGroup.lua`) usa `InviteUnit`, `UninviteUnit`,
-`PromoteToLeader`, `LeaveParty` y los eventos `PARTY_*`; la invitacion es el dialogo nativo. Alt+clic en un nombre
-del chat invita. El chat de grupo va a la pestana "Grupo" del chat (fija mientras estas en grupo; escribir ahi = `/p`).
+Grupos **nativos** del core (no van por el protocolo), con su interfaz nativa (grupo y banda). El panel solo mira
+el grupo para el boton de buscar (lider, tamano: `GetNumPartyMembers`/`GetNumRaidMembers`).
 
-Reglas (`EventWowGroups.cpp`, no en modo dev): maximo 5 (se descarta `CMSG_GROUP_RAID_CONVERT`); no se invita ni se
-acepta en partida (`ERROR GROUP_IN_MATCH`, `GROUP_TARGET_IN_MATCH <nombre>`).
+Reglas (`EventWowGroups.cpp`, no en modo dev): no se invita ni se acepta en partida (`ERROR GROUP_IN_MATCH`,
+`GROUP_TARGET_IN_MATCH <nombre>`); el tamano de cola lo limita `MaxPartySize` de cada juego.
 
 Cola en grupo (`EventWowMatchMgr`): `QUEUE` del lider apunta al grupo entero como una entrada (nunca se separa).
 - Requisitos: ser el lider (`QUEUE_NOT_LEADER`), juego con `MaxPartySize` > 1 (`QUEUE_SOLO_ONLY <max>`) y grupo que
@@ -127,17 +114,6 @@ Aceptar/Rechazar y cuenta atras de `EventWow.Queue.AcceptTimeout`, 20 s).
 - Durante la propuesta los jugadores siguen "en cola" (`QUEUE_STATUS QUEUED`) y no pueden apuntarse a otra.
 - Instancias: el core liga tambien al lider de quien entra (aunque no este en la partida); al cerrar la partida se
   quitan todos los binds de su InstanceSave (`UnbindAllFor`).
-
-## Amigos
-
-Lista de amigos **nativa** (no va por el protocolo): pestana "Amigos" de la seccion social del panel
-(`EventWowFriends.lua`, `EventWowSocial.lua`) con `GetFriendInfo`, `AddFriend`, `RemoveFriend`, `ShowFriends` y
-`FRIENDLIST_UPDATE`. Los avisos de conexion/desconexion son mensajes de sistema del core (salen en Global).
-
-## Pendiente
-
-- `ONLINE` se difunde en cada login/logout: agrupar si hay muchos jugadores.
-- Chat: filtro de palabras, registro en BD (de momento log `module.eventwow.chat`).
 
 ## Partidas (paso 6-7)
 

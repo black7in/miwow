@@ -48,12 +48,3 @@ INSERT INTO `light_dbc` (`ID`, `ContinentID`, `X`, `Y`, `Z`, `FalloffStart`, `Fa
     `LightParamsID_6`, `LightParamsID_7`, `LightParamsID_8`)
 VALUES (2601, 754, 0, 0, 0, 23262.191, 30725.883, 396, 491, 396, 491, 3, 0, 0, 0);
 
--- Personaje 50 "Saltador": gnomo (display 5436, como el Piloto) sin hechizos. El disfraz impide al contenedor (druida)
--- usar formas, monturas o cualquier otro hechizo (EventWowDisguise: OnSpellCheckCast).
-DELETE FROM `eventwow_character` WHERE `Id` = 50;
-INSERT INTO `eventwow_character` (`Id`, `Name`, `Description`, `Icon`, `DisplayId`, `Scale`, `Health`, `PowerType`,
-    `MaxPower`) VALUES
-(50, 'Saltador', 'Gnomo ágil: solo sus piernas.', 'Interface\\Icons\\Ability_Rogue_Sprint', 5436, 1.0, 0, 0, 0);
-
-DELETE FROM `eventwow_game_character` WHERE `GameId` = 'parkour';
-INSERT INTO `eventwow_game_character` (`GameId`, `CharacterId`, `Sort`) VALUES ('parkour', 50, 0);

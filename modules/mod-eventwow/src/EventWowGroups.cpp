@@ -4,15 +4,13 @@
 #include "EventWowProtocol.h"
 #include "Group.h"
 #include "ObjectAccessor.h"
-#include "Opcodes.h"
 #include "Player.h"
 #include "ScriptMgr.h"
-#include "WorldPacket.h"
-#include "WorldSession.h"
 
 // Grupos: los nativos de AzerothCore (invitar, aceptar, lider, expulsar, salir, chat de grupo, marcos de grupo).
 // El panel los maneja con la API de grupo del cliente (EventWowGroup.lua); aqui solo las reglas de EventWow:
-//  - Maximo 5 (grupo, nunca banda): se descarta CMSG_GROUP_RAID_CONVERT.
+//  - Bandas normales (servidor tradicional): un grupo o banda solo busca partida si cabe en MaxPartySize del juego
+//    (EventWowMatchMgr::Enqueue, QUEUE_GROUP_TOO_BIG).
 //  - No se invita ni se acepta estando en una partida (ni a alguien que este en una).
 //  - Cualquier cambio en un grupo lo saca de la cola (EventWowMatchMgr::OnGroupChanged).
 // En modo dev (.gm / .dev) no hay reglas: AzerothCore normal.
@@ -94,27 +92,8 @@ public:
     }
 };
 
-// Grupo -> banda: no existe (CanPacketReceive llega desde el hilo de red: solo se leen flags del jugador)
-class EventWow_GroupServerScript : public ServerScript
-{
-public:
-    EventWow_GroupServerScript() : ServerScript("EventWow_GroupServerScript", {
-        SERVERHOOK_CAN_PACKET_RECEIVE
-    }) { }
-
-    bool CanPacketReceive(WorldSession* session, WorldPacket const& packet) override
-    {
-        if (packet.GetOpcode() != CMSG_GROUP_RAID_CONVERT || !sEventWowConfig.Enabled)
-            return true;
-
-        Player* player = session->GetPlayer();
-        return player && EventWowDevMode::IsActive(player);
-    }
-};
-
 void AddSC_eventwow_groups()
 {
     new EventWow_GroupPlayerScript();
     new EventWow_GroupScript();
-    new EventWow_GroupServerScript();
 }

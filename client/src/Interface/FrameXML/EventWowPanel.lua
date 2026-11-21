@@ -1,26 +1,24 @@
--- EventWow: panel de eventos (minijuegos + chat global). Generico: todo lo que muestra llega del servidor
--- (GAMES, QUEUE_STATUS...), el cliente no conoce ningun minijuego. Ver docs/protocolo.md.
+-- EventWow: panel de eventos (solo minijuegos: chat, grupo y amigos son los nativos de WoW). Generico: todo lo que
+-- muestra llega del servidor (GAMES, QUEUE_STATUS...), el cliente no conoce ningun minijuego. Ver docs/protocolo.md.
 --
---  +-----------------------------------------------------------+
---  | EVENTWOW                                    <nombre>  [X] |  barra superior
---  +----------------------+------------------------------------+
---  | MINIJUEGOS (lista)   | detalle + Buscar partida / en cola |
---  +----------------------+------------------------------------+
---  | CHAT GLOBAL (EventWowChat.lua)                            |
---  +-----------------------------------------------------------+
--- Ventana centrada (se arrastra por la barra superior) que se abre y cierra con el boton del minimapa,
--- /eventwow o Esc; cerrada dentro de una partida (EventWow_SetMode, EventWow.lua). El reparto interior es
--- proporcional (EventWowPanel_Layout) y el numero de filas de la lista depende del alto disponible.
+--  +-----------------------------------------------+
+--  | EVENTOS                                   [X] |  barra superior (se arrastra)
+--  +-----------------+-----------------------------+
+--  | lista de juegos | detalle                     |
+--  |                 | Buscar partida / en cola    |
+--  +-----------------+-----------------------------+
+-- Ventana pequena sobre la interfaz normal (no oculta nada) que se abre y cierra con el boton del minimapa,
+-- /eventwow o Esc; cerrada dentro de una partida (EventWow_SetMode, EventWow.lua). La cola en grupo usa el grupo
+-- nativo: busca el lider por todos.
 
 EVENTWOW_PANEL = {
-	WIDTH = 960,          -- tamano de la ventana (menos si la pantalla no da: SCREEN_MARGIN por lado)
-	HEIGHT = 640,
+	WIDTH = 860,          -- tamano de la ventana (menos si la pantalla no da: SCREEN_MARGIN por lado)
+	HEIGHT = 560,
 	SCREEN_MARGIN = 40,
 	MARGIN = 8,
 	GAP = 6,
 	TOP_BAR_HEIGHT = 36,
-	GAMES_HEIGHT_RATIO = 0.55,  -- parte del alto (sin barra superior) para juegos; el resto, chat
-	LIST_WIDTH_RATIO = 0.32,
+	LIST_WIDTH_RATIO = 0.36,
 	LIST_MIN_WIDTH = 280,
 	MAX_ROWS = 20,
 	ROW_HEIGHT = 40,
@@ -35,7 +33,7 @@ EVENTWOW_PANEL = {
 	COLOR_BORDER = { 0.35, 0.35, 0.4, 1 },
 };
 
-EVENTWOW_STR_PANEL_TITLE = "EVENTWOW";
+EVENTWOW_STR_PANEL_TITLE = "EVENTOS";
 EVENTWOW_STR_PANEL_MINIMAP_TITLE = "Eventos";
 EVENTWOW_STR_PANEL_MINIMAP_HINT = "Clic: abrir o cerrar el panel (/eventwow)";
 EVENTWOW_STR_PANEL_MINIMAP_QUEUED = "Buscando partida: %s";
@@ -76,6 +74,22 @@ local function EventWow_ApplyBackdrop(frame, color)
 	frame:SetBackdrop(EVENTWOW_PANEL.BACKDROP);
 	frame:SetBackdropColor(unpack(color));
 	frame:SetBackdropBorderColor(unpack(EVENTWOW_PANEL.COLOR_BORDER));
+end
+
+-- Grupo nativo (grupo o banda): tamano y si puede buscar partida (lider o sin grupo)
+local function EventWow_GroupSize()
+	local raid = GetNumRaidMembers();
+	if ( raid > 0 ) then
+		return raid;
+	end
+	return GetNumPartyMembers() + 1;
+end
+
+local function EventWow_IsLeaderOrSolo()
+	if ( GetNumRaidMembers() > 0 ) then
+		return IsRaidLeader() and true or false;
+	end
+	return GetNumPartyMembers() == 0 or (IsPartyLeader() and true or false);
 end
 
 local function EventWow_FindGame(id)
@@ -170,15 +184,15 @@ function EventWowPanel_UpdateDetail()
 	else
 		EventWowPanelQueue:Hide();
 		EventWowPanelSearchButton:Show();
-		-- En grupo busca el lider por todos (EventWowGroup.lua); el servidor lo vuelve a comprobar
-		local size = EventWowGroup_GetSize();
+		-- En grupo busca el lider por todos; el servidor lo vuelve a comprobar
+		local size = EventWow_GroupSize();
 		local open = hasGame and game.openSession;
 		local text, enabled = open and EVENTWOW_STR_PANEL_JOIN or EVENTWOW_STR_PANEL_SEARCH,
 			hasGame and game.playable and EventWow_Protocol.connected;
 		if ( hasGame and not game.playable ) then
 			text = EVENTWOW_STR_PANEL_UNAVAILABLE;
 		elseif ( hasGame and size > 1 ) then
-			if ( not EventWowGroup_IsLeaderOrSolo() ) then
+			if ( not EventWow_IsLeaderOrSolo() ) then
 				text, enabled = EVENTWOW_STR_PANEL_NOT_LEADER, false;
 			elseif ( (game.maxPartySize or 1) <= 1 ) then
 				text, enabled = EVENTWOW_STR_PANEL_SOLO_ONLY, false;
@@ -259,9 +273,6 @@ local function EventWow_CreateTopBar(panel)
 		EventWowPanel:Hide();
 	end);
 
-	local name = bar:CreateFontString("EventWowPanelPlayerName", "ARTWORK", "GameFontHighlight");
-	name:SetPoint("RIGHT", close, "LEFT", -8, 0);
-
 	-- Arrastrar la ventana por la barra
 	bar:EnableMouse(true);
 	bar:RegisterForDrag("LeftButton");
@@ -271,14 +282,6 @@ local function EventWow_CreateTopBar(panel)
 	bar:SetScript("OnDragStop", function()
 		EventWowPanel:StopMovingOrSizing();
 	end);
-end
-
-function EventWowPanel_UpdatePlayerName()
-	local text = UnitName("player") or "";
-	if ( EventWow_Protocol.isGM ) then
-		text = EVENTWOW_CHAT.GM_BADGE..text;
-	end
-	EventWowPanelPlayerName:SetText(text);
 end
 
 local function EventWow_CreateGameRow(list, index)
@@ -427,8 +430,7 @@ function EventWowPanel_Layout()
 	end
 
 	local margin, gap = EVENTWOW_PANEL.MARGIN, EVENTWOW_PANEL.GAP;
-	local content = height - margin * 2 - EVENTWOW_PANEL.TOP_BAR_HEIGHT - gap * 2;
-	local gamesHeight = math.floor(content * EVENTWOW_PANEL.GAMES_HEIGHT_RATIO);
+	local gamesHeight = height - margin * 2 - EVENTWOW_PANEL.TOP_BAR_HEIGHT - gap;
 	local listWidth = math.max(EVENTWOW_PANEL.LIST_MIN_WIDTH, math.floor((width - margin * 2) * EVENTWOW_PANEL.LIST_WIDTH_RATIO));
 	EventWowPanelGameList:SetSize(listWidth, gamesHeight);
 
@@ -463,28 +465,15 @@ local function EventWow_CreatePanel()
 	EventWow_CreateGameList(panel);
 	EventWow_CreateDetail(panel);
 
-	-- Abajo: chat (izq.) + social: grupo y amigos (der., ancho fijo)
-	local social = EventWowSocial_Create(panel);
-	social:SetPoint("TOPRIGHT", EventWowPanelDetail, "BOTTOMRIGHT", 0, -EVENTWOW_PANEL.GAP);
-	social:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -EVENTWOW_PANEL.MARGIN, EVENTWOW_PANEL.MARGIN);
-	EventWow_ApplyBackdrop(social, EVENTWOW_PANEL.COLOR_SECTION);
-
-	local chat = EventWowChat_Create(panel);
-	chat:SetPoint("TOPLEFT", EventWowPanelGameList, "BOTTOMLEFT", 0, -EVENTWOW_PANEL.GAP);
-	chat:SetPoint("BOTTOMRIGHT", social, "BOTTOMLEFT", -EVENTWOW_PANEL.GAP, 0);
-	EventWow_ApplyBackdrop(chat, EVENTWOW_PANEL.COLOR_SECTION);
-
 	panel:SetScript("OnSizeChanged", EventWowPanel_Layout);
 	panel:SetScript("OnShow", function()
 		PlaySound("igCharacterInfoOpen");
 		EventWowPanel_Resize();
 		EventWowPanel_Layout();
-		EventWowPanel_UpdatePlayerName();
 		EventWowPanel_Update();
 	end);
 	panel:SetScript("OnHide", function()
 		PlaySound("igCharacterInfoClose");
-		EventWowChatEditBox:ClearFocus();
 	end);
 	panel:Hide();
 end
@@ -601,9 +590,16 @@ EventWow_RegisterHandler("QUEUE_STATUS", function(fields)
 	EventWowPanel_Update();
 end);
 
-EventWow_RegisterListener("CONNECTED", function()
-	EventWowPanel_UpdatePlayerName();
-	EventWowPanel_Update();
+EventWow_RegisterListener("CONNECTED", EventWowPanel_Update);
+-- El boton de buscar depende del grupo nativo (lider, tamano)
+local groupFrame = CreateFrame("Frame");
+groupFrame:RegisterEvent("PARTY_MEMBERS_CHANGED");
+groupFrame:RegisterEvent("RAID_ROSTER_UPDATE");
+groupFrame:RegisterEvent("PARTY_LEADER_CHANGED");
+groupFrame:SetScript("OnEvent", function()
+	if ( EventWowPanel:IsShown() ) then
+		EventWowPanel_UpdateDetail();
+	end
 end);
 EventWow_RegisterListener("GAMES", EventWowPanel_Update);
 EventWow_CreatePanel();

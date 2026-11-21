@@ -1,4 +1,4 @@
--- EventWow: carrera, placas de aceleracion y piloto gnomo (EventWowGameRace.cpp; hechizo 9502013 en carrera.toml).
+-- EventWow: carrera, placas de aceleracion (EventWowGameRace.cpp; hechizo 9502013 en carrera.toml).
 --
 -- 9500012: placa de aceleracion = plataforma de teletransporte de Ulduar (UL_TeleportationPad, display 31853; ~11 x 4,5
 -- yd a escala 1 segun el modelo, pero a 0,6 se veia diminuta: 1,8; la usa "[DND] Summoning Pad" 39817). La runa
@@ -19,8 +19,3 @@ DROP TEMPORARY TABLE `eventwow_tmp_template`;
 INSERT INTO `creature_template_model` (`CreatureID`, `Idx`, `CreatureDisplayID`, `DisplayScale`, `Probability`, `VerifiedBuild`) VALUES
 (9500012, 0, 31853, 1.8, 1, 0);
 
--- Personaje 3 "Piloto": gnomo (display 5436, Gnome Pit Crewman varon) en vez del goblin. Arregla tambien el icono:
--- en _02 se escribio con '\I' y MySQL se comio las barras.
-UPDATE `eventwow_character` SET `DisplayId` = 5436, `Description` = 'Piloto gnomo en su moto de carreras.',
-    `Icon` = 'Interface\\Icons\\Ability_Mount_MechaStrider'
-WHERE `Id` = 3;

@@ -22,9 +22,16 @@ namespace EventWowLobby
     // Guarda la posicion actual como punto de vuelta (Player::SetEntryPoint) antes de ir a la partida
     void SaveReturnPoint(Player* player);
 
-    // Estado base al entrar/salir de una partida: vivo, vida completa, sin combate, sin disfraz ni bonificaciones,
-    // sin montura ni forma y sin beneficios temporales. NUNCA toca objetos, oro, nivel, talentos ni auras pasivas.
+    // Estado base al entrar/salir de una partida: vivo, vida completa, sin combate, sin vehiculo, sin bloqueo de
+    // hechizos, sin bonificaciones, sin montura ni forma y sin beneficios temporales. NUNCA toca objetos, oro, nivel, talentos ni auras pasivas.
     void RestoreBaseState(Player* player);
+
+    // Morir en un evento no gasta el equipo (el core quita un 10 % al morir contra criaturas o al caer, salvo en
+    // campos de batalla): SaveDurability al llegar a la partida, RestoreDurability al reaparecer, al salir y antes
+    // del logout (devuelve lo perdido desde la foto, sin coste), ClearDurability al salir
+    void SaveDurability(Player* player);
+    void RestoreDurability(Player* player);
+    void ClearDurability(Player* player);
 
     // Restaura el estado base y lo lleva a su punto de vuelta (o a su hogar)
     bool ReturnFromMatch(Player* player);

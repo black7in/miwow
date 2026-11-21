@@ -1,13 +1,16 @@
 #include "EventWowLobby.h"
 #include "DataMap.h"
 #include "EventWowConfig.h"
-#include "EventWowDisguise.h"
 #include "EventWowGames.h"
-#include "EventWowInventory.h"
+#include "EventWowSpellLock.h"
 #include "EventWowStats.h"
+#include "EventWowVehicle.h"
+#include "Item.h"
 #include "Map.h"
 #include "Player.h"
 #include "ScriptMgr.h"
+#include <algorithm>
+#include <vector>
 
 namespace
 {
@@ -15,6 +18,14 @@ namespace
     std::string const RelocatedKey = "EventWowLoginRelocated";
 
     struct RelocatedFlag : public DataMap::Base { };
+
+    // Durabilidad del equipo al llegar a la partida (SaveDurability)
+    std::string const DurabilityKey = "EventWowDurability";
+
+    struct DurabilitySlot : public DataMap::Base
+    {
+        std::vector<std::pair<ObjectGuid, uint32>> Items;  // objeto equipado -> durabilidad
+    };
 }
 
 char const* EventWowLobby::CanJoinFrom(Player const* player)
@@ -39,11 +50,8 @@ char const* EventWowLobby::CanJoinFrom(Player const* player)
 
 bool EventWowLobby::IsEventMap(uint32 mapId)
 {
-    for (EventWowGameInfo const& game : sEventWowGames.GetAll())
-        if (game.MapId == mapId)
-            return true;
-
-    return false;
+    // Solo el rango propio (EventWowGames::Validate no deja otros): las maquetas del panel llevan MapId 0
+    return mapId >= EventWowFirstMapId && mapId <= EventWowLastMapId;
 }
 
 void EventWowLobby::SaveReturnPoint(Player* player)
@@ -69,10 +77,51 @@ void EventWowLobby::RestoreBaseState(Player* player)
     player->RemoveArenaAuras();
     player->RemoveAurasByType(SPELL_AURA_MOUNTED);
     player->RemoveAurasByType(SPELL_AURA_MOD_SHAPESHIFT);
-    EventWowDisguise::Remove(player);
-    EventWowInventory::Clear(player);
+    EventWowVehicle::Remove(player);
+    EventWowSpellLock::Clear(player);
     EventWowStats::Reset(player);
     player->SetFullHealth();
+}
+
+void EventWowLobby::SaveDurability(Player* player)
+{
+    DurabilitySlot* slot = player->CustomData.GetDefault<DurabilitySlot>(DurabilityKey);
+    slot->Items.clear();
+    for (uint8 i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
+        if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+            if (item->GetUInt32Value(ITEM_FIELD_MAXDURABILITY))
+                slot->Items.emplace_back(item->GetGUID(), item->GetUInt32Value(ITEM_FIELD_DURABILITY));
+}
+
+void EventWowLobby::RestoreDurability(Player* player)
+{
+    DurabilitySlot const* slot = player->CustomData.Get<DurabilitySlot>(DurabilityKey);
+    if (!slot)
+        return;
+
+    for (uint8 i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
+    {
+        Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i);
+        if (!item)
+            continue;
+
+        auto itr = std::find_if(slot->Items.begin(), slot->Items.end(),
+            [item](std::pair<ObjectGuid, uint32> const& saved) { return saved.first == item->GetGUID(); });
+        uint32 const current = item->GetUInt32Value(ITEM_FIELD_DURABILITY);
+        if (itr == slot->Items.end() || current >= itr->second)
+            continue;
+
+        // Como Player::DurabilityRepair, sin coste y hasta la durabilidad que tenia al llegar
+        item->SetUInt32Value(ITEM_FIELD_DURABILITY, itr->second);
+        item->SetState(ITEM_CHANGED, player);
+        if (!current)
+            player->_ApplyItemMods(item, i, true);
+    }
+}
+
+void EventWowLobby::ClearDurability(Player* player)
+{
+    player->CustomData.Erase(DurabilityKey);
 }
 
 bool EventWowLobby::ReturnFromMatch(Player* player)
@@ -88,8 +137,15 @@ class EventWow_LobbyPlayerScript : public PlayerScript
 public:
     EventWow_LobbyPlayerScript() : PlayerScript("EventWow_LobbyPlayerScript", {
         PLAYERHOOK_ON_OVERRIDE_LOGIN_LOCATION,
-        PLAYERHOOK_ON_LOGIN
+        PLAYERHOOK_ON_LOGIN,
+        PLAYERHOOK_ON_BEFORE_LOGOUT
     }) { }
+
+    // Antes de guardar el personaje (OnPlayerLogout, que saca de la partida, llega despues de SaveToDB)
+    void OnPlayerBeforeLogout(Player* player) override
+    {
+        EventWowLobby::RestoreDurability(player);
+    }
 
     bool OnPlayerOverrideLoginLocation(Player* player, WorldLocation& location) override
     {
@@ -113,7 +169,7 @@ public:
             return;
 
         player->CustomData.Erase(RelocatedKey);
-        // Pudo desconectarse muerto o disfrazado (el disfraz no se guarda, pero la muerte si)
+        // Pudo desconectarse muerto o en su vehiculo (el vehiculo no se guarda, pero la muerte si)
         if (!player->IsAlive())
             EventWowLobby::RestoreBaseState(player);
     }

@@ -166,6 +166,9 @@ protected:
         RunnerState State = RunnerState::AtStart;
     };
 
+    // Con su personaje, pero solo sus piernas: sin Traslacion, forma de viaje, monturas... (pociones si)
+    bool BlocksPlayerSpells() const override { return true; }
+
     Position GetArrivalPosition(Player* /*player*/) override
     {
         return _course.Checkpoints.front().Pos;

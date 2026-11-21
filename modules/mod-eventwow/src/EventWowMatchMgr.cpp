@@ -2,13 +2,13 @@
 #include "DataMap.h"
 #include "EventWowConfig.h"
 #include "EventWowDevMode.h"
-#include "EventWowDisguise.h"
 #include "EventWowGames.h"
-#include "EventWowInventory.h"
 #include "EventWowLobby.h"
 #include "EventWowMatch.h"
 #include "EventWowProtocol.h"
+#include "EventWowSpellLock.h"
 #include "EventWowStats.h"
+#include "EventWowVehicle.h"
 #include "GameTime.h"
 #include "Group.h"
 #include "InstanceSaveMgr.h"
@@ -105,6 +105,8 @@ void EventWowMatchMgr::Update(Milliseconds diff)
 
     for (uint32 id : toClose)
         CloseMatch(id);
+
+    UpdateClosedInstances(diff);
 }
 
 // Cola ------------------------------------------------------------------------------------------
@@ -740,8 +742,43 @@ void EventWowMatchMgr::CloseMatch(uint32 matchId)
         sInstanceSaveMgr->UnbindAllFor(save);
 
     // Si la instancia nunca llego a cargarse, nadie mas borraria su InstanceSave
-    // (si esta cargada, se borra al descargarse: Instance.UnloadDelay)
+    // (si esta cargada, se borra al descargarse: UpdateClosedInstances)
     sInstanceSaveMgr->DeleteInstanceSaveIfNeeded(instanceId, false);
+
+    _closedInstances.push_back({ match.GetMapId(), instanceId, ClosedInstanceTimeout });
+}
+
+// Instancias de partidas cerradas: en cuanto se vacian (los jugadores tardan en salir: teleport pendiente) se
+// descargan ya y sin guardar nada (InstanceMap::Reset sin jugadores = descarga inmediata + borrar al descargar),
+// en vez de esperar Instance.UnloadDelay (30 min por defecto: es la de todas las mazmorras del servidor)
+void EventWowMatchMgr::UpdateClosedInstances(Milliseconds diff)
+{
+    for (auto itr = _closedInstances.begin(); itr != _closedInstances.end();)
+    {
+        Map* map = sMapMgr->FindMap(itr->MapId, itr->InstanceId);
+        InstanceMap* instance = map ? map->ToInstanceMap() : nullptr;
+        bool done = !instance;  // no cargada (o ya descargada)
+        if (instance && !instance->HavePlayers())
+        {
+            instance->Reset(INSTANCE_RESET_GROUP_LEAVE);
+            done = true;
+        }
+
+        if (!done && itr->Remaining <= diff)
+        {
+            LOG_ERROR("module.eventwow", "EventWow: la instancia {} (mapa {}) de una partida cerrada sigue con jugadores, "
+                "se descargara con Instance.UnloadDelay", itr->InstanceId, itr->MapId);
+            done = true;
+        }
+
+        if (done)
+            itr = _closedInstances.erase(itr);
+        else
+        {
+            itr->Remaining -= diff;
+            ++itr;
+        }
+    }
 }
 
 EventWowMatch* EventWowMatchMgr::GetMatch(Player* player) const
@@ -763,10 +800,12 @@ void EventWowMatchMgr::RemovePlayer(EventWowMatch& match, ObjectGuid guid, bool 
         if (slot && slot->MatchId == match.GetId())
             player->CustomData.Erase(MatchKey);
 
-        // Tambien en modo dev y en el logout: disfraz y bonificaciones son de la partida
-        EventWowDisguise::Remove(player);
-        EventWowInventory::Clear(player);
+        // Tambien en modo dev y en el logout: vehiculo, bloqueo de hechizos y bonificaciones son de la partida
+        EventWowVehicle::Remove(player);
+        EventWowSpellLock::Clear(player);
         EventWowStats::Reset(player);
+        EventWowLobby::RestoreDurability(player);
+        EventWowLobby::ClearDurability(player);
     }
 
     // Bind temporal que el core crea al entrar (InstanceMap::AddPlayerToMap)
@@ -825,6 +864,7 @@ void EventWowMatchMgr::OnPlayerMapChanged(Player* player)
         slot->Arrived = true;
         if (!EventWowDevMode::IsActive(player))
             EventWowLobby::RestoreBaseState(player);
+        EventWowLobby::SaveDurability(player);
         match->HandlePlayerArrived(player);
         return;
     }
@@ -880,7 +920,6 @@ void EventWowMatchMgr::OnPlayerConnected(Player* player)
     {
         match->SendState(player);
         match->SendHud(player);
-        match->SendPick(player);
     }
     else
         SendNoMatch(player);
@@ -979,17 +1018,6 @@ namespace
         LOG_DEBUG("module.eventwow", "EventWow: {} abandona la partida {}", player->GetName(), match->GetId());
         sEventWowMatchMgr.RemovePlayer(*match, player->GetGUID(), true);
     }
-
-    // PICK <id personaje>: eleccion en la fase Picking
-    void HandlePick(Player* player, EventWowProtocol::Args const& args)
-    {
-        EventWowMatch* match = sEventWowMatchMgr.GetMatch(player);
-        if (!match || args.empty())
-            return;
-
-        if (Optional<uint32> characterId = Acore::StringTo<uint32>(args[0]))
-            match->HandlePick(player, *characterId);
-    }
 }
 
 class EventWow_MatchPlayerScript : public PlayerScript
@@ -1061,7 +1089,6 @@ void AddSC_eventwow_matches()
     EventWowProtocol::RegisterHandler("ABANDON", HandleAbandon);
     EventWowProtocol::RegisterHandler("ACCEPT", HandleAccept);
     EventWowProtocol::RegisterHandler("DECLINE", HandleDecline);
-    EventWowProtocol::RegisterHandler("PICK", HandlePick);
     EventWowProtocol::RegisterConnectListener([](Player* player) { sEventWowMatchMgr.OnPlayerConnected(player); });
 
     new EventWow_MatchPlayerScript();

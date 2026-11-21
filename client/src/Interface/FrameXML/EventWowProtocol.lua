@@ -20,8 +20,6 @@ EVENTWOW_STR_PROTOCOL_ERROR = "Error del servidor: %s";
 EVENTWOW_ERROR_TEXTS = {
 	VERSION = "Versión del cliente incompatible con el servidor. Actualiza el parche.",
 	MUTED = "Estás silenciado.",
-	CHAT_RATE = "Vas demasiado rápido. Espera un momento.",
-	CHAT_TOO_LONG = "Mensaje demasiado largo (máximo %s caracteres).",
 	QUEUE_UNKNOWN_GAME = "Ese minijuego no existe.",
 	QUEUE_DEAD = "No puedes apuntarte a un evento estando muerto.",
 	QUEUE_IN_COMBAT = "No puedes apuntarte a un evento en combate.",
@@ -44,8 +42,6 @@ EVENTWOW_ERROR_TEXTS = {
 	GROUP_TARGET_IN_MATCH = "%s está en una partida.",
 	MATCH_CREATE_FAILED = "No se pudo crear la partida. Inténtalo de nuevo.",
 	MATCH_TELEPORT_FAILED = "No se pudo entrar en la partida.",
-	PICK_INVALID = "Ese personaje no está disponible en esta partida.",
-	PICK_TAKEN = "Otro jugador ya ha elegido ese personaje.",
 };
 
 EventWow_Protocol = {
@@ -72,7 +68,7 @@ function EventWow_RegisterHandler(op, func)
 end
 
 -- Avisos internos del cliente (varios por evento): "CONNECTED", "GAMES", "MATCH" (entra/sale/cambia de estado),
--- "CHARACTER" (disfraz), "DEV_MODE"
+-- "DEV_MODE"
 function EventWow_RegisterListener(event, func)
 	local list = EventWow_Protocol.listeners[event];
 	if ( not list ) then

@@ -18,7 +18,6 @@ struct EventWowGameInfo;
 enum class EventWowMatchState : uint8
 {
     Loading,    // jugadores en camino a la instancia
-    Picking,    // todos dentro: eleccion de personaje (solo si el juego la usa, GetPickTime())
     Countdown,  // todos dentro: cuenta atras
     Running,
     Ended       // resultado en pantalla; al terminar, vuelta a donde estaba
@@ -35,7 +34,7 @@ enum class EventWowMatchResult : uint8
 // (EventWowGameInfo::Factory) y gestionado por EventWowMatchMgr, que se encarga de la cola, la instancia,
 // los teleports y la vuelta a donde estaba. El minijuego solo implementa los On*() y usa los helpers protegidos.
 //
-// Ciclo: Loading -> (todos dentro o EventWow.Match.LoadTimeout) -> [Picking] -> Countdown -> OnStart() -> Running
+// Ciclo: Loading -> (todos dentro o EventWow.Match.LoadTimeout) -> Countdown -> OnStart() -> Running
 //        -> End() -> Ended -> (EventWow.Match.ReturnDelay) -> todos a donde estaban y se destruye.
 // Si no queda nadie, la partida se cierra sola. Todo corre en el hilo del mundo (WorldScript::OnUpdate
 // y manejadores del protocolo): guardar ObjectGuid, no punteros a Player.
@@ -74,13 +73,6 @@ public:
     // MATCH_STATE actual (tambien al reconectar con /reload)
     void SendState(Player* player) const;
     void SendHud(Player* player) const;
-    // MATCH_PICK + MATCH_PICKS si esta en la fase de eleccion (al llegar y al reconectar)
-    void SendPick(Player* player) const;
-    // PICK <id personaje>: eleccion del jugador en la fase Picking (definitiva). Tambien desde el dialogo del
-    // PNJ del personaje (eleccion en el mundo)
-    void HandlePick(Player* player, uint32 characterId);
-    // true si el jugador puede elegir ahora ese personaje (fase Picking, sin elegir aun, personaje libre)
-    bool CanPick(Player* player, uint32 characterId) const;
 
 protected:
     // --- Para los minijuegos ---
@@ -101,32 +93,14 @@ protected:
     // GetRespawnPosition() a los 5 s; cada juego decide su regla (checkpoint, eliminado, esperar...).
     virtual void OnPlayerDied(Player* player) { RespawnPlayer(player, 5s); }
     virtual Position const& GetRespawnPosition(Player* player) const;
-    // Donde aparece cada jugador al entrar en la instancia (antes de disfrazarse: su vehiculo se invoca ahi).
+    // Donde aparece cada jugador al entrar en la instancia (su vehiculo, si lo hay, se invoca ahi).
     // Se llama una vez por jugador al crear la partida, en el orden de la cola. Por defecto el Start del juego.
     virtual Position GetArrivalPosition(Player* player);
-    // Personaje (EventWowCharacters.h) con el que se disfraza al llegar a la instancia. 0 = ninguno (el juego
-    // lo elegira despues con SetCharacter, p. ej. tras una fase de seleccion). Por defecto: el primero que
-    // ofrece el juego en eventwow_game_character (juegos donde todos son iguales, como una carrera).
-    // Con fase de eleccion (GetPickTime() > 0) no se llama: cada uno elige el suyo.
-    virtual uint32 GetAssignedCharacter(Player* player) const;
-    // Fase de eleccion de personaje entre los del juego (eventwow_game_character), tras la carga.
-    // 0s = sin fase (personaje asignado). Con menos de 2 personajes no hay nada que elegir: se asigna.
-    // Al acabar el tiempo, los que no han elegido reciben uno al azar.
-    virtual Seconds GetPickTime() const { return 0s; }
-    // true: cada personaje solo puede elegirlo un jugador (si hay mas jugadores que personajes, se repiten)
-    virtual bool IsPickUnique() const { return true; }
-    // Eleccion EN EL MUNDO (estilo Warcraft 3): posiciones donde aparecen los PNJ de los personajes
-    // (EventWowCharacterInfo::PickCreature), por el orden de eventwow_game_character. El jugador habla con uno
-    // para elegirlo y, si la eleccion es unica, el PNJ desaparece. Vacio (por defecto) = ventana de eleccion
-    // del cliente (MATCH_PICK). Personajes sin PickCreature o sin posicion no salen (solo al azar).
-    virtual std::vector<Position> GetPickPositions() const { return { }; }
-    // Ayuda para GetPickPositions: count posiciones en circulo alrededor de center, mirando al centro
-    static std::vector<Position> MakePickCircle(Position const& center, float radius, std::size_t count);
-    // Personajes del juego con PNJ de eleccion (cuantas posiciones hacen falta)
-    std::size_t CountPickCreatures() const;
-
-    // Disfraza al jugador (sustituye el disfraz anterior). Se quita solo al salir de la partida.
-    bool SetCharacter(Player* player, uint32 characterId);
+    // Vehiculo (creature_template con VehicleId) en el que va cada jugador mientras esta en la partida
+    // (EventWowVehicle.h). 0 = a pie (por defecto). Se asigna al llegar; el juego puede retrasar el montaje.
+    virtual uint32 GetVehicleEntry() const { return 0; }
+    // true: en la partida no se pueden lanzar hechizos propios (clase, monturas...), solo objetos (EventWowSpellLock.h)
+    virtual bool BlocksPlayerSpells() const { return false; }
 
     // Resucita (vida completa) y lleva a GetRespawnPosition() tras delay (0s = ya). El HUD muestra la cuenta atras.
     void RespawnPlayer(Player* player, Seconds delay);
@@ -150,16 +124,6 @@ private:
     void UpdateRespawns(Milliseconds diff);
     void DoRespawn(Player* player);
     void BroadcastState() const;
-    bool UsesPicking() const;
-    // true si otro jugador (no except) ya lo ha elegido y la eleccion es unica
-    bool IsCharacterTaken(uint32 characterId, ObjectGuid except) const;
-    void FinishPicking();
-    bool UsesWorldPick() const;
-    // Eleccion en el mundo: aparece el PNJ de cada personaje libre y desaparece el de los elegidos
-    void UpdatePickCreatures();
-    void DespawnPickCreatures();
-    void BroadcastPicks() const;
-    void SendPicks(Player* player) const;
 
     uint32 _id = 0;
     EventWowGameInfo const* _game = nullptr;
@@ -175,14 +139,8 @@ private:
     std::string _hud;
     // Reapariciones pendientes: jugador -> tiempo restante
     std::unordered_map<ObjectGuid, Milliseconds> _respawns;
-    // Fase de eleccion: jugador -> personaje elegido
-    std::unordered_map<ObjectGuid, uint32> _picks;
-    // Eleccion en el mundo: personaje -> su PNJ en la instancia
-    std::unordered_map<uint32, ObjectGuid> _pickCreatures;
-    // Mantenimiento de los disfraces (volver a subir al vehiculo), cada segundo
-    Milliseconds _disguiseTimer = 0ms;
-    // Efectos de las casillas de inventario (EventWowInventory), cada 250 ms
-    Milliseconds _inventoryTimer = 0ms;
+    // Mantenimiento de los vehiculos (volver a subir), cada segundo
+    Milliseconds _vehicleTimer = 0ms;
     // Sesion abierta: jugadores en camino -> tiempo que les queda para llegar
     std::unordered_map<ObjectGuid, Milliseconds> _joining;
 };

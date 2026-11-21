@@ -105,6 +105,7 @@ private:
     // Sesion abierta (EventWowGameInfo::OpenSession): a una partida en marcha con hueco, o a una nueva
     void JoinOpenSession(EventWowGameInfo const& game, std::vector<Player*> const& members);
     void CloseMatch(uint32 matchId);
+    void UpdateClosedInstances(Milliseconds diff);
     bool IsMatchInstance(uint32 instanceId) const;
 
     // id juego -> cola (por orden de llegada)
@@ -114,6 +115,16 @@ private:
     std::map<uint32, std::unique_ptr<EventWowMatch>> _matches;
     uint32 _nextMatchId = 1;
     Milliseconds _queueTimer = 0ms;
+
+    // Instancias de partidas ya cerradas, a descargar en cuanto se vacien (UpdateClosedInstances)
+    struct ClosedInstance
+    {
+        uint32 MapId = 0;
+        uint32 InstanceId = 0;
+        Milliseconds Remaining = 0ms;
+    };
+    static constexpr Milliseconds ClosedInstanceTimeout = 5min;
+    std::vector<ClosedInstance> _closedInstances;
 
     mutable std::mutex _instancesLock;
     std::unordered_set<uint32> _instances;

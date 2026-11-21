@@ -16,9 +16,9 @@ en cada minijuego se le da modelo, hechizos y stats temporales.
 > nivel, talentos, auras pasivas); lo que se cambie y se guarde en BD necesita foto + restauracion en el login.
 > Plan: 1) quitar lo destructivo y lo de plataforma (servidor) | 2) cliente: Glue original, panel que se abre y
 > cierra sobre la interfaz normal, `GlobalStrings` restaurado, textos de error nuevos | 3) moneda propia de partida
-> (la tienda usa el oro de WoW) | 4) heroes: neutralizar el personaje (`Player::_RemoveAllItemMods` /
-> `_ApplyAllItemMods`, beneficios, mascotas, formas, competencias de arma temporales), foto del nivel en BD.
-> Paso 1 HECHO (SIN COMPILAR NI PROBAR):
+> (la tienda usa el oro de WoW) | ~~4) heroes~~: DESCARTADO (2026-11-21, decision del usuario): en `tradicional` se
+> entra a los eventos con el personaje y equipo propios; el aumento temporal de stats (`EventWowStats`) se queda.
+> Paso 1 HECHO (compilado y probado por el usuario 2026-11-21):
 > - Fuera: login/teletransporte al lobby, invisibilidad, `ClearInventory` (login y estado base), nivel forzado y
 >   `PLAYER_FLAGS_NO_XP_GAIN`, tutoriales, bloqueo de canales, raza/clase fijas (`EventWowCharacter.cpp` borrado,
 >   `EventWow.Character.*`/`EventWow.Lobby.*` fuera), overrides de plataforma (personajes por cuenta, mascaras,
@@ -36,7 +36,7 @@ en cada minijuego se le da modelo, hechizos y stats temporales.
 > - Juegos con `MaxLevel` (progresion) o `InventorySlots` desactivados en `Validate` (asedio, test_shop) y
 >   `.eventwow hero <id> <nivel>` / `level` rechazados, hasta los pasos 3-4.
 > - `mod_eventwow.conf` desplegado actualizado; el de `main` guardado en `server/mod_eventwow.conf.main.bak`.
-> Paso 2 HECHO (cliente, SIN PROBAR; parche regenerado):
+> Paso 2 HECHO (cliente, probado por el usuario 2026-11-21):
 > - Glue original (borrados `GlueXML/CharacterSelect.lua` y `CharacterCreate.lua`) y `GlobalStrings.lua` original.
 > - `EventWow.lua`: modos `"world"` (interfaz nativa intacta) | `"match"` (lo de antes: marcos ocultos, ventanas y
 >   acciones bloqueadas). Fuera: portada del lobby, tutoriales desactivados, CVars de nombres forzadas, menu sin Macros.
@@ -48,6 +48,52 @@ en cada minijuego se le da modelo, hechizos y stats temporales.
 > - Textos de error `QUEUE_DEAD/IN_COMBAT/IN_FLIGHT/IN_INSTANCE/IN_BG_QUEUE`; "Volver/Salir al lobby" -> "Salir".
 > - Pendiente: cola de evento + invitacion de BG/LFG (bloquear unas con otras), mascotas al entrar. Personajes de prueba
 >   druida 80 (Test, Bla, War) BORRADOS de la BD de desarrollo (2026-11-18, a peticion del usuario).
+
+> Limpieza blizzlike (2026-11-21, compilada y probada por el usuario: "todo esta funcionando bien"):
+> - Config: fuera `Instance.UnloadDelay` (global: afectaba a todas las mazmorras) y `EventWow.Hero.*`. Las instancias
+>   de partidas cerradas se descargan solas al vaciarse (`EventWowMatchMgr::UpdateClosedInstances`, `InstanceMap::Reset`).
+> - Bandas permitidas (fuera el bloqueo de `CMSG_GROUP_RAID_CONVERT`); la cola sigue limitada por `MaxPartySize`.
+> - Partidas SOLO en mapas propios 750-799 (`EventWowFirstMapId/LastMapId`, `Validate`); `IsEventMap` = ese rango (antes
+>   recorria el catalogo: la maqueta "invasion" con MapId 0 marcaba Reinos del Este como mapa de evento). `test`,
+>   `test_group`, `test_vehicle` pasan de Sima Ignea (389) al 750.
+> - `EventWowRewards.cpp`: en mapas de evento no avanzan logros/criterios (estadisticas), ni XP ni reputacion.
+>   Sin hook de honor/botin: criaturas de evento sin botin y sin zonas JcJ.
+> - Durabilidad: `EventWowLobby::Save/Restore/ClearDurability` (foto al llegar; se devuelve al reaparecer, al salir
+>   y antes del logout).
+> - Heroes BORRADOS: `EventWowProgress`, `EventWowWeapons`, `EventWowInventory`, `EventWowShop`, `EventWowHeroSpells`,
+>   juego `asedio` y `test_shop`, comando `.eventwow attackspeed`; ficha sin armas/ataque/atributos/Kind; disfraz sin
+>   armas, celeridad (agilidad/intelecto ya no dan velocidad de ataque/lanzamiento) ni progresion (solo cambia el tipo de
+>   poder si la ficha fija `MaxPower`). Comando GM `.eventwow disfraz <id>|off|list` (antes `hero`).
+>   GAMES sigue mandando el campo de casillas (siempre 0, el cliente lo ignora).
+> - Datos de heroes PURGADOS: borrados sus SQL (`_13_07-09`, `_14_*`, `_16_00`) y los hechizos de spellgen salvo
+>   `carrera`/`parkour` (toml + SQL). `2026_11_21_00_eventwow_tradicional_sin_heroes.sql` (aplicado a la BD de
+>   desarrollo) borra fichas 10-44, objetos 9500000-9500299, mercader/PNJ de eleccion/invocaciones, hechizos
+>   9500000-9509999 salvo 9502xxx/9503xxx, tablas `eventwow_item`/`eventwow_character_attribute` y columnas de
+>   armas/ataque/`Kind`/`PickCreature`. Quedan fichas 1, 2, 3, 50. Registros de `updates` de los
+>   SQL borrados quitados a mano en la BD de desarrollo (si no: "Cleanup is disabled!" al arrancar).
+> - Cliente: fuera `EventWowInventory.lua` y `EventWowStats.lua`; `EventWowAbilities.lua` sin progresion/XP/atributos/
+>   ataque basico. El filtro de "Has aprendido un nuevo hechizo" solo actua en partida o disfrazado (antes, siempre).
+>   Parche regenerado. `docs/heroes*.md` y `docs/asedio*.md` borrados en esta rama (siguen en `main`).
+> - Fase de eleccion BORRADA (decision del usuario: el asedio, si se hace, tendra sus propios heroes): estado `Picking`,
+>   `PICK`/`MATCH_PICK(S)`, `EventWowPickCreature.cpp` (`npc_eventwow_pick`), `EventWowPick.lua`, columna `PickCreature`.
+>   Los juegos solo usan `GetAssignedCharacter`/`SetCharacter`.
+> - DISFRAZ BORRADO (decision del usuario 2026-11-21: cada uno va con su personaje; el morph ya lo tiene el core):
+>   fuera `EventWowDisguise`, `EventWowCharacters`, tablas `eventwow_character*`/`eventwow_game_character` (DROP en
+>   `_21_00`; SQL `_13_01-04/06` borrados y fichas quitadas de `_13_05`, `_17_02`, `_18_00`, `_18_01`), comando
+>   `.eventwow disfraz`, `MATCH_CHARACTER`, `EventWowAbilities.lua` (barra propia y filtro de "Has aprendido...").
+>   Lo que hacia y sigue haciendo falta, por juego (virtuales de `EventWowMatch`):
+>   - `GetVehicleEntry()` -> `EventWowVehicle` (invocar, montar con retraso, mantener montado, `Hold/Mount/DismissVehicle`):
+>     carrera = 9500001, `test_vehicle` = 9500000.
+>   - `BlocksPlayerSpells()` -> `EventWowSpellLock` (`OnSpellCheckCast`: sin hechizos propios ni monturas; objetos y
+>     desencadenados si; no en modo dev): carrera y parkour.
+>   `EventWowStats` (stats temporales, `.eventwow stat`) se queda. Se quitan en `RemovePlayer` y `RestoreBaseState`.
+> - Panel = solo juegos (decision del usuario 2026-11-21: chat, susurros, amigos y grupo son los nativos): ventana
+>   860x560 arrastrable sobre la interfaz normal (lista + detalle + buscar/cola). Borrados `EventWowChat.lua`,
+>   `EventWowGroup.lua`, `EventWowFriends.lua`, `EventWowSocial.lua` y el chat global del servidor (`EventWowChat.cpp`,
+>   `CHAT`/`ONLINE`). El boton de buscar mira el grupo nativo (grupo o banda; solo el lider).
+> - Mapa 751 (asedio) SE QUEDA (decision del usuario: para futuras implementaciones) aunque no lo use ningun juego.
+> - Core: rama **`tradicional`** del core = `eventwow` sin `ab105ded2`/`04ab628c7`/`b88f7bc5d` (solo los usaban los
+>   heroes), revertidos en el commit `cc3c9300d`. `main` sigue usando la rama `eventwow` del core.
 
 ## Estructura
 
@@ -355,21 +401,8 @@ Datos clave de la API Glue:
   - Observacion pendiente: reinicios de instancia del core. Mazmorras 5 normal no tienen reinicio programado
     (seguro). Bandas (semanal) / heroicos (diario) si: una partida en esos mapas se cortaria a la hora del reinicio.
     Opcion propuesta: que `Validate()` rechace mapas con `MapDifficulty.resetTime` != 0. Sin decidir.
-- **Asedio (juego `asedio`, mapa 751): PAUSADO el 2026-11-17** para hacer otro evento mas simple. Estado completo,
-  diario y pendientes en **`docs/asedio-estado.md`** (leerlo al reanudar). Herramientas que nacieron alli y sirven
-  para cualquier juego:
-  - Fase de eleccion `Picking` en `EventWowMatch` (ventana `EventWowPick.lua` o PNJ en circulo estilo WC3,
-    `GetPickPositions`, `npc_eventwow_pick`); protocolo v7.
-  - Hechizos propios: `tools/spellgen` (fichas TOML en `data/spells/` -> SQL `spell_dbc`/`spell_ranks`/
-    `spell_bonus_data`), ver `docs/hechizos.md`. Scripts en `EventWowHeroSpells.cpp`.
-  - Niveles en partida `EventWowProgress.*` (nivel 1 -> `EventWowGameInfo::MaxLevel`, puntos de habilidad, rangos,
-    atributos; protocolo v8 `MATCH_ABILITIES`/`UPGRADE`).
-  - Armas de la ficha equipadas de verdad (`EventWowWeapons`; el contenedor tiene todas las habilidades de armas y
-    sin ranura de reliquia), ataque basico de la ficha (`AttackSpeed`/`AutoAttackSpell`...), disparos automaticos
-    propios con reglas del 75 (core `04ab628c7`), agilidad/intelecto EXTRA -> velocidad de ataque / celeridad con
-    hechizos (`EventWow.Hero.*`, suelo de lanzamiento con el hook del core `b88f7bc5d`).
-  - Comandos GM: `.eventwow hero <id> [nivel]` | `level <n>` | `off` | `list`, `.eventwow attackspeed ...`.
-  - Enemigos para probar: `.dev on` + `/eventwow` + `.npc add temp 28104` (esqueleto 80) / 31144 (muneco).
+- Asedio (juego `asedio`): solo en `main` (pausado 2026-11-17, `docs/asedio-estado.md` de `main`). En
+  `tradicional` borrado el juego; el mapa 751 se queda (sin juego). Queda tambien `tools/spellgen` (hechizos propios, `docs/hechizos.md`), que usan carrera y parkour.
 - **Carrera (evento actual, desde 2026-11-17)**. Decisiones del usuario: circuito cerrado con vueltas (tipo Mario
   Kart, varios ambientes), en moto (vehiculo), 1-8 jugadores, objetos/poderes MAS ADELANTE. Mapas de circuito
   generados SIN Warcraft 3 desde un plano JSON (`tools/mapgen/trackgen.py`, ver "Circuitos" en `docs/mapas.md`; el
@@ -460,14 +493,8 @@ Datos clave de la API Glue:
   - IDs de mapa 750-799 (`Build-Dbc` exporta `map_dbc` en ese rango). SQL `_10` (750) y `_11` (751) aplicados a mano en
     la BD de desarrollo para generar Map.dbc (el updater los reaplica, son idempotentes).
   - 750 `EventWowTest` (`Maps/Warcraft/test.w3m`, juego `test_map`): probado, COMMIT `28f1693`.
-  - 751 `EventWowAsedio` (`Maps/Warcraft/Mi_Mapa_XHero.w3x`, tileset Corona de Hielo, 96x224 casillas -> 2x2 ADT, juego
-    `asedio` (antes `test_siege_map`), inicio = punto del jugador 1). Probado por el usuario: estructura igual a su mapa. Pero los muros
-    (nivel 4) parecian relieve de tierra blanca ("es una ciudad, las divisiones deberian ser muros"): anadido
-    `wallLayer: 4` (caras verticales + texturas `wallTop` IC_Vrykul_PaverRubbleB / `wallFace` IG_DarkRockA) y despues
-    modelos de muro (ver `docs/asedio-estado.md`).
-    48 regiones renombradas por POSICION en `maps.json` `regionNames` (plano: `tools/mapgen/_work/regiones_751.png`,
-    regenerable); su funcion real (oleadas, teletransportes...) la sabe el amigo.
-  - Mapa 751 completo (muros, zona, minimapa, vmaps): COMMIT `e3cea56`.
+  - 751 `EventWowAsedio` (`Maps/Warcraft/Mi_Mapa_XHero.w3x`, Corona de Hielo, muros con modelos; detalle en
+    `docs/asedio-estado.md` de `main`). En `tradicional` sin juego que lo use.
   - mmaps 750/751 GENERADOS (2026-11-13; herramientas compiladas por el usuario con `TOOLS_BUILD`): desde `data\`,
     `..\mmaps_generator.exe --config ..\mmaps-config.yaml <id> < nul` (al final espera una tecla). Comprobado leyendo
     los .mmtile: las zonas comunicadas andando en el navmesh = las 16 de WC3. Repetir tras cada cambio del mapa.

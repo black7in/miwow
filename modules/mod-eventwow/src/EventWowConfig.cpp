@@ -19,13 +19,6 @@ void EventWowConfig::Load()
     MatchLoadTimeout = Seconds(std::max<uint32>(5, sConfigMgr->GetOption<uint32>("EventWow.Match.LoadTimeout", 30)));
     MatchReturnDelay = Seconds(sConfigMgr->GetOption<uint32>("EventWow.Match.ReturnDelay", 8));
 
-    AgilityHasteMax = std::max(0.0f, sConfigMgr->GetOption<float>("EventWow.Hero.AgilityHaste.Max", 1770.0f));
-    AgilityHasteHalf = std::max(1.0f, sConfigMgr->GetOption<float>("EventWow.Hero.AgilityHaste.Half", 1000.0f));
-    AttackMinInterval = sConfigMgr->GetOption<uint32>("EventWow.Hero.AttackMinInterval", 150);
-    IntellectHasteMax = std::max(0.0f, sConfigMgr->GetOption<float>("EventWow.Hero.IntellectHaste.Max", 300.0f));
-    IntellectHasteHalf = std::max(1.0f, sConfigMgr->GetOption<float>("EventWow.Hero.IntellectHaste.Half", 1000.0f));
-    SpellCastMinTime = sConfigMgr->GetOption<uint32>("EventWow.Hero.SpellCastMinTime", 500);
-
     LOG_INFO("module.eventwow", "EventWow: {}", Enabled ? "activado" : "desactivado");
 }
 

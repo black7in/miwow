@@ -1,7 +1,7 @@
 -- EventWow: vehiculos propios (rango de entradas reservado 9500000-9599999).
 -- Copias de vehiculos existentes SIN NOMBRE: al conducir, el cliente muestra sobre el vehiculo el nombre de la
 -- criatura en vez del del jugador (no se puede cambiar por jugador), asi que no se muestra ninguno.
--- Sin script de su contenido original, sin version heroica, sin clic para montar (EventWowDisguise sube al
+-- Sin script de su contenido original, sin version heroica, sin clic para montar (EventWowVehicle sube al
 -- jugador) y sin traducciones (creature_template_locale): el cliente esES usa el nombre base, vacio.
 --
 -- 9500000: Salvaged Chopper (33062, moto de Ulduar), con sus modelos, hechizos de vehiculo y addon.
@@ -30,6 +30,3 @@ CREATE TEMPORARY TABLE `eventwow_tmp_addon` SELECT * FROM `creature_template_add
 UPDATE `eventwow_tmp_addon` SET `entry` = 9500000;
 INSERT INTO `creature_template_addon` SELECT * FROM `eventwow_tmp_addon`;
 DROP TEMPORARY TABLE `eventwow_tmp_addon`;
-
--- El personaje de prueba del vehiculo pasa a usar la copia
-UPDATE `eventwow_character` SET `VehicleEntry` = 9500000 WHERE `Id` = 2;

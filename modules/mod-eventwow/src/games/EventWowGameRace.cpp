@@ -1,9 +1,9 @@
 #include "EventWowDevMode.h"
-#include "EventWowDisguise.h"
 #include "EventWowGames.h"
 #include "EventWowMatch.h"
 #include "EventWowMatchMgr.h"
 #include "EventWowProtocol.h"
+#include "EventWowVehicle.h"
 #include "Config.h"
 #include "Creature.h"
 #include "Log.h"
@@ -74,6 +74,8 @@ namespace
     constexpr Milliseconds TrackInterval = 100ms;
     constexpr Milliseconds HudInterval = 500ms;
     constexpr Milliseconds RootInterval = 250ms;
+    // Moto de carreras (SQL 2026_11_17_02: Salvaged Chopper a 28 yd/s, sin hechizos de vehiculo)
+    constexpr uint32 RaceVehicleEntry = 9500001;
     constexpr Milliseconds MountDelay = 3s;        // de la cuenta atras (10 s) hasta "¡Todos a sus motos!"
     constexpr int32 WindowBack = 40;               // muestras (2 yd) hacia atras y hacia delante
     constexpr int32 WindowAhead = 60;
@@ -410,6 +412,10 @@ public:
     }
 
 protected:
+    // Cada piloto, con su personaje, en la moto de carreras; a pie no puede lanzar nada (ni montura ni forma)
+    uint32 GetVehicleEntry() const override { return RaceVehicleEntry; }
+    bool BlocksPlayerSpells() const override { return true; }
+
     struct Racer
     {
         uint32 Slot = 0;
@@ -460,7 +466,7 @@ protected:
             racer.Slot, racer.Index, player->GetVehicleBase() ? "si" : "no");
         // A pie hasta "¡Todos a sus motos!" (MountAll, en la cuenta atras)
         if (!_mounted)
-            EventWowDisguise::HoldVehicle(player);
+            EventWowVehicle::HoldVehicle(player);
         SetRooted(player, true);
         EventWowMessage("RACE_INFO").Add(RaceLaps).Send(player);
         SendResults(player, false);
@@ -546,11 +552,11 @@ protected:
 
             Racer& racer = itr->second;
 
-            // Sin moto (tras recolocarle): la nueva cuanto antes, no al ritmo de EventWowDisguise::Update (1 s)
+            // Sin moto (tras recolocarle): la nueva cuanto antes, no al ritmo de EventWowVehicle::Update (1 s)
             Unit* vehicle = player->GetVehicleBase();
             if (!vehicle && player->IsAlive() && !player->IsBeingTeleported())
             {
-                EventWowDisguise::Update(player);
+                EventWowVehicle::Update(player);
                 vehicle = player->GetVehicleBase();
             }
 
@@ -644,7 +650,7 @@ private:
             EventWowMessage("RACE_EVENT").Add("MOUNT").Send(player);
             Racer& racer = itr->second;
             Position const spot = GridPosition(racer);
-            bool const mounted = EventWowDisguise::MountVehicle(player, &spot);
+            bool const mounted = EventWowVehicle::MountVehicle(player, &spot);
             LOG_INFO("module.eventwow", "EventWow: carrera: {} a su moto (puesto {}): {}", player->GetName(), racer.Slot,
                 mounted ? "montado" : "NO montado");
         });
@@ -1085,7 +1091,7 @@ private:
 
         // Sin TeleportVehicle: fuera la moto, el jugador al punto y OnTick le da otra alli (ya quieta)
         Position const pos = _track.Place(index, 0.0f, 1.5f);
-        EventWowDisguise::DismissVehicle(player);
+        EventWowVehicle::DismissVehicle(player);
         player->NearTeleportTo(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), pos.GetOrientation());
         EventWowMessage("RACE_EVENT").Add("FELL").Send(player);
     }

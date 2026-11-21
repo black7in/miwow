@@ -24,15 +24,3 @@ UPDATE `eventwow_tmp_addon` SET `entry` = 9500001;
 INSERT INTO `creature_template_addon` SELECT * FROM `eventwow_tmp_addon`;
 DROP TEMPORARY TABLE `eventwow_tmp_addon`;
 
--- Personaje 3 "Piloto": goblin (como el Motorista de pruebas) en la moto de carreras. Todos los corredores iguales
--- (EventWowMatch::GetAssignedCharacter = el primero del juego).
-DELETE FROM `eventwow_character` WHERE `Id` = 3;
-INSERT INTO `eventwow_character` (`Id`, `Name`, `Description`, `Icon`, `DisplayId`, `Scale`, `Health`, `PowerType`,
-    `MaxPower`, `VehicleEntry`) VALUES
-(3, 'Piloto', 'Piloto goblin en su moto de carreras.', 'Interface\Icons\Ability_Mount_MechaStrider', 7052, 1.0, 0, 0, 0,
-    9500001);
-
-DELETE FROM `eventwow_game_character` WHERE `GameId` IN ('carrera', 'carrera_estelar');
-INSERT INTO `eventwow_game_character` (`GameId`, `CharacterId`, `Sort`) VALUES
-('carrera', 3, 0),
-('carrera_estelar', 3, 0);

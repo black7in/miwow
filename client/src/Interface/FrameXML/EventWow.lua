@@ -6,8 +6,8 @@
 -- Modo "world" (fuera de los eventos): la interfaz nativa queda INTACTA. El panel de eventos (EventWowPanel.lua) es
 -- una ventana que se abre y cierra con el boton del minimapa, /eventwow o Esc.
 -- Modo "match" (MATCH_STATE del servidor, EventWowMatch.lua): mundo + HUD de la partida; de la interfaz nativa solo
--- se ven los marcos de EVENTWOW_MATCH_VISIBLE_FRAMES y el chat; ventanas y acciones nativas bloqueadas (el personaje
--- de la partida trae su propia barra). Al salir todo vuelve a su sitio (los marcos se reparentan, no se destruyen).
+-- se ven los marcos de EVENTWOW_MATCH_VISIBLE_FRAMES y el chat; ventanas, bolsas y barras de accion nativas
+-- bloqueadas (cada juego da lo suyo: p. ej. la barra de la moto). Al salir todo vuelve a su sitio (los marcos se reparentan, no se destruyen).
 -- Modo dev (.gm on o .dev on): en partida, "/eventwow dev" o el boton de arriba quitan las restricciones (solo cliente,
 -- no toca ningun flag).
 
@@ -57,7 +57,7 @@ EVENTWOW_MATCH_VISIBLE_FRAMES = {
 	CastingBarFrame = true,
 	-- Minimapa y nombre de la zona (mapas propios: AreaTable + minimapas de tools/mapgen); sin sus botones
 	MinimapCluster = true,
-	-- Barra nativa de vehiculo (personajes con vehiculo; el motor la muestra solo al montar). Sin boton de bajarse.
+	-- Barra nativa de vehiculo (juegos con vehiculo; el motor la muestra solo al montar). Sin boton de bajarse.
 	VehicleMenuBar = true,
 	-- Marcos de grupo nativos (solo se ven con grupo)
 	PartyMemberFrame1 = true,
@@ -66,18 +66,9 @@ EVENTWOW_MATCH_VISIBLE_FRAMES = {
 	PartyMemberFrame4 = true,
 };
 
--- Ocultos SIEMPRE mientras se va disfrazado (EventWow_Character), tambien en modo dev sin restricciones: tapan la
--- barra de habilidades del disfraz (EventWowAbilities.lua). La barra de mascota se cuelga entonces de la nuestra.
-EVENTWOW_DISGUISE_HIDDEN_FRAMES = {
-	"MainMenuBar",
-	"MultiBarBottomLeft",
-	"MultiBarBottomRight",
-};
-
 -- Funciones globales (llamadas desde Bindings.xml / micro menu) que no hacen nada en partida
 EVENTWOW_MATCH_BLOCKED_FUNCTIONS = {
-	-- Ventanas (las bolsas nativas nunca: el inventario de partida es EventWowInventory.lua; OpenBackpack lo
-	-- llama la ventana del vendedor)
+	-- Ventanas (tambien las bolsas; OpenBackpack lo llama la ventana del vendedor)
 	"ToggleBackpack",
 	"OpenBackpack",
 	"OpenAllBags",
@@ -204,20 +195,20 @@ local function EventWow_WrapBlockedFunctions()
 end
 
 -- Barra de mascota nativa (PetActionBarFrame, hija de MainMenuBar): en partida MainMenuBar esta oculta, asi que
--- se cuelga de un marco propio centrado encima de la barra de habilidades (invocaciones controlables, p. ej. el
--- necrofago de Arthas). La barra se coloca sola en TOPLEFT de su padre + (PETACTIONBAR_XPOS, PETACTIONBAR_YPOS).
+-- se cuelga de un marco propio centrado abajo (mascotas e invocaciones controlables).
+-- La barra se coloca sola en TOPLEFT de su padre + (PETACTIONBAR_XPOS, PETACTIONBAR_YPOS).
 EVENTWOW_PET_BAR = {
 	WIDTH = 509,  -- tamano de PetActionBarFrame (PetActionBarFrame.xml)
 	HEIGHT = 43,
-	GAP = 40,     -- encima de la barra de habilidades (deja sitio a la barra de XP y al nombre del personaje)
+	BOTTOM = 104, -- borde inferior de la barra, desde abajo de la pantalla
 };
 
 local function EventWow_AnchorPetBarHolder()
 	local holder = EventWowPetBarHolder;
 	holder:ClearAllPoints();
-	holder:SetPoint("BOTTOMLEFT", EventWowAbilityBar, "TOP",
+	holder:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM",
 		-EVENTWOW_PET_BAR.WIDTH / 2 - PETACTIONBAR_XPOS,
-		EVENTWOW_PET_BAR.GAP + EVENTWOW_PET_BAR.HEIGHT - PETACTIONBAR_YPOS);
+		EVENTWOW_PET_BAR.BOTTOM + EVENTWOW_PET_BAR.HEIGHT - PETACTIONBAR_YPOS);
 end
 
 local function EventWow_CreatePetBarHolder()
@@ -254,13 +245,6 @@ local function EventWow_ApplyMode()
 		end
 	end
 
-	local disguised = EventWow_Character ~= nil;
-	if ( disguised ) then
-		for _, name in ipairs(EVENTWOW_DISGUISE_HIDDEN_FRAMES) do
-			EventWow_HideFrame(name);
-		end
-	end
-
 	for _, name in ipairs(EVENTWOW_MINIMAP_HIDDEN_BUTTONS) do
 		if ( restricted ) then
 			EventWow_HideFrame(name);
@@ -283,7 +267,7 @@ local function EventWow_ApplyMode()
 		EventWowPanel:Hide();
 	end
 
-	EventWow_ApplyPetBar(restricted or disguised);
+	EventWow_ApplyPetBar(restricted);
 
 	if ( match and EventWow_UI.dev ) then
 		EventWowDevButton:SetText(EventWow_UI.native and EVENTWOW_STR_DEV_NATIVE_OFF or EVENTWOW_STR_DEV_NATIVE_ON);
@@ -361,6 +345,4 @@ end
 
 EventWow_CreateDevButton();
 EventWow_CreatePetBarHolder();
--- Al ponerse/quitarse un disfraz (MATCH_CHARACTER) cambian la barra nativa y la de mascota
-EventWow_RegisterListener("CHARACTER", EventWow_ApplyMode);
 EventWow_WrapBlockedFunctions();

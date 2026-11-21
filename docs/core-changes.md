@@ -8,6 +8,10 @@ Repositorio del core: `azerothcore-wotlk/` (fork local, luego remoto privado).
 
 `git log --oneline master..eventwow` es en todo momento la lista real de cambios; este archivo explica el porque.
 
+- `tradicional` -> `eventwow` sin los cambios que solo usaban los heroes (`ab105ded2`, `04ab628c7`, `b88f7bc5d`,
+  revertidos en `cc3c9300d`, 2026-11-21, probado). Es la del servidor tradicional (rama
+  `tradicional` del repo EventWow): solo quedan `4fc546e73` (login) y `71970693a` (instancias).
+
 ## Version base probada
 
 | Fecha | upstream/master | eventwow | Notas |

@@ -1,7 +1,6 @@
 #include "EventWowGames.h"
 #include "DBCStores.h"
 #include "EventWowConfig.h"
-#include "EventWowInventory.h"
 #include "EventWowProtocol.h"
 #include "Group.h"
 #include "Log.h"
@@ -39,14 +38,15 @@ void EventWowGames::Validate()
     for (EventWowGameInfo& game : _games)
     {
         game.MaxPartySize = std::clamp<uint8>(game.MaxPartySize, 1, std::max<uint8>(1, std::min<uint8>(game.MaxPlayers, MAXGROUPSIZE)));
-        game.InventorySlots = std::min(game.InventorySlots, EventWowInventory::MaxSlots);
 
         if (!game.IsPlayable())
             continue;
 
         MapEntry const* entry = sMapStore.LookupEntry(game.MapId);
         char const* error = nullptr;
-        if (!entry || !entry->IsDungeon())
+        if (game.MapId < EventWowFirstMapId || game.MapId > EventWowLastMapId)
+            error = "el mapa no es propio de EventWow (750-799)";
+        else if (!entry || !entry->IsDungeon())
             error = "el mapa no es de mazmorra/banda";
         else if (!sObjectMgr->GetInstanceTemplate(game.MapId))
             error = "el mapa no tiene instance_template";
@@ -56,12 +56,6 @@ void EventWowGames::Validate()
             error = "punto de aparicion invalido";
         else if (game.MinPlayers < 1 || game.MinPlayers > game.MaxPlayers)
             error = "MinPlayers/MaxPlayers invalidos";
-        // Servidor tradicional: aun no hay foto del personaje real. La progresion cambia el nivel de verdad (y bajar
-        // de nivel reinicia talentos) y el inventario de partida usa la mochila del jugador y el oro de WoW.
-        else if (game.MaxLevel)
-            error = "usa progresion de nivel (pendiente en el servidor tradicional)";
-        else if (game.InventorySlots)
-            error = "usa inventario de partida (pendiente en el servidor tradicional)";
 
         if (error)
         {
@@ -74,6 +68,7 @@ void EventWowGames::Validate()
 namespace
 {
     // GAMES <n> (<id> <icono> <min> <max> <nombre> <descripcion> <jugable 0/1> <grupo max> <casillas> <sesion abierta 0/1>)
+    //   (casillas: campo de la rama main; aqui siempre 0, el cliente lo ignora)
     //   x n
     void SendGameList(Player* player)
     {
@@ -84,7 +79,7 @@ namespace
         for (EventWowGameInfo const& game : games)
             message.Add(game.Id).Add(game.Icon).Add(game.MinPlayers).Add(game.MaxPlayers)
                 .Add(game.Name).Add(game.Description).Add(game.IsPlayable() ? 1 : 0).Add(game.MaxPartySize)
-                .Add(game.InventorySlots).Add(game.OpenSession ? 1 : 0);
+                .Add(0).Add(game.OpenSession ? 1 : 0);
 
         message.Send(player);
     }

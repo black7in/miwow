@@ -7,9 +7,9 @@
 
 class Player;
 
-// Bonificaciones de stats de una partida (libros de la tienda, base de un personaje, mejoras...).
+// Bonificaciones temporales de stats de una partida (mejoras de un evento, .eventwow stat...).
 // Se aplican EXACTAMENTE como las de un objeto equipado (Player::_ApplyItemBonuses), asi que todo lo derivado
-// lo calcula el motor con sus formulas nativas (las del druida contenedor): Fuerza -> poder de ataque,
+// lo calcula el motor con sus formulas nativas (las de su clase): Fuerza -> poder de ataque,
 // Agilidad -> critico/esquiva/armadura, Aguante -> vida, Intelecto -> mana, etc.
 // No se guardan en BD (el core no guarda modificadores) y se quitan al salir de la partida
 // (EventWowMatchMgr::RemovePlayer, EventWowLobby::RestoreBaseState).

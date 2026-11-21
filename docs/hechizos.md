@@ -1,7 +1,7 @@
 # Hechizos propios: como se crean y como vamos a trabajar
 
-Plan del 2026-11-14 (investigacion; nada implementado todavia). Contexto: `docs/heroes.md` (15 hechizos por
-heroe: 3 basicas x 4 rangos + definitiva x 3, mas el ataque basico a distancia).
+Plan del 2026-11-14 (hecho: `tools/spellgen`). Nacio con los heroes de la rama `main` (en `tradicional` no hay heroes; aqui lo
+usan la carrera y el parkour). Lo que habla de rangos y puntos de habilidad describe `main`.
 
 ## 1. Como funciona un hechizo en WoW 3.3.5
 
