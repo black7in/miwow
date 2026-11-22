@@ -5,6 +5,8 @@
   mapas propios (tools\mapgen desde Maps\maps.json: World\Maps del cliente + .map del servidor en ServerDataDir;
   necesita Python con numpy, lanzador "py"). Las mmaps se generan aparte: mmaps_generator <id> (docs\mapas.md).
   El resultado se copia manualmente a Data\ del cliente.
+  Ademas lo empaqueta como MPQ de verdad (tools\mpqpack.py) en client\patches\web\<Name>: el cliente web solo lee MPQ
+  empaquetados y server.js lo sirve desde ahi (extraFiles en web\servidor\config.json). -NoPack para saltarlo.
 
 .EXAMPLE
   .\tools\Build-Patch.ps1
@@ -16,6 +18,7 @@ param(
     [string]$Locale = "esES",
     [switch]$SkipDbc,
     [switch]$SkipMaps,
+    [switch]$NoPack,
     [string]$ServerDataDir = "",
     # Data\ del cliente (MPQ originales): colision de los modelos de muro para los vmaps del servidor
     [string]$WowDataDir = "D:\Clientes de Wow\Wow - copia\Data"
@@ -57,6 +60,14 @@ if (-not $SkipMaps)
     else { Write-Warning "No existe ${trs}: sin minimapas (extraerlo de patch-3.MPQ, ver docs/mapas.md)" }
     & py -I -B @mapArgs
     if ($LASTEXITCODE -ne 0) { throw "mapgen fallo (codigo $LASTEXITCODE)" }
+}
+
+if (-not $NoPack)
+{
+    $webDir = Join-Path $root "client\patches\web"
+    New-Item -ItemType Directory -Force -Path $webDir | Out-Null
+    & py -I -B (Join-Path $PSScriptRoot "mpqpack.py") $out (Join-Path $webDir $Name)
+    if ($LASTEXITCODE -ne 0) { throw "mpqpack fallo (codigo $LASTEXITCODE)" }
 }
 
 $files = Get-ChildItem -Path $out -Recurse -File

@@ -10,7 +10,7 @@
   "theirManifest": "/opt/miwow-juego/cliente-web/game-manifest.txt",
   "userDir": "/opt/miwow-juego/userdata",
   "trustProxy": true,
-  "basicAuth": "pruebas:CAMBIA-ESTA-CLAVE",
+  "basicAuth": "",
   "maxWsPerIp": 6,
   "wsIdleTimeoutSec": 900,
   "maxUserdataMB": 20,

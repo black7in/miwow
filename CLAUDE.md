@@ -167,7 +167,14 @@ en cada minijuego se le da modelo, hechizos y stats temporales.
 > - **VPS de pruebas** (`ssh MiWow`, sudo; `docs/despliegue-vps-pruebas.md`): Apache + certbot, web Astro en
 >   `miwow.duckdns.org`, cliente web en `https://juego.miwow.duckdns.org/play` (`miwow-juego.service`, `/opt/miwow-juego`,
 >   MPQ del disco, sin R2), publicar con `web\deploy\publicar-vps.ps1 [-Parche]`. COMPARTIDO con `wow-arcano.com` y SU
->   AzerothCore (3724/8085): no tocarlos; el nuestro ira en 3725/8086 con BD propias (`tcpRoutes` traduce 3724 -> 3725).
+>   AzerothCore (3724/8085): no tocarlos. NUESTRO CORE DESPLEGADO (2026-11-21, seccion 8 del doc): `/opt/miwow-core`,
+>   servicios `miwow-auth`/`miwow-world` en 3725/8086, BD `miwow_auth/characters/world` con el usuario de la web
+>   `miwow_web` (sin permisos ya sobre `acore_*`; la web Astro lee nuestras BD), comandos GM por SOAP 127.0.0.1:7879
+>   (cuenta GM `black`), realmlist PC `144.126.158.141:3725`, cliente Frostbound esES + nuestro `patch-4.MPQ`, sin
+>   basicAuth. Repos GitHub publicos: `black7in/miwow` (este) y `black7in/miwow-azerothcore` (core, rama `tradicional`).
+>   El usuario lo probo en el navegador: llega al reino; "hay mucho por mejorar en el cliente" (siguiente trabajo).
+>   Pendiente: mmaps v19 -> regenerar con el generador actual; arreglo clang de `MiWowGuildSeason.cpp` sin commitear
+>   (copiado a mano al VPS); pagina `/[lang]/play` de Astro.
 > - El wasm carga interfaz modificada (`signature check OFF`). Solo lee MPQ EMPAQUETADOS (la carpeta `patch-4.MPQ` no:
 >   comprobado por el usuario; lo empaqueta el a mano). El tamano del MPQ debe cambiar en cada version (cache por tamano).
 > - Su Lua tactil va incrustado (no sale de `FrameXML.toc`: convive con el nuestro) y solo actua con `webTouch`/mando;
@@ -204,6 +211,8 @@ EventWow/                     repo (la carpeta conserva el nombre antiguo; el se
   tools/
     Merge-Interface.ps1       consolida Interface de los MPQ extraidos respetando el orden de carga
     Build-Patch.ps1           copia client/src -> client/patches/patch-4.MPQ (+ DBC con Build-Dbc.ps1 + mapas con mapgen)
+                              y lo empaqueta (mpqpack.py) en client/patches/web/patch-4.MPQ para el cliente web
+    mpqpack.py                carpeta -> MPQ v0 (zlib, listfile; el tamano cambia en cada version)
     Build-Dbc.ps1             DBC del cliente = client/DBCs/DBC<locale> + filas MiWow de las tablas *_dbc de la BD world
     Diff-Config.ps1           audita worldserver.conf vs .dist (cambios hechos a mano)
     mapgen/                   Python (py + numpy): WC3 -> ADT/WDT del cliente + .map del servidor (docs/mapas.md)

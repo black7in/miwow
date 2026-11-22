@@ -57,7 +57,11 @@ La web de Astro: su `.env` del VPS apunta hoy a las BD que haya en ese MySQL; al
 
 ## 4. Cliente del juego en el VPS
 
-- Lo esta bajando el usuario (2026-11-21) a `~/wow-client/` (un `.rar` de un repack 3.3.5a de terceros).
+- INSTALADO 2026-11-21: repack "Frostbound" (esES, contenido revisado por el usuario) en
+  `/home/miwow/wow-client/World of Warcraft Frostbound`. En `/opt/miwow-juego/cliente/Data` solo sus MPQ de Blizzard
+  (`Data/*.MPQ` y `Data/esES/*.MPQ`) como ENLACES DUROS (`ln -f`, mismo disco: no ocupan otra vez) + nuestro
+  `patch-4.MPQ`. Fuera su launcher, addons (MultiBot), videos y `realmlist.wtf`. Sus tamanos NO coinciden con `D:\Wow`
+  (otro empaquetado): `game-index.txt` no sirve para compararlos.
 - Al extraerlo, dejar en `/opt/miwow-juego/cliente/` SOLO lo original de Blizzard:
   `Data/common.MPQ`, `common-2.MPQ`, `expansion.MPQ`, `lichking.MPQ`, `patch.MPQ`, `patch-2.MPQ`, `patch-3.MPQ`,
   `Data/esES/**` (menos `realmlist.wtf`) e `Interface/AddOns/Blizzard_*`. **Fuera** cualquier otro `patch-*.MPQ` /
@@ -75,7 +79,7 @@ Estado: `miwow-juego.service` activo, vhost `juego.conf` + `juego-le-ssl.conf` (
 (8.730.355 bytes, `application/wasm`), manifest, iconos, WebSocket 101 en `/tcp/.../3724` -> `127.0.0.1:3725`
 (rechazado: nuestro core aun no existe) y `/tcp/.../8085` (wow-arcano) rechazado con 403. Webs de Astro y wow-arcano
 intactas (el 403 de `wow-arcano.com` con curl es el reto anti-bots de su Cloudflare; su origen da 200).
-La clave de pruebas (`basicAuth`) esta solo en `/opt/miwow-juego/servidor/config.json` del VPS (`chmod 600`).
+`basicAuth` QUITADA el 2026-11-21 (decision del usuario: nadie conoce el servidor); para volver a cerrarlo, "usuario:clave" en `/opt/miwow-juego/servidor/config.json` y reiniciar `miwow-juego`.
 Falta: el cliente del juego en `cliente/` (paso 4) y nuestro core.
 
 Desde el PC (PowerShell, en la raiz del repo). `web\deploy\publicar-vps.ps1` hace los pasos 1-2 y reinicia el servicio:
@@ -101,7 +105,7 @@ sudo certbot --apache -d juego.miwow.duckdns.org
 sudo apache2ctl configtest && sudo systemctl reload apache2
 ```
 Comprobar: `curl -sI https://juego.miwow.duckdns.org/healthz` (200) y abrir `https://juego.miwow.duckdns.org/play`
-(pide la basicAuth; en la consola del navegador `crossOriginIsolated` = true).
+(en la consola del navegador `crossOriginIsolated` = true).
 
 ## 6. Comprobaciones utiles
 
@@ -125,9 +129,94 @@ journalctl -u miwow-juego -f                          # peticiones raras, WS abi
 
 `publicar-vps.ps1` NUNCA sube `config.json` (el del VPS tiene la clave real) ni toca `userdata/`.
 
-## 8. Pendiente
+## 8. Core de MiWow en el VPS (DESPLEGADO el 2026-11-21)
+
+Decisiones del usuario: respetar el servidor de wow-arcano (otros puertos, nada suyo se modifica) y usar en MySQL
+**solo el usuario de la web, `miwow_web`** (su contrasena sale de `/opt/miwow-web/app/.env` `DB_PASSWORD`; no se crean usuarios).
+
+### Repos (GitHub, publicos)
+| Repo | Rama | En el VPS |
+|---|---|---|
+| `https://github.com/black7in/miwow-azerothcore` (fork del core) | `tradicional` | `/opt/miwow-core/src` (clon de AzerothCore oficial + remoto `miwow` con nuestra rama) |
+| `https://github.com/black7in/miwow` (este repo) | `tradicional` | `/opt/miwow-core/miwow`; `src/modules/mod-miwow` = enlace simbolico a `miwow/modules/mod-miwow` |
+
+### Carpetas
+```
+/opt/miwow-core/
+  src/      core (git)            build/   CMake (no versionado)
+  miwow/    este repo (git)       server/  instalacion: bin/ (authserver, worldserver), etc/ (*.conf, modules/)
+  data/     dbc, maps, vmaps, mmaps, Cameras        logs/
+```
+`data/` = copia de `/home/azeroth-server/data` (wow-arcano: misma extraccion, se comprobaron tamanos; su carpeta solo
+se LEYO) + nuestros archivos: mapas 750-754 (maps/vmaps/mmaps), modelos de colision de los circuitos, `Cameras` y 9 teselas
+de mmaps del mapa 562 que difieren por version del generador (88 archivos, ~12 MB, subidos desde
+`server\bin\RelWithDebInfo\data`). Tras regenerar mapas propios: volver a subir sus archivos `75x*`.
+
+### Compilar (dependencias ya instaladas: cmake 3.25, clang 14, boost 1.74, libmysqlclient 8.4)
+```bash
+cd /opt/miwow-core/src && git fetch miwow && git checkout tradicional && git reset --hard miwow/tradicional
+cd /opt/miwow-core/miwow && git pull
+mkdir -p /opt/miwow-core/build && cd /opt/miwow-core/build
+cmake ../src -DCMAKE_INSTALL_PREFIX=/opt/miwow-core/server -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+      -DWITH_WARNINGS=1 -DTOOLS_BUILD=none -DSCRIPTS=static -DMODULES=static -DCMAKE_CXX_FLAGS="-include utility"
+nice -n 15 make -j6 install > build.log 2>&1     # -j6 + nice: no quitar CPU al worldserver de wow-arcano
+```
+`-include utility`: a `MySQLConnection.cpp` de AzerothCore (base 2948c203f) le falta `#include <utility>` para
+`std::exchange`; MSVC lo trae de rebote, clang 14 + libstdc++ 12 no. Se arregla sin tocar el core.
+
+Primera compilacion (2026-11-21): mientras el push del core a GitHub seguia en marcha, `src` = AzerothCore oficial en
+`2948c203f` + nuestros 6 commits con `git format-patch`/`git am`. Terminado el push, `src` sigue a `miwow/tradicional`
+(remoto `miwow` = `black7in/miwow-azerothcore`; mismo arbol `dff44864`, sin recompilar). Actualizar:
+`git fetch miwow && git reset --hard miwow/tradicional`.
+
+### Base de datos (MySQL 8.4 compartido)
+- BD propias `miwow_auth`, `miwow_characters`, `miwow_world` (utf8mb4; CREADAS el 2026-11-21 con `sudo mysql`) con
+  `GRANT ALL` SOLO a `miwow_web` sobre esas tres. No se toca ninguna BD ni usuario de wow-arcano (`acore_*`, `acore`, `root`).
+- HECHO 2026-11-21: la web de Astro (`/opt/miwow-web/app/.env`) apunta a `miwow_auth/characters/world` (antes leia las
+  `acore_*` de wow-arcano y su registro creaba cuentas en SU `acore_auth.account`; copia en `.env.bak-acore-20261121`).
+  Las variables son `astro:env` secretas: se leen al arrancar (`systemctl restart miwow-web`, sin recompilar).
+  A `miwow_web` se le quitaron TODOS los permisos sobre `acore_*`: solo tiene `miwow_web`, `miwow_auth`,
+  `miwow_characters`, `miwow_world`.
+
+### Configuracion (`/opt/miwow-core/server/etc`, no versionada, `chmod 600`)
+| Clave | Valor |
+|---|---|
+| `LoginDatabaseInfo` / `WorldDatabaseInfo` / `CharacterDatabaseInfo` | `"127.0.0.1;3306;miwow_web;<clave>;miwow_auth"` / `..._world` / `..._characters` |
+| `RealmServerPort` (authserver) | `3725` |
+| `WorldServerPort` (worldserver) | `8086` |
+| `DataDir` / `LogsDir` | `"/opt/miwow-core/data"` / `"/opt/miwow-core/logs"` |
+| `Console.Enable` | `0` (servicio systemd sin consola) |
+| `modules/mod_miwow.conf` | copia de `mod_miwow.conf.dist` (juego: igual en todos los entornos) |
+
+`miwow_auth.realmlist`: `address` = IP publica del VPS (clientes de PC), `localAddress = 127.0.0.1`,
+`localSubnetMask = 255.255.255.255` (el proxy del cliente web llega desde 127.0.0.1), `port = 8086`.
+Servicios `miwow-auth` / `miwow-world` (usuario `miwow`, plantillas en `web/deploy/vps-pruebas/`): INSTALADOS y
+habilitados. Los `.conf` se generaron desde los `.dist` con un script (claves de la tabla de arriba + `SourceDirectory`
+= `/opt/miwow-core/src` para el updater, `TempDir`, `SOAP`); `mod_miwow.conf` = copia del `.dist`.
+
+### Comandos GM sin consola: SOAP
+`Console.Enable = 0` (systemd) -> los comandos van por SOAP, SOLO en `127.0.0.1:7879` (7878 es el de por defecto;
+comprobado cerrado desde fuera). Se autentica con una cuenta GM 3:
+```bash
+curl -s -u USUARIO:CLAVE -H 'Content-Type: text/xml' http://127.0.0.1:7879/ -d '<?xml version="1.0"?><SOAP-ENV:Envelope
+ xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns1="urn:AC"><SOAP-ENV:Body><ns1:executeCommand>
+ <command>account create nombre clave</command></ns1:executeCommand></SOAP-ENV:Body></SOAP-ENV:Envelope>'
+```
+Primera cuenta GM (`BLACK`, nivel 3, todos los reinos) creada directamente en `miwow_auth` con SRP6 (mismo calculo que
+`AccountMgr`: g = 7, N del core, x = SHA1(sal | SHA1(USUARIO:CLAVE)) little-endian), porque SOAP necesita ya una cuenta GM.
+
+### Estado del arranque (2026-11-21)
+- auth en 3725 y world en 8086 abiertos a Internet (clientes de PC: `set realmlist 144.126.158.141:3725`; el puerto en
+  el realmlist del cliente es obligatorio, 3724 es de wow-arcano). Cliente web: `tcpRoutes` 3724 -> 127.0.0.1:3725.
+- `realmlist` id 1 `MiWow`: `address 144.126.158.141`, `localAddress 127.0.0.1/255.255.255.255`, `port 8086`.
+- El updater creo las tres BD y aplico el SQL del modulo; cargan carrera (752/753) y parkour (754).
+- Aviso NO fatal: 66 teselas de mmaps `built with generator v19, expected v20` (los mmaps de `data/` son anteriores al
+  core actual; en esas teselas no hay navegacion de PNJ). Regenerarlos con `mmaps_generator` del core actual (pendiente).
+- Arreglo de compilacion en clang 14: `MiWowGuildSeason.cpp` capturaba un structured binding en una lambda (lo permite
+  C++20/MSVC, clang < 16 no). Corregido en el repo; en el VPS se copio el archivo a mano hasta el siguiente commit.
+
+## 9. Pendiente
 
 - Nuestro AzerothCore en el VPS (compilar, BD propias, puertos 3725/8086, `Warden.Enabled` segun la prueba).
 - Pagina `/[lang]/play` de Astro con el boton "Jugar" (URL del cliente web en los ajustes de la web).
-- Quitar la basicAuth cuando se abra a todo el mundo.
 - Trafico: sin R2 todas las descargas salen del VPS (~50 MB por jugador hasta el login, mas al viajar por el mundo).

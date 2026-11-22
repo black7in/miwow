@@ -1,0 +1,19 @@
+# /etc/systemd/system/miwow-auth.service  (VPS de pruebas, ver docs/despliegue-vps-pruebas.md seccion 8)
+#   sudo systemctl daemon-reload && sudo systemctl enable --now miwow-auth
+#   journalctl -u miwow-auth -f      (logs del core tambien en /opt/miwow-core/logs)
+[Unit]
+Description=MiWow authserver (AzerothCore + mod-miwow)
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=miwow
+WorkingDirectory=/opt/miwow-core/server/bin
+ExecStart=/opt/miwow-core/server/bin/authserver -c /opt/miwow-core/server/etc/authserver.conf
+Restart=on-failure
+RestartSec=10
+LimitNOFILE=65536
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target

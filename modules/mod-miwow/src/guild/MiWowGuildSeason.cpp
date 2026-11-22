@@ -1010,8 +1010,10 @@ void MiWowGuildSeason::RemoveStalePerkSpells(Player* player)
         if (spellId < PerkSpellFirst || spellId > PerkSpellLast || spell->State == PLAYERSPELL_REMOVED)
             continue;
 
+        // Copia: clang < 16 no deja capturar un structured binding en una lambda
+        uint32 const id = spellId;
         bool const isPerk = IsEnabled() && std::any_of(_perks.begin(), _perks.end(),
-            [spellId](MiWowGuildPerk const& perk) { return perk.SpellId == spellId; });
+            [id](MiWowGuildPerk const& perk) { return perk.SpellId == id; });
         if (!isPerk)
             stale.push_back(spellId);
     }

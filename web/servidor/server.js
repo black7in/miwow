@@ -28,6 +28,9 @@ const DEFAULTS = {
   webDir: '../cliente',         // carpeta con Wow.js y Wow.wasm (relativa a este archivo)
   userDir: 'userdata',          // userdata/<idSesión>/WTF/...
   theirManifest: '../cliente/game-manifest.txt',
+  // Archivos del juego servidos desde otra ruta (pisan a los de clientDir): ruta del juego -> archivo (relativo a este).
+  // P. ej. { "Data/patch-4.MPQ": "../../client/patches/web/patch-4.MPQ" } (en local se copia a clientDir con Instalar-Parche).
+  extraFiles: {},
   gameIndex: '',                // archivo "tamaño<TAB>ruta" con la lista del juego (cliente en R2): así el VPS no necesita los MPQ
   trustProxy: false,            // true si hay Caddy/nginx delante (usa X-Forwarded-For)
   basicAuth: '',                // "usuario:clave" para cerrar el acceso en pruebas ('' = abierto)
@@ -48,6 +51,7 @@ function loadConfig() {
   const abs = p => path.resolve(__dirname, p);
   cfg.webDir = abs(cfg.webDir); cfg.userDir = abs(cfg.userDir); cfg.theirManifest = abs(cfg.theirManifest);
   if (cfg.gameIndex) cfg.gameIndex = abs(cfg.gameIndex);
+  cfg.extraFiles = Object.fromEntries(Object.entries(cfg.extraFiles || {}).map(([rel, p]) => [rel, abs(p)]));
   if (!cfg.cookieSecret) {
     const sf = path.join(__dirname, '.cookie-secret');
     if (!fs.existsSync(sf)) fs.writeFileSync(sf, crypto.randomBytes(32).toString('hex'));
@@ -104,6 +108,15 @@ function scanGame(force = false) {
   }
   walk(CONFIG.clientDir, 'Data/' + CONFIG.locale, out);
   walk(CONFIG.clientDir, 'Interface', out);
+  // Solo los addons de Blizzard (como en R2/VPS): los de terceros que haya en clientDir no se sirven.
+  for (const k of [...out.keys()]) {
+    if (k.startsWith('interface/addons/') && !k.startsWith('interface/addons/blizzard_')) out.delete(k);
+  }
+  for (const [rel, abs] of Object.entries(CONFIG.extraFiles)) {
+    let st; try { st = fs.statSync(abs); } catch { log('AVISO: no existe', abs, '(extraFiles)'); continue; }
+    const name = theirCase.get(rel.toLowerCase()) || rel.replace(/\.mpq$/i, '.MPQ');
+    out.set(rel.toLowerCase(), { name, abs, size: st.size, mtime: st.mtimeMs });
+  }
   const stamp = [...out.values()].map(f => f.name + f.size + f.mtime).join('|');
   if (stamp !== gameStamp) { gameFiles = out; gameStamp = stamp; log(`juego: ${out.size} archivos`); }
 }

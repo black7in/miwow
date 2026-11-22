@@ -1,0 +1,22 @@
+# /etc/systemd/system/miwow-world.service  (VPS de pruebas, ver docs/despliegue-vps-pruebas.md seccion 8)
+#   sudo systemctl daemon-reload && sudo systemctl enable --now miwow-world
+#   journalctl -u miwow-world -f      (logs del core tambien en /opt/miwow-core/logs)
+[Unit]
+Description=MiWow worldserver (AzerothCore + mod-miwow)
+After=network.target mysql.service
+Wants=miwow-auth.service
+
+[Service]
+Type=simple
+User=miwow
+WorkingDirectory=/opt/miwow-core/server/bin
+ExecStart=/opt/miwow-core/server/bin/worldserver -c /opt/miwow-core/server/etc/worldserver.conf
+Restart=on-failure
+RestartSec=10
+# Parada limpia: el worldserver guarda personajes al recibir SIGTERM
+TimeoutStopSec=120
+LimitNOFILE=65536
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target

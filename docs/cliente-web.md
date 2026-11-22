@@ -138,7 +138,10 @@ npm ci                                   # una vez
 copy config.local.example.json config.json   # una vez; ajustar clientDir
 node server.js
 ```
-1. authserver + worldserver encendidos; en `acore_auth.realmlist`: `address = 127.0.0.1`.
+1. authserver + worldserver encendidos; en `acore_auth.realmlist`: `address = 127.0.0.1` (comprobado 2026-11-22).
+   El parche: `Build-Patch` -> `client\patches\Instalar-Parche.ps1` (lo ejecuta el usuario) copia la carpeta al cliente de PC y
+   `client\patches\web\patch-4.MPQ` a `D:\Wow\Data\patch-4.MPQ`; recargar la pagina (el manifest se re-escanea cada 30 s).
+   (`extraFiles` en `config.json` serviria el MPQ sin copiarlo; no se usa.) De `D:\Wow\Interface\AddOns` solo se sirven los `Blizzard_*`.
 2. Abrir **http://localhost:8080/play** (Chrome; Firefox puede dar "out of memory" tras varias recargas: cerrar la pestana).
 3. Cliente base: **`D:\Wow`** (original). NO usar `D:\Clientes de Wow\Wow3.3.5a-Limpio` (intento de compactarlo, puede estar roto).
 4. Si desconecta al entrar al mundo: Warden (su modulo nativo no corre en wasm) -> `Warden.Enabled = 0` (sin decidir
@@ -157,11 +160,13 @@ el empaquetado automatico queda pendiente). El MPQ empaquetado tambien sirve en 
 archivo en los dos.
 
 Flujo al cambiar algo de cliente:
-1. `tools\Build-Patch.ps1` -> `client\patches\patch-4.MPQ` (carpeta) -> el usuario lo empaqueta como MPQ.
-2. **Asegurar que el tamano cambia** respecto a cualquier version publicada antes (si no, los jugadores se quedan con los
-   bloques viejos): comparar con la linea de `patch-4.MPQ` en `web\servidor\game-index.txt`; si coincide, anadir un
-   archivo de relleno/version al MPQ (o, como plan B, renombrar a `patch-5.MPQ`).
-3. Copiarlo a `D:\Wow\Data\patch-4.MPQ` (el `clientDir`: de ahi sale el manifest y el respaldo del Worker).
+1. `tools\Build-Patch.ps1` -> `client\patches\patch-4.MPQ` (carpeta, PC) + `client\patches\web\patch-4.MPQ` (MPQ
+   empaquetado por `tools\mpqpack.py` desde 2026-11-22: v0, zlib por sectores de 4 KB, `(listfile)`, releido y comprobado;
+   MPQExtractor/StormLib lo extrae identico). En local lo copia `Instalar-Parche.ps1` (paso 3).
+2. **El tamano cambia solo**: `mpqpack.py` mete `MiWow-version.txt` (fecha) y le anade relleno si el MPQ saliera del mismo
+   tamano que el anterior de esa carpeta. Para publicar, comparar ademas con la linea de `patch-4.MPQ` en
+   `web\servidor\game-index.txt` (version subida a R2).
+3. (R2/VPS) Copiarlo a `D:\Wow\Data\patch-4.MPQ` (el `clientDir`: de ahi sale el manifest y el respaldo del Worker).
 4. Si se usa R2: `web\deploy\subir-r2.ps1 -Solo patch-4` y `web\deploy\subir-r2.ps1 -SoloIndice`; en el VPS copiar
    `game-index.txt` a `/srv/wow/servidor/` (se relee solo cada 30 s).
 5. Los jugadores solo recargan la pagina. Si R2 aun tiene otro tamano, el Worker manda el bloque al origen (mas lento, nunca
