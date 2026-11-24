@@ -143,12 +143,12 @@ sin WebGL 2, memoria, abort) con boton Reintentar. Con R2 `/progress` no ve los 
 Pantalla completa: `play.html` define `window.wowToggleFullscreen` (la llama el boton "Full Screen" que el wasm anade al
 menu Esc si `document.fullscreenEnabled`; `MiWow.lua` lo traduce) + boton en la pantalla de carga + en tactil el primer toque
 en el juego (los navegadores exigen un gesto del usuario); en Android bloquea horizontal. iPhone no tiene la API: aviso de
-"Anadir a pantalla de inicio" (metas `apple-mobile-web-app-*`). SIN PROBAR.
+"Anadir a pantalla de inicio" (metas `apple-mobile-web-app-*`). Probado 2026-11-24.
 Precarga: `window.wowPrefetch(urls)` (la llama el cliente con los bloques que va a leer) baja 4 en paralelo a la cache HTTP. DESACTIVADA salvo `?precarga=1` (sospechosa de congelar la entrada al mundo en Firefox).
 Probado en movil por LAN (2026-11-22): sigue a ~0,5 MB/s, sin cambio visible (falta mirar si el cliente la llama: `precarga=`
 en `?carga=1`). Pendiente optimizar la descarga (bundles `bundle-<crc>.bin`, que hoy dan 404).
 Primera prueba (Firefox, 2026-11-22): `wowFramesLoaded` llega a los ~14 s con ~34 MB descargados (`loadEstimateMB` = 36); `wowFetchCount` no existe hasta ese momento.
-2026-11-24 (con R2, SIN PROBAR): bytes = lo mayor de `/progress`, lo que crece `navigator.storage.estimate().usage` (la cache
+2026-11-24 (con R2, probado): bytes = lo mayor de `/progress`, lo que crece `navigator.storage.estimate().usage` (la cache
 OPFS `blocks.bin` del cliente, la escriben sus hilos) y `wowFetchCount` x 64 KB; tras `onRuntimeInitialized` la barra avanza
 tambien por tiempo (curva hacia el 97 %, `PROCESS_TAU` 90 s) y, 8 s sin descargar, aviso `tipWait` (no recargar). Medido en
 movil (Android, Entel) con la cache llena: ~3 min 10 s hasta el login, casi todo PROCESANDO (21 bloques nuevos); en PC mucho
@@ -158,6 +158,16 @@ si `wowFetchState()` != null o `wowFetchCount()` cambio hace < 0,6 s (cadena de 
 congela el juego aunque cada bloque tarde poco); si eso dura >= 0,7 s o el hilo principal se bloquea, aparece (compositor).
 `/stats/freeze` (caja negra del cliente: sesion anterior acabada sin `pagehide`) se guarda en el log de `miwow-juego` (`FREEZE`).
 Diagnostico en pantalla: `?carga=1` (no `?trace=1`).
+2026-11-24 (probado): cargas siguientes sin "Descargando" falso. `localStorage.wowLoadedOnce` (se pone al terminar) ->
+"Cargando el cliente" + consejo `tipCached`; Resource Timing de `Wow.wasm` (`transferSize` < la mitad = cache) decide si
+sus MB cuentan en el contador (solo bytes de red). Tras arrancar: "Descargando datos" solo si llegaron bytes nuevos en los
+ultimos 2,5 s, si no "Cargando datos del juego" (`phaseLoad`, sustituye a `phaseReady`). `#dl` oculto hasta `finish()`.
+2026-11-24 (probado): pantalla de carga del mundo congelada y al 100 % (tambien sin descargas). `Wow.js` tiene un
+mecanismo que pedia un receptor en su pagina: con `window.wowPresentChannel` = id != 0 el hilo de dibujo manda copias del
+canvas (ImageBitmap) por `BroadcastChannel("wowPresent" + id)` y `null` al acabar. `play.html` pone un id aleatorio por
+pestana y las pinta en `#present` (capa encima de `#canvas`, `bitmaprenderer`); seguro: se quita si 1,5 s sin fotogramas y
+`wowFrameCount` avanza. `?present=0` lo apaga. Trazas `present: inicio/fin` con `?carga=1`. No se sabe en que momentos lo
+llama el C++ (sin fuentes): si no llega nada, la pantalla de carga sigue como antes.
 
 ### Arrancar en local
 ```powershell

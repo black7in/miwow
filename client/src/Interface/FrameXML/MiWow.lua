@@ -106,6 +106,7 @@ MIWOW_MATCH_BLOCKED_PANELS = {
 MIWOW_STR_DEV_NATIVE_ON = "Interfaz nativa";
 MIWOW_STR_DEV_NATIVE_OFF = "Interfaz de partida";
 MIWOW_STR_DEV_ONLY = "Solo en modo dev (.gm on o .dev on).";
+MIWOW_STR_FULLSCREEN = "Pantalla completa";
 
 MiWow_UI = {
 	-- "world" | "match"
@@ -352,3 +353,11 @@ end
 MiWow_CreateDevButton();
 MiWow_CreatePetBarHolder();
 MiWow_WrapBlockedFunctions();
+
+-- Cliente web: el wasm anade al menu (Esc) el boton "Full Screen" (GameMenuButtonFullscreen, solo si el navegador
+-- permite pantalla completa; llama a window.wowToggleFullscreen de play.html). Su texto va fijo en ingles en el wasm.
+GameMenuFrame:HookScript("OnShow", function()
+	if ( GameMenuButtonFullscreen ) then
+		GameMenuButtonFullscreen:SetText(MIWOW_STR_FULLSCREEN);
+	end
+end);

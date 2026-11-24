@@ -71,7 +71,7 @@ EventWow/
   contrasena), lobby definitivo.
 
 ## Siguiente
-- Cliente web: probar lo publicado el 2026-11-24 (pantalla de carga y HUD tactil), commitear el HUD; luego congelones
+- Cliente web: congelones
   por espera de datos (dominio propio en Cloudflare / bundles) y `wowRenderScale` en movil. Ver `web/CLAUDE.md`.
 - Hermandad: ventajas NO pasivas (resurreccion en masa, invocar al grupo, calderos/festines, vuelos mas rapidos).
 - Carrera: arreglar las caidas (no vuelve a la pista). Ver `docs/carrera-estado.md`.

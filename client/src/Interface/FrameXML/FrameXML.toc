@@ -153,4 +153,5 @@ MiWowMatch.lua
 MiWowRace.lua
 MiWowParkour.lua
 MiWowMatchFound.lua
+MiWowTouchSkin.lua
 MiWow.lua

@@ -28,6 +28,8 @@
   }
   html, body { margin: 0; height: 100%; background: var(--ink-950); overflow: hidden; color: var(--fg); font: 15px/1.5 var(--font-sans); }
   #canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; outline: none; }
+  /* Fotogramas que el cliente manda mientras su hilo de dibujo esta ocupado (pantalla de carga del mundo) */
+  #present { position: fixed; inset: 0; width: 100vw; height: 100vh; display: none; pointer-events: none; z-index: 1; }
   #wow-text { position: fixed; left: -9999px; top: 0; opacity: 0; }
   #safe { position: fixed; inset: 0; pointer-events: none; }
 
@@ -100,6 +102,7 @@
 <body>
 <div id="safe"></div>
 <canvas id="canvas" tabindex="-1" oncontextmenu="event.preventDefault()"></canvas>
+<canvas id="present" aria-hidden="true"></canvas>
 <input id="wow-text" type="text" autocomplete="off" autocapitalize="off" spellcheck="false">
 
 <div id="loader" role="status" aria-live="polite">
@@ -131,9 +134,10 @@
   // ---------------- Textos (es / en / pt, como la web) ----------------
   const TEXTS = {
     es: {
-      phaseClient: 'Descargando el cliente', phaseStart: 'Iniciando el juego', phaseData: 'Descargando datos del juego',
-      phaseReady: 'Preparando la pantalla de inicio', phaseDone: '¡Listo!',
+      phaseClient: 'Descargando el cliente', phaseClientCached: 'Cargando el cliente', phaseStart: 'Iniciando el juego',
+      phaseData: 'Descargando datos del juego', phaseLoad: 'Cargando datos del juego', phaseDone: '¡Listo!',
       tipFirst: 'La primera vez se descargan los datos del juego. Las siguientes veces cargará mucho más rápido.',
+      tipCached: 'Los datos del juego ya están en tu dispositivo: solo se descarga lo que haya cambiado.',
       tipSlow: 'La conexión va lenta, seguimos descargando…',
       tipWait: 'El juego está preparando sus datos. En móvil puede tardar un par de minutos: no cierres ni recargues la página.',
       tipTouch: 'Consejo: gira el móvil en horizontal para jugar más cómodo.',
@@ -146,9 +150,10 @@
       mb: 'MB', perSec: '/s',
     },
     en: {
-      phaseClient: 'Downloading the client', phaseStart: 'Starting the game', phaseData: 'Downloading game data',
-      phaseReady: 'Preparing the start screen', phaseDone: 'Ready!',
+      phaseClient: 'Downloading the client', phaseClientCached: 'Loading the client', phaseStart: 'Starting the game',
+      phaseData: 'Downloading game data', phaseLoad: 'Loading game data', phaseDone: 'Ready!',
       tipFirst: 'The first time, the game data is downloaded. Next time it will load much faster.',
+      tipCached: 'The game data is already on your device: only what changed is downloaded.',
       tipSlow: 'The connection is slow, still downloading…',
       tipWait: 'The game is preparing its data. On mobile it can take a couple of minutes: do not close or reload the page.',
       tipTouch: 'Tip: turn your phone sideways for a better experience.',
@@ -161,9 +166,10 @@
       mb: 'MB', perSec: '/s',
     },
     pt: {
-      phaseClient: 'Baixando o cliente', phaseStart: 'Iniciando o jogo', phaseData: 'Baixando dados do jogo',
-      phaseReady: 'Preparando a tela inicial', phaseDone: 'Pronto!',
+      phaseClient: 'Baixando o cliente', phaseClientCached: 'Carregando o cliente', phaseStart: 'Iniciando o jogo',
+      phaseData: 'Baixando dados do jogo', phaseLoad: 'Carregando dados do jogo', phaseDone: 'Pronto!',
       tipFirst: 'Na primeira vez os dados do jogo são baixados. Nas próximas vezes carregará muito mais rápido.',
+      tipCached: 'Os dados do jogo já estão no seu dispositivo: só é baixado o que mudou.',
       tipSlow: 'A conexão está lenta, continuamos baixando…',
       tipWait: 'O jogo está preparando seus dados. No celular pode levar alguns minutos: não feche nem recarregue a página.',
       tipTouch: 'Dica: gire o celular na horizontal para jogar melhor.',
@@ -214,7 +220,13 @@
     dataBase: null, dataBytes: 0, estimate: 36 * MB,
     phase: '', shown: 0, done: false, failed: false, runtimeReady: false,
     lastBytesAt: performance.now(), lastFrames: 0, framesSince: 0,
+    lastDownloadAt: -1e9,                  // ultima vez que llegaron bytes NUEVOS por la red (para decir "Descargando")
   };
+  // Ya cargo alguna vez en este navegador: Wow.wasm y los bloques suelen salir de la cache (HTTP + OPFS) y lo que
+  // tarda es procesar, no descargar. Se confirma al bajar Wow.wasm con Resource Timing (wasmFromCache).
+  const LOADED_KEY = 'wowLoadedOnce';
+  const seenBefore = (() => { try { return localStorage.getItem(LOADED_KEY) === '1'; } catch { return false; } })();
+  let wasmFromCache = seenBefore;
   const samples = [];   // [t, bytesTotales] para la velocidad
 
   function setPhase(text) { if (state.phase !== text) { state.phase = text; $('phase').textContent = text; trace('fase: ' + text); } }
@@ -238,13 +250,15 @@
     $('pct').textContent = pct + '%';
     $('bar').setAttribute('aria-valuenow', pct);
 
+    // MB a la vista = solo lo que llega por la red (Wow.wasm leido de la cache no cuenta).
     const now = performance.now();
-    samples.push([now, got]);
+    const net = (wasmFromCache ? 0 : state.wasmLoaded) + state.dataBytes;
+    samples.push([now, net]);
     while (samples.length > 2 && now - samples[0][0] > 3000) samples.shift();
-    const dt = (now - samples[0][0]) / 1000, db = got - samples[0][1];
+    const dt = (now - samples[0][0]) / 1000, db = net - samples[0][1];
     const speed = dt > 0.5 ? db / dt : 0;
-    $('detail').textContent = got > 0
-      ? fmtMB(got) + ' ' + T.mb + (speed > 20 * 1024 ? ' · ' + fmtMB(speed) + ' ' + T.mb + T.perSec : '')
+    $('detail').textContent = net > 0
+      ? fmtMB(net) + ' ' + T.mb + (speed > 20 * 1024 ? ' · ' + fmtMB(speed) + ' ' + T.mb + T.perSec : '')
       : '';
   }
 
@@ -252,6 +266,8 @@
     if (state.done || state.failed) return;
     state.done = true;
     trace('LISTO (' + why + ')');
+    try { localStorage.setItem(LOADED_KEY, '1'); } catch {}
+    dl.style.display = '';   // el circulito de descarga solo dentro del juego
     $('phase').textContent = T.phaseDone;
     $('fill').style.width = '100%'; $('pct').textContent = '100%';
     setTimeout(() => {
@@ -320,8 +336,9 @@
     if (!document.createElement('canvas').getContext('webgl2')) { fail('errWebgl'); return; }
   } catch { fail('errWebgl'); return; }
 
-  setPhase(T.phaseClient);
-  setTip(window.wowTouch && innerHeight > innerWidth ? T.tipTouch : T.tipFirst);
+  setPhase(seenBefore ? T.phaseClientCached : T.phaseClient);
+  const defaultTip = seenBefore ? T.tipCached : T.tipFirst;
+  setTip(window.wowTouch && innerHeight > innerWidth ? T.tipTouch : defaultTip);
 
   // ---------------- Señales del cliente (Wow.js) ----------------
   // wowFramesLoaded: el cliente avisa cuando su interfaz está cargada -> fuera la pantalla de carga.
@@ -406,18 +423,19 @@
     // Y lo que crece el almacenamiento del sitio: el cliente guarda cada bloque descargado en OPFS (blocks.bin).
     pollStorage();
     const bytes = Math.max(state.serverBytes || 0, state.storageBytes || 0, (fetches || 0) * BLOCK_ESTIMATE);
-    if (bytes > state.dataBytes) { state.dataBytes = bytes; state.lastBytesAt = performance.now(); }
+    if (bytes > state.dataBytes) { state.dataBytes = bytes; state.lastBytesAt = state.lastDownloadAt = performance.now(); }
     const fstate = typeof window.wowFetchState === 'function' ? window.wowFetchState() : null;
     const frames = typeof window.wowFrameCount === 'function' ? window.wowFrameCount() : 0;
     if (frames !== state.lastFrames) { state.lastFrames = frames; state.framesSince = state.framesSince || performance.now(); }
 
-    if (state.runtimeReady) setPhase(performance.now() - state.lastBytesAt < 2500 ? T.phaseData : T.phaseReady);
+    // "Descargando" solo si de verdad llegan bytes nuevos; si no, esta procesando lo que ya tiene.
+    if (state.runtimeReady) setPhase(performance.now() - state.lastDownloadAt < 2500 ? T.phaseData : T.phaseLoad);
     // Mucho rato sin descargar ya arrancado = procesando: que no cierren la pagina
     const idle = state.runtimeReady && performance.now() - state.lastBytesAt > 8000;
     // Un bloque que tarda: aviso de conexión lenta.
     if (fstate && fstate.seconds >= 6) setTip(T.tipSlow, true);
     else if (idle) setTip(T.tipWait, true);
-    else if ($('tip').classList.contains('warn')) setTip(T.tipFirst);
+    else if ($('tip').classList.contains('warn')) setTip(defaultTip);
 
     // Plan B si el cliente no avisa: ya pinta, no descarga nada desde hace 10 s y no espera ningún bloque.
     if (state.runtimeReady && state.framesSince && fstate === null && performance.now() - state.lastBytesAt > 10000
@@ -434,6 +452,9 @@
   // no hay fotogramas: el compositor sigue la animacion y el circulito aparece; al volver, desaparece.
   const DL_SHOW_MS = 700, DL_LONG = 3600000;
   const dl = $('dl');
+  // Oculto mientras se ve la pantalla de carga (ya tiene su barra): al PROCESAR, el hilo principal se bloquea a
+  // ratos y el compositor lo enseñaba aunque no se descargara nada. Lo vuelve a mostrar finish().
+  dl.style.display = 'none';
   let dlAnim = null;
   try {
     dlAnim = dl.animate([
@@ -455,6 +476,40 @@
       requestAnimationFrame(dlTick);
     };
     requestAnimationFrame(dlTick);
+  }
+
+  // ---------------- Fotogramas durante la carga del mundo (wowPresentChannel) ----------------
+  // Wow.js trae un mecanismo que su pagina /play (no la tenemos) recibia: si window.wowPresentChannel != 0, el hilo de
+  // dibujo copia el canvas a un ImageBitmap y lo manda por BroadcastChannel("wowPresent" + id); null = terminar.
+  // Sin receptor la pantalla de carga del mundo no avanzaba en pantalla (se veia congelada y al final al 100 %):
+  // mientras carga, ese hilo no vuelve a su bucle y el navegador no muestra lo que dibuja. ?present=0 lo apaga.
+  if (params.get('present') !== '0' && typeof BroadcastChannel === 'function') {
+    const id = 1 + Math.floor(Math.random() * 1e9);   // por pestana: que dos pestanas no se mezclen
+    window.wowPresentChannel = id;
+    const pc = $('present');
+    let bmr = null, ctx2d = null;
+    try { bmr = pc.getContext('bitmaprenderer'); } catch {}
+    if (!bmr) ctx2d = pc.getContext('2d');
+    let shown = false, frames = 0, lastAt = 0, gameFramesAt = 0;
+    const hide = (why) => { if (!shown) return; shown = false; pc.style.display = 'none'; trace('present: fin (' + why + ', ' + frames + ' fotogramas)'); };
+    const ch = new BroadcastChannel('wowPresent' + id);
+    ch.onmessage = (ev) => {
+      const b = ev.data;
+      if (!b) { hide('null'); return; }
+      try {
+        if (bmr) bmr.transferFromImageBitmap(b);
+        else { if (pc.width !== b.width || pc.height !== b.height) { pc.width = b.width; pc.height = b.height; } ctx2d.drawImage(b, 0, 0); b.close(); }
+      } catch (e) { trace('present: ' + e.message); return; }
+      frames++; lastAt = performance.now();
+      gameFramesAt = typeof window.wowFrameCount === 'function' ? window.wowFrameCount() : 0;
+      if (!shown) { shown = true; pc.style.display = 'block'; trace('present: inicio'); }
+    };
+    // Seguro: si no llega el null, quitar la capa cuando el juego vuelve a dibujar normal (no tapar el juego con una imagen vieja).
+    setInterval(() => {
+      if (!shown || performance.now() - lastAt < 1500) return;
+      const n = typeof window.wowFrameCount === 'function' ? window.wowFrameCount() : 0;
+      if (n !== gameFramesAt) hide('el juego dibuja');
+    }, 250);
   }
 
   // ---------------- Module de Emscripten ----------------
@@ -487,6 +542,14 @@
           bytes = new Uint8Array(await r.arrayBuffer()); state.wasmLoaded = bytes.length;
         }
         state.wasmTotal = state.wasmLoaded;
+        // De la cache o de la red: transferSize = bytes que pasaron por la red (0 si cache; solo cabeceras si 304).
+        try {
+          const e = performance.getEntriesByName(new URL('/Wow.wasm', location.href).href).pop();
+          if (e && typeof e.transferSize === 'number') {
+            wasmFromCache = e.transferSize < bytes.length / 2;
+            trace('Wow.wasm ' + (wasmFromCache ? 'de la cache' : 'descargado') + ' (transferSize ' + e.transferSize + ')');
+          }
+        } catch {}
         setPhase(T.phaseStart);
         trace('Wow.wasm ' + fmtMB(bytes.length) + ' MB, compilando');
         const res = await WebAssembly.instantiate(bytes, imports);
@@ -494,7 +557,7 @@
       })().catch((e) => fail(/memory/i.test(String(e)) ? 'errMemory' : 'errGeneric', e && e.stack || e));
       return {};
     },
-    onRuntimeInitialized: () => { state.runtimeReady = true; state.runtimeAt = state.lastBytesAt = performance.now(); trace('runtime listo'); setPhase(T.phaseData); },
+    onRuntimeInitialized: () => { state.runtimeReady = true; state.runtimeAt = state.lastBytesAt = performance.now(); trace('runtime listo'); setPhase(T.phaseLoad); },
     onAbort: (w) => fail(/memory/i.test(String(w)) ? 'errMemory' : 'errGeneric', 'abort: ' + w),
   };
   // Al salir (recargar, cerrar, navegar) liberamos lo pesado: Firefox no lo suelta enseguida y la página nueva

@@ -37,7 +37,7 @@ Cliente 3.3.5a en wasm de Last Havens (permiso verbal, SIN fuentes) + nuestro ba
   ~0,3-1 s cada uno por R2 sin cache cerca. **Siguiente**: (1) dominio propio en Cloudflare para cachear `/blocks` en el
   borde (la Cache API no funciona en `workers.dev`) y/o (2) investigar los bundles (`bundle-<crc>.bin`, hoy 404).
   Despues: `wowRenderScale` en movil (fluidez).
-- 2026-11-24 PUBLICADO, SIN PROBAR (`play.html`): sin "Descargando" falso en cargas siguientes (`wowLoadedOnce`,
+- 2026-11-24 probado (`play.html`): sin "Descargando" falso en cargas siguientes (`wowLoadedOnce`,
   Resource Timing del wasm, `phaseLoad`, `#dl` oculto en la pantalla de carga) + receptor `wowPresentChannel` para que
   se vea la pantalla de carga del mundo (trazas `present: inicio/fin` con `?carga=1`; si no llegan, el C++ no lo usa ahi).
 - Pendiente: mmaps v19 -> regenerar con el generador actual; arreglo clang de `MiWowGuildSeason.cpp` sin commitear
@@ -47,13 +47,12 @@ Cliente 3.3.5a en wasm de Last Havens (permiso verbal, SIN fuentes) + nuestro ba
 Decision del usuario (2026-11-22): su logica intacta, marcos de vida nativos, solo texturas e iconos "modernos" dorados.
 Solo actua con `webTouch`; captura `LasthavensEditApi` con una metatabla de `_G` (su trozo 15 lo borra). Texturas de
 `tools/touchui/gen_touchui.py` en `client/src/Interface/TouchUI`. Maqueta de referencia: artefacto "HUD tactil MiWoW".
-- Probado: anillo, saltar dorado.
-- PUBLICADO 2026-11-24, SIN PROBAR: iconos del boton inteligente, menu (retrato con nuestro anillo, cajon y micro
+- Probado: anillo, saltar dorado y (2026-11-24) lo siguiente:
+- iconos del boton inteligente, menu (retrato con nuestro anillo, cajon y micro
   botones), chat (ventana grande, canales/pestanas en pastilla, caja, botones redondos), ventana de bolsas; mochila y
   libro de hechizos con su icono ORIGINAL recortado en circulo dentro de nuestro anillo (`MiWowTouch_RoundIcon`), en
   columna bajo el boton Menu junto al minimapa; su engranaje `hud.setup` (abria el libro) oculto; vista previa del chat
   (`hud.preview`) centrada abajo y 26 px mas arriba; experiencia = `MiWowTouchXpBar` abajo-centro con texto
   (actual / siguiente, %, lo que falta, descanso) y su linea de 3 px con alfa 0.
-- Sin commitear: se commitea TODO el HUD tactil cuando el usuario lo pruebe.
 - Pendiente: adaptar `MiWow.lua` (modo partida) y las ventanas al modo tactil (su Lua toca `VehicleMenuBar`, barras,
   `UIParent:SetScale`...).
