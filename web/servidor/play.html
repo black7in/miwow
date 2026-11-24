@@ -2,53 +2,521 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>MiWoW</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icons/favicon.png">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<meta name="theme-color" content="#111014">
+<link rel="preload" href="/fonts/montserrat-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/brand/logo-web.png" as="image">
+<meta name="theme-color" content="#0e0c0a">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MiWoW">
 <style>
-  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; color: #ffd100; font: 14px Georgia, serif; }
+  /* Tokens de la web de Astro (PaginasWeb/AzerothWeb/src/styles/global.css) */
+  @font-face { font-family: 'Montserrat'; font-weight: 500 700; font-display: swap; src: url(/fonts/montserrat-latin.woff2) format('woff2'); }
+  @font-face { font-family: 'Open Sans'; font-weight: 400 600; font-display: swap; src: url(/fonts/opensans-latin.woff2) format('woff2'); }
+  :root {
+    --font-display: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
+    --font-sans: 'Open Sans', ui-sans-serif, system-ui, sans-serif;
+    --ink-950: #0e0c0a; --ink-900: #15120f; --ink-850: #1b1814; --ink-800: #221e19;
+    --sun-200: #ffe86b; --sun-300: #ffd535; --sun-400: #ffc20e; --sun-500: #f8b100;
+    --fg: #ffffff; --fg-2: #d6d1c9; --fg-3: #9b958c;
+    color-scheme: dark;
+  }
+  html, body { margin: 0; height: 100%; background: var(--ink-950); overflow: hidden; color: var(--fg); font: 15px/1.5 var(--font-sans); }
   #canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; outline: none; }
-  #loading { position: fixed; left: 0; right: 0; top: 40%; text-align: center; pointer-events: none; }
-  #status { margin-top: 8px; color: #ccc; font-size: 12px; }
   #wow-text { position: fixed; left: -9999px; top: 0; opacity: 0; }
   #safe { position: fixed; inset: 0; pointer-events: none; }
-  #log { position: fixed; left: 4px; bottom: 4px; max-width: 60vw; max-height: 30vh; overflow: auto; font: 11px monospace; color: #8f8; background: #0008; white-space: pre-wrap; }
+
+  /* ---------- Pantalla de carga ---------- */
+  #loader {
+    position: fixed; inset: 0; z-index: 10; display: grid; place-items: center;
+    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    background-color: var(--ink-850);
+    background-image:
+      radial-gradient(ellipse 60% 45% at 50% 38%, rgb(248 177 0 / 0.10), transparent 70%),
+      radial-gradient(ellipse at 20% 0%, rgb(255 255 255 / 0.035), transparent 50%),
+      radial-gradient(ellipse at 80% 100%, rgb(0 0 0 / 0.45), transparent 60%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    transition: opacity .6s ease, visibility .6s;
+  }
+  #loader.done { opacity: 0; visibility: hidden; }
+  .panel { width: min(520px, 100%); text-align: center; }
+  .logo { width: min(340px, 72vw); height: auto; filter: drop-shadow(0 10px 24px rgb(0 0 0 / .6)); user-select: none; -webkit-user-drag: none; animation: float 6s ease-in-out infinite; }
+  @keyframes float { 50% { transform: translateY(-6px); } }
+  .eyebrow { margin: 28px 0 0; font: 600 13px/1.2 var(--font-display); letter-spacing: .06em; text-transform: uppercase; color: var(--sun-400); min-height: 16px; }
+  .bar { position: relative; margin-top: 14px; height: 8px; border-radius: 999px; background: rgb(255 255 255 / .08); box-shadow: inset 0 1px 2px rgb(0 0 0 / .5); overflow: hidden; }
+  .fill { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: inherit; transition: width .35s ease;
+    background: linear-gradient(180deg, var(--sun-200) 0%, var(--sun-400) 55%, var(--sun-500) 100%);
+    box-shadow: 0 0 14px rgb(248 177 0 / .45); }
+  .fill::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgb(255 255 255 / .45), transparent); transform: translateX(-100%); animation: shine 1.8s ease-in-out infinite; }
+  @keyframes shine { to { transform: translateX(100%); } }
+  .row { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; font-size: 13px; color: var(--fg-3); }
+  .pct { font: 600 13px var(--font-display); color: var(--fg-2); font-variant-numeric: tabular-nums; }
+  #detail { font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tip { margin: 26px auto 0; max-width: 440px; font-size: 14px; color: var(--fg-3); min-height: 42px; transition: opacity .4s; }
+  .tip.warn { color: var(--sun-300); }
+
+  /* Error */
+  #error { display: none; }
+  #loader.failed #progress { display: none; }
+  #loader.failed #error { display: block; }
+  #error h1 { margin: 28px 0 0; font: 600 22px/1.3 var(--font-display); }
+  #error p { margin: 10px 0 0; color: var(--fg-2); }
+  #error code { display: block; margin-top: 14px; padding: 10px 12px; border-radius: 3px; background: rgb(0 0 0 / .4); border: 1px solid rgb(255 255 255 / .08); color: var(--fg-3); font: 12px/1.4 ui-monospace, monospace; text-align: left; white-space: pre-wrap; word-break: break-word; max-height: 30vh; overflow: auto; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; margin-top: 22px; padding: 14px 32px; border: 0; border-radius: 3px; cursor: pointer;
+    font: 600 14px var(--font-display); letter-spacing: .04em; text-transform: uppercase; color: #1a1200;
+    background: linear-gradient(180deg, var(--sun-200) 0%, var(--sun-400) 55%, var(--sun-500) 100%);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / .5), 0 2px 12px -2px rgb(248 177 0 / .35); transition: filter .2s, box-shadow .2s; }
+  .btn:hover { filter: brightness(1.08); box-shadow: inset 0 1px 0 rgb(255 255 255 / .5), 0 4px 24px -2px rgb(248 177 0 / .55); }
+
+  .btn-outline { color: var(--sun-400); background: rgb(0 0 0 / .3); border: 1px solid var(--sun-500); box-shadow: none; padding: 11px 24px; font-size: 13px; margin-top: 18px; }
+  .btn-outline:hover { color: var(--sun-300); background: rgb(248 177 0 / .1); filter: none; box-shadow: none; }
+  .btn-outline svg { width: 16px; height: 16px; margin-right: 8px; }
+  #fs[hidden], #ios[hidden] { display: none; }
+  #ios { margin: 18px auto 0; max-width: 440px; font-size: 13px; color: var(--fg-2); padding: 10px 14px; border-radius: 3px; background: rgb(255 255 255 / .04); border: 1px solid rgb(255 255 255 / .08); }
+
+  /* Trazas de carga (?carga=1) */
+  #trace { position: fixed; right: 8px; bottom: 8px; z-index: 11; max-width: min(420px, 90vw); max-height: 40vh; overflow: auto; padding: 8px 10px; border-radius: 3px;
+    background: rgb(0 0 0 / .75); color: #9fd8ff; font: 11px/1.4 ui-monospace, monospace; white-space: pre-wrap; display: none; }
+
+  /* Indicador de descarga (circulito arriba en el centro, como el de Blizzard). Lo hace visible una animacion del COMPOSITOR que la pagina
+     reinicia en cada fotograma: si la pagina se queda bloqueada esperando datos (o el cliente lleva rato esperando un
+     bloque) nadie la reinicia y aparece solo, girando aunque el hilo principal este parado. */
+  #dl { position: fixed; z-index: 12; width: 30px; height: 30px; pointer-events: none; opacity: 0;
+    left: 50%; top: max(12px, env(safe-area-inset-top)); margin-left: -15px; }
+  #dl i { position: absolute; inset: 0; border-radius: 50%; border: 3px solid rgb(255 255 255 / .14);
+    border-top-color: var(--sun-300); border-right-color: var(--sun-500);
+    box-shadow: 0 0 10px rgb(248 177 0 / .35), inset 0 0 6px rgb(0 0 0 / .5); animation: dlspin .9s linear infinite; }
+  @keyframes dlspin { to { transform: rotate(360deg); } }
+
+  @media (max-height: 480px) { .logo { width: min(220px, 50vw); } .eyebrow { margin-top: 14px; } .tip { margin-top: 12px; min-height: 0; } }
+  @media (prefers-reduced-motion: reduce) { .logo, .fill::after { animation: none; } #loader, .fill { transition: none; } }
 </style>
 </head>
 <body>
 <div id="safe"></div>
 <canvas id="canvas" tabindex="-1" oncontextmenu="event.preventDefault()"></canvas>
 <input id="wow-text" type="text" autocomplete="off" autocapitalize="off" spellcheck="false">
-<div id="loading">Cargando cliente…<div id="status"></div></div>
-<div id="log"></div>
+
+<div id="loader" role="status" aria-live="polite">
+  <div class="panel">
+    <img class="logo" src="/brand/logo-web.png" alt="MiWoW" width="544" height="300" draggable="false">
+    <div id="progress">
+      <p class="eyebrow" id="phase"></p>
+      <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="bar"><div class="fill" id="fill"></div></div>
+      <div class="row"><span id="detail"></span><span class="pct" id="pct">0%</span></div>
+      <p class="tip" id="tip"></p>
+      <button class="btn btn-outline" id="fs" type="button" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span id="fs-text"></span>
+      </button>
+      <p id="ios" hidden></p>
+    </div>
+    <div id="error">
+      <h1 id="err-title"></h1>
+      <p id="err-text"></p>
+      <code id="err-code" hidden></code>
+      <button class="btn" id="retry" type="button"></button>
+    </div>
+  </div>
+</div>
+<div id="trace"></div>
+<div id="dl" aria-hidden="true"><i></i></div>
+
 <script>
-  if (!crossOriginIsolated) document.getElementById('loading').textContent = 'ERROR: la página no está aislada (falta COOP/COEP), no habrá hilos.';
-  // Límite de memoria del WASM. Sin esto pide hasta 4 GB y Firefox puede fallar
-  // con "out of memory" (sobre todo tras varias recargas).
+(() => {
+  // ---------------- Textos (es / en / pt, como la web) ----------------
+  const TEXTS = {
+    es: {
+      phaseClient: 'Descargando el cliente', phaseStart: 'Iniciando el juego', phaseData: 'Descargando datos del juego',
+      phaseReady: 'Preparando la pantalla de inicio', phaseDone: '¡Listo!',
+      tipFirst: 'La primera vez se descargan los datos del juego. Las siguientes veces cargará mucho más rápido.',
+      tipSlow: 'La conexión va lenta, seguimos descargando…',
+      tipWait: 'El juego está preparando sus datos. En móvil puede tardar un par de minutos: no cierres ni recargues la página.',
+      tipTouch: 'Consejo: gira el móvil en horizontal para jugar más cómodo.',
+      errTitle: 'No se pudo cargar el juego', errRetry: 'Reintentar',
+      errIsolation: 'Tu navegador no permite el modo necesario para el juego (aislamiento entre orígenes). Prueba con Chrome, Edge o Firefox actualizados.',
+      errWebgl: 'Tu navegador o tu tarjeta gráfica no soportan WebGL 2, que el juego necesita.',
+      errGeneric: 'Ha ocurrido un error durante la carga. Vuelve a intentarlo; si se repite, avísanos con el detalle de abajo.',
+      errMemory: 'El navegador se ha quedado sin memoria. Cierra otras pestañas y vuelve a intentarlo.',
+      fullscreen: 'Pantalla completa', iosHint: 'En iPhone/iPad: pulsa Compartir y luego «Añadir a pantalla de inicio» para jugar a pantalla completa.',
+      mb: 'MB', perSec: '/s',
+    },
+    en: {
+      phaseClient: 'Downloading the client', phaseStart: 'Starting the game', phaseData: 'Downloading game data',
+      phaseReady: 'Preparing the start screen', phaseDone: 'Ready!',
+      tipFirst: 'The first time, the game data is downloaded. Next time it will load much faster.',
+      tipSlow: 'The connection is slow, still downloading…',
+      tipWait: 'The game is preparing its data. On mobile it can take a couple of minutes: do not close or reload the page.',
+      tipTouch: 'Tip: turn your phone sideways for a better experience.',
+      errTitle: 'The game could not be loaded', errRetry: 'Retry',
+      errIsolation: 'Your browser does not allow the mode the game needs (cross-origin isolation). Try an up-to-date Chrome, Edge or Firefox.',
+      errWebgl: 'Your browser or graphics card does not support WebGL 2, which the game needs.',
+      errGeneric: 'Something went wrong while loading. Try again; if it keeps happening, send us the details below.',
+      errMemory: 'The browser ran out of memory. Close other tabs and try again.',
+      fullscreen: 'Full screen', iosHint: 'On iPhone/iPad: tap Share and then “Add to Home Screen” to play full screen.',
+      mb: 'MB', perSec: '/s',
+    },
+    pt: {
+      phaseClient: 'Baixando o cliente', phaseStart: 'Iniciando o jogo', phaseData: 'Baixando dados do jogo',
+      phaseReady: 'Preparando a tela inicial', phaseDone: 'Pronto!',
+      tipFirst: 'Na primeira vez os dados do jogo são baixados. Nas próximas vezes carregará muito mais rápido.',
+      tipSlow: 'A conexão está lenta, continuamos baixando…',
+      tipWait: 'O jogo está preparando seus dados. No celular pode levar alguns minutos: não feche nem recarregue a página.',
+      tipTouch: 'Dica: gire o celular na horizontal para jogar melhor.',
+      errTitle: 'Não foi possível carregar o jogo', errRetry: 'Tentar de novo',
+      errIsolation: 'Seu navegador não permite o modo que o jogo precisa (isolamento entre origens). Tente Chrome, Edge ou Firefox atualizados.',
+      errWebgl: 'Seu navegador ou placa de vídeo não suporta WebGL 2, necessário para o jogo.',
+      errGeneric: 'Ocorreu um erro durante o carregamento. Tente de novo; se continuar, envie-nos o detalhe abaixo.',
+      errMemory: 'O navegador ficou sem memória. Feche outras abas e tente de novo.',
+      fullscreen: 'Tela cheia', iosHint: 'No iPhone/iPad: toque em Compartilhar e depois em “Adicionar à Tela de Início” para jogar em tela cheia.',
+      mb: 'MB', perSec: '/s',
+    },
+  };
+  const params = new URLSearchParams(location.search);
+  const langWanted = (params.get('lang') || (() => { try { return localStorage.getItem('lang'); } catch { return null; } })() || navigator.language || 'es').slice(0, 2).toLowerCase();
+  const lang = TEXTS[langWanted] ? langWanted : 'es';
+  const T = TEXTS[lang];
+  document.documentElement.lang = lang;
+
+  const $ = (id) => document.getElementById(id);
+  const loader = $('loader');
+  const TRACE = params.get('carga') === '1';
+  const traceLines = [];
+  const trace = (t) => {
+    if (!TRACE) return;
+    traceLines.push(((performance.now() / 1000).toFixed(1) + 's ').padStart(7) + t);
+    if (traceLines.length > 60) traceLines.shift();
+    const el = $('trace'); el.style.display = 'block'; el.textContent = traceLines.join('\n'); el.scrollTop = 1e9;
+  };
+
+  // ---------------- Opciones del cliente ----------------
+  // Límite de memoria del WASM. Sin esto pide hasta 4 GB y Firefox puede fallar con "out of memory".
   window.wowMemoryMB = 2048;
-  // Modo táctil: el cliente pregunta "window.wowTouch" (su página /play lo pone).
-  // Automático en pantallas táctiles; forzar con ?touch=1 o desactivar con ?touch=0.
-  const touchParam = new URLSearchParams(location.search).get('touch');
+  // Modo táctil: el cliente pregunta "window.wowTouch". Automático si el dispositivo PRINCIPAL es táctil y sin ratón
+  // (móvil/tablet). No usar navigator.maxTouchPoints: en Windows vale > 0 en portátiles con pantalla táctil (o ciertos
+  // touchpads) aunque se juegue con ratón. Forzar con ?touch=1 / ?touch=0.
+  const touchParam = params.get('touch');
   window.wowTouch = touchParam !== null
     ? touchParam === '1'
-    : matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
-  const logEl = document.getElementById('log');
-  const show = (t) => { logEl.textContent += t + '\n'; logEl.scrollTop = 1e9; };
-  var Module = {
-    canvas: document.getElementById('canvas'),
-    locateFile: (p) => '/' + p,
-    print: (t) => { console.log(t); show(t); },
-    printErr: (t) => { console.warn(t); show('! ' + t); },
-    setStatus: (t) => { document.getElementById('status').textContent = t; },
-    onRuntimeInitialized: () => { document.getElementById('loading').style.display = 'none'; },
-    onAbort: (w) => { show('ABORT: ' + w); },
+    : matchMedia('(pointer: coarse) and (hover: none)').matches;
+
+  // ---------------- Estado de la carga ----------------
+  const MB = 1048576;
+  const PROCESS_TAU = 90;             // s: ritmo del avance por tiempo de la barra tras arrancar (86 % a los 3 min)
+  const BLOCK_ESTIMATE = 64 * 1024;   // tamano habitual de un bloque de /blocks/ (medido: 17.859 de 64 KB, 1 de 4 MB)
+  const fmtMB = (b) => (b / MB).toLocaleString(lang, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const state = {
+    wasmLoaded: 0, wasmTotal: 9 * MB,      // se corrige con Content-Length
+    dataBase: null, dataBytes: 0, estimate: 36 * MB,
+    phase: '', shown: 0, done: false, failed: false, runtimeReady: false,
+    lastBytesAt: performance.now(), lastFrames: 0, framesSince: 0,
   };
-  window.addEventListener('error', (e) => show('JS error: ' + e.message));
+  const samples = [];   // [t, bytesTotales] para la velocidad
+
+  function setPhase(text) { if (state.phase !== text) { state.phase = text; $('phase').textContent = text; trace('fase: ' + text); } }
+  function setTip(text, warn) { const el = $('tip'); el.textContent = text; el.classList.toggle('warn', !!warn); }
+
+  function render() {
+    if (state.done || state.failed) return;
+    const total = state.wasmTotal + state.estimate;
+    const got = state.wasmLoaded + state.dataBytes;
+    // Nunca llega al 100 % por estimación: solo al terminar de verdad. Y nunca retrocede.
+    let frac = Math.min(0.97, got / total);
+    if (state.runtimeReady) {
+      // Tras arrancar, el cliente pasa mucho rato PROCESANDO (lee su cache, carga datos e interfaz; en movil minutos)
+      // sin descargar nada: la barra avanza sola despacio para que no parezca colgada (curva hacia el 97 %).
+      const t = (performance.now() - state.runtimeAt) / 1000;
+      frac = Math.max(frac, 0.2 + 0.77 * (1 - Math.exp(-t / PROCESS_TAU)));
+    }
+    state.shown = Math.max(state.shown, frac);
+    const pct = Math.floor(state.shown * 100);
+    $('fill').style.width = (state.shown * 100).toFixed(1) + '%';
+    $('pct').textContent = pct + '%';
+    $('bar').setAttribute('aria-valuenow', pct);
+
+    const now = performance.now();
+    samples.push([now, got]);
+    while (samples.length > 2 && now - samples[0][0] > 3000) samples.shift();
+    const dt = (now - samples[0][0]) / 1000, db = got - samples[0][1];
+    const speed = dt > 0.5 ? db / dt : 0;
+    $('detail').textContent = got > 0
+      ? fmtMB(got) + ' ' + T.mb + (speed > 20 * 1024 ? ' · ' + fmtMB(speed) + ' ' + T.mb + T.perSec : '')
+      : '';
+  }
+
+  function finish(why) {
+    if (state.done || state.failed) return;
+    state.done = true;
+    trace('LISTO (' + why + ')');
+    $('phase').textContent = T.phaseDone;
+    $('fill').style.width = '100%'; $('pct').textContent = '100%';
+    setTimeout(() => {
+      loader.classList.add('done');
+      try { $('canvas').focus(); } catch {}
+      if (!TRACE) setTimeout(() => { loader.remove(); }, 800);
+    }, 250);
+  }
+
+  function fail(kind, detail) {
+    if (state.failed) return;
+    state.failed = true;
+    loader.classList.remove('done');
+    loader.classList.add('failed');
+    $('err-title').textContent = T.errTitle;
+    $('err-text').textContent = T[kind] || T.errGeneric;
+    if (detail) { const c = $('err-code'); c.hidden = false; c.textContent = String(detail).slice(0, 1500); }
+    $('retry').textContent = T.errRetry;
+    trace('ERROR ' + kind + ': ' + detail);
+    console.error('[MiWoW] carga fallida:', kind, detail);
+  }
+  $('retry').addEventListener('click', () => location.reload());
+
+  // ---------------- Pantalla completa ----------------
+  // El cliente llama a window.wowToggleFullscreen desde el botón de su menú (Esc) cuando document.fullscreenEnabled.
+  // Los navegadores solo la conceden tras un toque/clic del usuario. iPhone no tiene la API: «Añadir a pantalla de inicio».
+  const standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true;
+  const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement;
+  async function enterFullscreen() {
+    const el = document.documentElement;
+    try {
+      if (el.requestFullscreen) await el.requestFullscreen({ navigationUI: 'hide' });
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    } catch (e) { trace('pantalla completa rechazada: ' + e.message); return; }
+    // En móvil, a horizontal (solo Android; en otros falla en silencio).
+    if (window.wowTouch && screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
+  }
+  function exitFullscreen() {
+    if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+  }
+  window.wowToggleFullscreen = () => { fsElement() ? exitFullscreen() : enterFullscreen(); };
+
+  const fsBtn = $('fs');
+  const canFullscreen = !standalone && (document.fullscreenEnabled || document.webkitFullscreenEnabled);
+  if (canFullscreen) {
+    $('fs-text').textContent = T.fullscreen;
+    fsBtn.hidden = false;
+    fsBtn.addEventListener('click', enterFullscreen);
+    const syncBtn = () => { fsBtn.hidden = !!fsElement(); };
+    document.addEventListener('fullscreenchange', syncBtn);
+    document.addEventListener('webkitfullscreenchange', syncBtn);
+    // Táctil: el primer toque en el juego activa la pantalla completa (una vez por carga).
+    if (window.wowTouch) {
+      const firstTouch = () => { if (!fsElement()) enterFullscreen(); };
+      $('canvas').addEventListener('touchend', firstTouch, { once: true });
+    }
+  } else if (!standalone && /iPhone|iPad|iPod/.test(navigator.userAgent)) {
+    $('ios').textContent = T.iosHint;
+    $('ios').hidden = false;
+  }
+
+  // ---------------- Comprobaciones previas ----------------
+  if (!crossOriginIsolated) { fail('errIsolation'); return; }
+  try {
+    if (!document.createElement('canvas').getContext('webgl2')) { fail('errWebgl'); return; }
+  } catch { fail('errWebgl'); return; }
+
+  setPhase(T.phaseClient);
+  setTip(window.wowTouch && innerHeight > innerWidth ? T.tipTouch : T.tipFirst);
+
+  // ---------------- Señales del cliente (Wow.js) ----------------
+  // wowFramesLoaded: el cliente avisa cuando su interfaz está cargada -> fuera la pantalla de carga.
+  window.wowFramesLoaded = () => { trace('wowFramesLoaded'); finish('wowFramesLoaded'); };
+  window.wowFunnel = (step) => { trace('funnel: ' + step); };
+
+  // Precarga: el cliente pide sus bloques de uno en uno y esperando (XHR síncrono en sus hilos), pero avisa de los
+  // que va a necesitar con wowPrefetch(urls). Los bajamos en paralelo: quedan en la caché HTTP (bloques "immutable")
+  // y el XHR del cliente (misma URL) los encuentra ya descargados. Sigue activa también dentro del juego.
+  // Protocolo con el que llego la pagina: con HTTP/2 o /3 (Cloudflare) todo va por UNA conexion multiplexada y la
+  // precarga no le quita conexiones al XHR del cliente; con HTTP/1.1 (el VPS directo) si (6 por dominio).
+  const NAV_PROTO = ((performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || {}).nextHopProtocol || '';
+  const MULTIPLEXED = /^h[23]/.test(NAV_PROTO);
+  const PREFETCH_PARALLEL = MULTIPLEXED ? 8 : 4;
+  const prefetchSeen = new Set();
+  const prefetchQueue = [];
+  let prefetchActive = 0, prefetchDone = 0, prefetchCalls = 0;
+  function prefetchPump() {
+    while (prefetchActive < PREFETCH_PARALLEL && prefetchQueue.length) {
+      const url = prefetchQueue.shift();
+      prefetchActive++;
+      fetch(url, { credentials: 'same-origin' })
+        .then((r) => r.arrayBuffer())
+        .catch(() => { prefetchSeen.delete(url); })
+        .finally(() => { prefetchActive--; prefetchDone++; prefetchPump(); });
+    }
+  }
+  // Activa por defecto solo con HTTP/2-3 (2026-11-24: por Cloudflare el juego se congela esperando bloques sueltos).
+  // Con HTTP/1.1 sigue apagada (2026-11-22: sospechosa de congelar la entrada al mundo al quitarle conexiones al XHR
+  // del cliente). ?precarga=1 / ?precarga=0 la fuerzan.
+  const PREFETCH_ON = params.get('precarga') === '1' || (params.get('precarga') !== '0' && MULTIPLEXED);
+  trace('protocolo ' + (NAV_PROTO || '?') + ', precarga ' + (PREFETCH_ON ? 'activa x' + PREFETCH_PARALLEL : 'apagada'));
+  if (PREFETCH_ON) window.wowPrefetch = (urls) => {
+    prefetchCalls++;
+    if (!Array.isArray(urls)) return;
+    for (const url of urls) {
+      if (typeof url !== 'string' || prefetchSeen.has(url)) continue;
+      if (prefetchSeen.size > 50000) prefetchSeen.clear();
+      prefetchSeen.add(url);
+      prefetchQueue.push(url);
+    }
+    if (prefetchQueue.length > 2000) prefetchQueue.splice(0, prefetchQueue.length - 2000);   // lo más reciente
+    prefetchPump();
+  };
+
+  // Bytes nuevos guardados en el almacenamiento del sitio desde que se abrio la pagina (la cache OPFS del cliente).
+  // No depende de quien sirva los bloques (VPS o R2): con R2 /progress no los ve.
+  let storageBase = null, storageBusy = false;
+  async function pollStorage() {
+    if (storageBusy || !navigator.storage || !navigator.storage.estimate) return;
+    storageBusy = true;
+    try {
+      const { usage } = await navigator.storage.estimate();
+      if (typeof usage === 'number') {
+        if (storageBase === null) storageBase = usage;
+        state.storageBytes = Math.max(0, usage - storageBase);
+      }
+    } catch {}
+    storageBusy = false;
+  }
+  pollStorage();
+
+  // Sondeo: bytes servidos (servidor), descargas del cliente y fotogramas.
+  let polling = false;
+  async function poll() {
+    if (state.done || state.failed || polling) return;
+    polling = true;
+    try {
+      const r = await fetch('/progress', { cache: 'no-store', credentials: 'same-origin' });
+      if (r.ok) {
+        const j = await r.json();
+        if (state.dataBase === null) state.dataBase = j.bytes;
+        state.serverBytes = Math.max(0, j.bytes - state.dataBase);
+        if (j.estimate) state.estimate = j.estimate;
+      }
+    } catch {}
+    polling = false;
+
+    const fetches = typeof window.wowFetchCount === 'function' ? window.wowFetchCount() : null;
+    // Con R2 (Worker de Cloudflare) el servidor no ve los bloques: estimar con los que pide el cliente
+    // (casi todos de 64 KB). Se usa lo mayor de las dos medidas.
+    // Y lo que crece el almacenamiento del sitio: el cliente guarda cada bloque descargado en OPFS (blocks.bin).
+    pollStorage();
+    const bytes = Math.max(state.serverBytes || 0, state.storageBytes || 0, (fetches || 0) * BLOCK_ESTIMATE);
+    if (bytes > state.dataBytes) { state.dataBytes = bytes; state.lastBytesAt = performance.now(); }
+    const fstate = typeof window.wowFetchState === 'function' ? window.wowFetchState() : null;
+    const frames = typeof window.wowFrameCount === 'function' ? window.wowFrameCount() : 0;
+    if (frames !== state.lastFrames) { state.lastFrames = frames; state.framesSince = state.framesSince || performance.now(); }
+
+    if (state.runtimeReady) setPhase(performance.now() - state.lastBytesAt < 2500 ? T.phaseData : T.phaseReady);
+    // Mucho rato sin descargar ya arrancado = procesando: que no cierren la pagina
+    const idle = state.runtimeReady && performance.now() - state.lastBytesAt > 8000;
+    // Un bloque que tarda: aviso de conexión lenta.
+    if (fstate && fstate.seconds >= 6) setTip(T.tipSlow, true);
+    else if (idle) setTip(T.tipWait, true);
+    else if ($('tip').classList.contains('warn')) setTip(T.tipFirst);
+
+    // Plan B si el cliente no avisa: ya pinta, no descarga nada desde hace 10 s y no espera ningún bloque.
+    if (state.runtimeReady && state.framesSince && fstate === null && performance.now() - state.lastBytesAt > 10000
+        && performance.now() - state.framesSince > 10000) finish('sin descargas 10 s');
+
+    trace(`datos=${fmtMB(state.dataBytes)}MB descargas=${fetches} frames=${frames} precarga=${prefetchCalls}/${prefetchDone}/${prefetchQueue.length}` + (fstate ? ` esperando ${fstate.seconds}s ${fstate.path}` : ''));
+    render();
+  }
+  setInterval(poll, 500);
+
+  // ---------------- Indicador de descarga ("hombre muerto") ----------------
+  // Animacion de opacidad de 1 h: invisible hasta DL_SHOW_MS y luego visible. En cada fotograma se vuelve a 0 salvo
+  // que el cliente este esperando un bloque. Si la pagina se bloquea (el cliente espera datos en el hilo principal)
+  // no hay fotogramas: el compositor sigue la animacion y el circulito aparece; al volver, desaparece.
+  const DL_SHOW_MS = 700, DL_LONG = 3600000;
+  const dl = $('dl');
+  let dlAnim = null;
+  try {
+    dlAnim = dl.animate([
+      { opacity: 0 }, { opacity: 0, offset: DL_SHOW_MS / DL_LONG },
+      { opacity: 1, offset: (DL_SHOW_MS + 200) / DL_LONG }, { opacity: 1 },
+    ], { duration: DL_LONG, fill: 'forwards' });
+  } catch {}
+  // "Descargando" = esperando un bloque AHORA o el contador de bloques del cliente cambio hace < DL_ACTIVE_MS: una
+  // cadena de bloques rapidos (p. ej. el modelo de una raza nueva) congela el juego aunque cada uno tarde poco.
+  // DL_ACTIVE_MS < DL_SHOW_MS: un bloque suelto no llega a enseñarlo.
+  const DL_ACTIVE_MS = 600;
+  let dlCount = -1, dlChanged = 0;
+  if (dlAnim) {
+    const dlTick = (now) => {
+      const waiting = typeof window.wowFetchState === 'function' && window.wowFetchState() !== null;
+      const n = typeof window.wowFetchCount === 'function' ? window.wowFetchCount() : 0;
+      if (n !== dlCount) { if (dlCount >= 0) dlChanged = now; dlCount = n; }
+      if (!waiting && now - dlChanged > DL_ACTIVE_MS) dlAnim.currentTime = 0;
+      requestAnimationFrame(dlTick);
+    };
+    requestAnimationFrame(dlTick);
+  }
+
+  // ---------------- Module de Emscripten ----------------
+  window.Module = {
+    canvas: $('canvas'),
+    locateFile: (p) => '/' + p,
+    // Las trazas del cliente solo van a la consola (y con ?carga=1 también al recuadro).
+    print: (t) => { if (TRACE) { console.log(t); trace(t); } },
+    printErr: (t) => { console.warn(t); if (TRACE) trace('! ' + t); },
+    setStatus: (t) => { if (t) trace('status: ' + t); },
+    // Descarga de Wow.wasm con progreso real.
+    instantiateWasm(imports, done) {
+      (async () => {
+        const r = await fetch('/Wow.wasm', { credentials: 'same-origin' });
+        if (!r.ok) throw new Error('Wow.wasm: HTTP ' + r.status);
+        const len = +r.headers.get('Content-Length');
+        if (len > 0) state.wasmTotal = len;
+        let bytes;
+        if (r.body && r.body.getReader) {
+          const reader = r.body.getReader();
+          const chunks = [];
+          for (;;) {
+            const { done: end, value } = await reader.read();
+            if (end) break;
+            chunks.push(value); state.wasmLoaded += value.length; render();
+          }
+          bytes = new Uint8Array(state.wasmLoaded);
+          let o = 0; for (const c of chunks) { bytes.set(c, o); o += c.length; }
+        } else {
+          bytes = new Uint8Array(await r.arrayBuffer()); state.wasmLoaded = bytes.length;
+        }
+        state.wasmTotal = state.wasmLoaded;
+        setPhase(T.phaseStart);
+        trace('Wow.wasm ' + fmtMB(bytes.length) + ' MB, compilando');
+        const res = await WebAssembly.instantiate(bytes, imports);
+        done(res.instance, res.module);
+      })().catch((e) => fail(/memory/i.test(String(e)) ? 'errMemory' : 'errGeneric', e && e.stack || e));
+      return {};
+    },
+    onRuntimeInitialized: () => { state.runtimeReady = true; state.runtimeAt = state.lastBytesAt = performance.now(); trace('runtime listo'); setPhase(T.phaseData); },
+    onAbort: (w) => fail(/memory/i.test(String(w)) ? 'errMemory' : 'errGeneric', 'abort: ' + w),
+  };
+  // Al salir (recargar, cerrar, navegar) liberamos lo pesado: Firefox no lo suelta enseguida y la página nueva
+  // arrancaba lenta o no arrancaba (hilos del juego + memoria compartida de hasta 2 GB + contexto WebGL).
+  window.addEventListener('pagehide', () => {
+    try { if (window.PThread && PThread.terminateAllThreads) PThread.terminateAllThreads(); } catch {}
+    try {
+      const gl = $('canvas').getContext('webgl2');
+      const lose = gl && gl.getExtension('WEBGL_lose_context');
+      if (lose) lose.loseContext();
+    } catch {}
+  });
+  // Si el navegador restaurase la página de su caché de historial, ya no tiene hilos: recargar.
+  window.addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
+  window.addEventListener('error', (e) => trace('JS error: ' + e.message));
+  window.addEventListener('unhandledrejection', (e) => trace('promesa: ' + (e.reason && e.reason.message || e.reason)));
+
+  const script = document.createElement('script');
+  script.src = '/Wow.js';
+  script.onerror = () => fail('errGeneric', 'Wow.js: no se pudo descargar');
+  document.body.appendChild(script);
+})();
 </script>
-<script src="/Wow.js"></script>
 </body>
 </html>

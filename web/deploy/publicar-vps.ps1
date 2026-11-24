@@ -1,8 +1,10 @@
-# Publica el cliente web en el VPS de pruebas (ver docs/despliegue-vps-pruebas.md).
+﻿# Publica el cliente web en el VPS de pruebas (ver docs/despliegue-vps-pruebas.md).
 #   - servidor:    server.js, play.html, package*.json, game-index.txt, public/ y las plantillas de deploy/vps-pruebas
 #                  (en servidor/deploy/). config.json SOLO se crea la primera vez (despues no se toca: tiene la clave real).
 #   - cliente-web: Wow.js, Wow.wasm (el parcheado), game-manifest.txt
 #   - -Parche:     sube tambien el patch-4.MPQ EMPAQUETADO a cliente/Data/ (escritura atomica: .tmp + mv)
+#   - R2:          si el VPS tiene rclone (~/bin/rclone), sube a R2 lo publicado (Wow.js/wasm y patch-4) con
+#                  deploy/subir-r2.sh (lo sirve el Worker; si R2 se queda atras, el Worker lo pide al VPS)
 # Luego: npm ci y reinicio de miwow-juego (si el servicio ya esta instalado). Nunca toca userdata/ ni el cliente del juego.
 # Uso:  powershell -ExecutionPolicy Bypass -File web\deploy\publicar-vps.ps1 [-Parche C:\ruta\patch-4.MPQ] [-SoloParche]
 param(
@@ -25,6 +27,10 @@ if (-not $SoloParche) {
   Subir @("$s\server.js", "$s\play.html", "$s\package.json", "$s\package-lock.json", "$s\game-index.txt") "$Ruta/servidor/"
   Subir @("$s\public\manifest.webmanifest") "$Ruta/servidor/public/"
   Subir (Get-ChildItem "$s\public\icons" -File | ForEach-Object FullName) "$Ruta/servidor/public/icons/"
+  foreach ($d in 'brand', 'fonts') {   # logo y tipografias de play.html
+    Remoto "mkdir -p $Ruta/servidor/public/$d"
+    Subir (Get-ChildItem "$s\public\$d" -File | ForEach-Object FullName) "$Ruta/servidor/public/$d/"
+  }
   Subir (Get-ChildItem "$web\deploy\vps-pruebas" -File | ForEach-Object FullName) "$Ruta/servidor/deploy/"
   Remoto "test -f $Ruta/servidor/config.json || (cp $Ruta/servidor/deploy/config.json $Ruta/servidor/config.json && echo 'config.json creado: CAMBIA basicAuth')"
   Remoto "grep -q CAMBIA-ESTA-CLAVE $Ruta/servidor/config.json && echo 'AVISO: config.json sigue con la clave de ejemplo' || true"
@@ -33,6 +39,7 @@ if (-not $SoloParche) {
   foreach ($f in 'Wow.js', 'Wow.wasm', 'game-manifest.txt') { if (-not (Test-Path "$c\$f")) { throw "Falta $c\$f" } }
   Subir @("$c\Wow.js", "$c\Wow.wasm", "$c\game-manifest.txt") "$Ruta/cliente-web/"
   Remoto "cd $Ruta/servidor && npm ci --omit=dev --no-audit --no-fund --loglevel=error"
+  Remoto "if test -x ~/bin/rclone; then bash $Ruta/servidor/deploy/subir-r2.sh web; else echo 'sin rclone en el VPS: R2 no se actualiza'; fi"
 }
 
 if ($Parche) {
@@ -43,6 +50,7 @@ if ($Parche) {
   if ([int64]$viejo -eq $p.Length) { throw "patch-4.MPQ tiene el MISMO tamano ($($p.Length)) que el publicado: cambia su tamano (docs/cliente-web.md seccion 5)" }
   Subir @($p.FullName) "$Ruta/cliente/Data/patch-4.MPQ.tmp"
   Remoto "mv -f $Ruta/cliente/Data/patch-4.MPQ.tmp $Ruta/cliente/Data/patch-4.MPQ"
+  Remoto "if test -x ~/bin/rclone; then bash $Ruta/servidor/deploy/subir-r2.sh parche; else echo 'sin rclone en el VPS: R2 no se actualiza'; fi"
   Write-Host ("patch-4.MPQ publicado ({0:N0} bytes, antes {1:N0})" -f $p.Length, [int64]$viejo) -ForegroundColor Green
 }
 

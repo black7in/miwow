@@ -8,8 +8,9 @@ binding = "BUCKET"
 bucket_name = "wotlk-cliente"
 
 [vars]
-# Cambialo cada vez que reinicies el tunel rapido (cloudflared tunnel --url ...)
-ORIGIN = "https://CAMBIAR.trycloudflare.com"
+# Origen de todo lo que no esta en R2 (play, manifest, userdata, tunel /tcp/): el VPS de pruebas.
+# arrancar-online.ps1 (tunel rapido desde el PC) lo pisa con --var ORIGIN:<url del tunel>.
+ORIGIN = "https://juego.miwow.duckdns.org"
 LOCALE = "esES"
 
 # BASIC_AUTH va como secreto:  npx wrangler secret put BASIC_AUTH   ->  usuario:clave

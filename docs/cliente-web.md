@@ -130,6 +130,34 @@ Configuracion: `config.json` junto a `server.js` (o `CONFIG=/ruta`); variables `
 | Proxy WS->TCP | lista blanca `tcpRoutes` puerto->host, max. conexiones por IP, cierre por inactividad, contrapresion |
 | Acceso en pruebas | `basicAuth: "usuario:clave"` (`""` = abierto) |
 | Otros | `/healthz`, `/server-alert.txt` (opcional en `public/`), `clientIp` con `CF-Connecting-IP` detras de Cloudflare |
+| Pantalla de carga | `/progress` (JSON: bytes de datos del juego servidos a la sesion + `loadEstimateMB`), `/fonts/*` y `/brand/*` de `public/` |
+
+### Pagina `/play` (`play.html`, 2026-11-22)
+Diseno de la web de Astro (`PaginasWeb/AzerothWeb`: tokens de `global.css`, Montserrat/Open Sans servidas por nosotros en
+`public/fonts` por COEP, logo/emblema copiados a `public/brand`). Textos es/en/pt (`?lang=`, `localStorage.lang` o el navegador).
+Sin trazas en pantalla: las del cliente solo van a la consola con `?carga=1` (que ademas muestra un recuadro con las senales).
+Barra de progreso: `Wow.wasm` descargado con progreso real (`Module.instantiateWasm`) + bytes de `/progress` frente a
+`loadEstimateMB` (tope 97 % hasta terminar). Se quita con `window.wowFramesLoaded` (aviso del cliente) o, si no llega, tras
+10 s sin descargas ya pintando. Aviso de conexion lenta con `wowFetchState()` (bloque esperando >= 6 s). Errores (sin aislamiento,
+sin WebGL 2, memoria, abort) con boton Reintentar. Con R2 `/progress` no ve los bloques (los sirve el Worker): pendiente.
+Pantalla completa: `play.html` define `window.wowToggleFullscreen` (la llama el boton "Full Screen" que el wasm anade al
+menu Esc si `document.fullscreenEnabled`; `MiWow.lua` lo traduce) + boton en la pantalla de carga + en tactil el primer toque
+en el juego (los navegadores exigen un gesto del usuario); en Android bloquea horizontal. iPhone no tiene la API: aviso de
+"Anadir a pantalla de inicio" (metas `apple-mobile-web-app-*`). SIN PROBAR.
+Precarga: `window.wowPrefetch(urls)` (la llama el cliente con los bloques que va a leer) baja 4 en paralelo a la cache HTTP. DESACTIVADA salvo `?precarga=1` (sospechosa de congelar la entrada al mundo en Firefox).
+Probado en movil por LAN (2026-11-22): sigue a ~0,5 MB/s, sin cambio visible (falta mirar si el cliente la llama: `precarga=`
+en `?carga=1`). Pendiente optimizar la descarga (bundles `bundle-<crc>.bin`, que hoy dan 404).
+Primera prueba (Firefox, 2026-11-22): `wowFramesLoaded` llega a los ~14 s con ~34 MB descargados (`loadEstimateMB` = 36); `wowFetchCount` no existe hasta ese momento.
+2026-11-24 (con R2, SIN PROBAR): bytes = lo mayor de `/progress`, lo que crece `navigator.storage.estimate().usage` (la cache
+OPFS `blocks.bin` del cliente, la escriben sus hilos) y `wowFetchCount` x 64 KB; tras `onRuntimeInitialized` la barra avanza
+tambien por tiempo (curva hacia el 97 %, `PROCESS_TAU` 90 s) y, 8 s sin descargar, aviso `tipWait` (no recargar). Medido en
+movil (Android, Entel) con la cache llena: ~3 min 10 s hasta el login, casi todo PROCESANDO (21 bloques nuevos); en PC mucho
+menos. Precarga ACTIVA por defecto si la pagina llego por HTTP/2-3 (Cloudflare; 8 en paralelo), apagada con HTTP/1.1.
+Indicador `#dl` (circulito arriba en el centro): animacion WAAPI de opacidad que la pagina reinicia en cada fotograma salvo
+si `wowFetchState()` != null o `wowFetchCount()` cambio hace < 0,6 s (cadena de bloques: p. ej. elegir una raza nueva
+congela el juego aunque cada bloque tarde poco); si eso dura >= 0,7 s o el hilo principal se bloquea, aparece (compositor).
+`/stats/freeze` (caja negra del cliente: sesion anterior acabada sin `pagehide`) se guarda en el log de `miwow-juego` (`FREEZE`).
+Diagnostico en pantalla: `?carga=1` (no `?trace=1`).
 
 ### Arrancar en local
 ```powershell
@@ -258,7 +286,7 @@ muchos valores son opciones); interfaz en su Lua (`LasthavensTouch*`, `Lasthaven
 modificable con nuestro FrameXML via hooks); texturas `Interface/TouchUI/*.tga` (56) que estan en SU servidor: **nos
 faltan**, hay que hacer las nuestras con los mismos nombres (en el parche).
 
-- `play.html` pone `window.wowTouch`: automatico en pantallas tactiles, `?touch=1` fuerza (sirve en PC), `?touch=0` desactiva.
+- `play.html` pone `window.wowTouch`: automatico si el puntero PRINCIPAL es tactil sin raton (`(pointer: coarse) and (hover: none)`; antes tambien `maxTouchPoints > 0`, que activaba el modo movil en un PC Windows con Firefox), `?touch=1` fuerza (sirve en PC), `?touch=0` desactiva.
   `wowTouch` tambien activa `wowHalfTextures` (texturas a media resolucion). Mando: automatico si `navigator.getGamepads()` lo ve.
 - Movil necesita HTTPS (sin el no hay `SharedArrayBuffer`): VPS con Caddy, o el Worker `*.workers.dev`, o en pruebas
   `adb reverse tcp:8080 tcp:8080` / `chrome://flags/#unsafely-treat-insecure-origin-as-secure`.

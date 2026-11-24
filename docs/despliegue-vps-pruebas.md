@@ -71,6 +71,25 @@ La web de Astro: su `.env` del VPS apunta hoy a las BD que haya en ese MySQL; al
 - Comprobar que es el mismo cliente que `D:\Wow`: `web/servidor/game-index.txt` tiene los tamanos de cada archivo de `D:\Wow`
   (p. ej. `Data/patch.MPQ` = 4005207470). Comando en el paso 6.
 - `patch-4.MPQ` de MiWow (empaquetado, ver `docs/cliente-web.md` seccion 5) en `cliente/Data/`.
+- **Frostbound vs `D:\Wow`** (comparado 2026-11-23 por tabla de archivos): `common`, `common-2`, `expansion`, `lichking`,
+  `locale-esES`, `patch-esES-2` = mismo contenido (otro empaquetado); `patch-3`, `patch-esES-3` identicos. En `patch.MPQ`,
+  `patch-2.MPQ` y `patch-esES.MPQ` le faltan ~1600 entradas de 0 bytes y ~125 archivos (animaciones, texturas, piezas del
+  mapa del mundo de Rasganorte) que SI estan en versiones anteriores de los MPQ base: no falta nada, carga la version vieja.
+- **COMPACTADO 2026-11-23** (`tools/mpqcompact.py`, 14,1 -> 10,1 GB): de `common`..`patch-2` se quitaron los archivos que
+  sustituye un MPQ posterior (orden `common < common-2 < expansion < lichking < patch < patch-2 < patch-3`; ni `esES` ni
+  `patch-4` cuentan ni se tocan). Comprobado: los 177.796 archivos ganadores identicos byte a byte. Los de `Data/` ya NO son
+  enlaces duros; los originales siguen en la carpeta del Frostbound. Volver atras:
+  `cd /opt/miwow-juego/cliente/Data && for f in common common-2 expansion lichking patch patch-2; do ln -f "/home/miwow/wow-client/World of Warcraft Frostbound/Data/$f.MPQ" $f.MPQ; done`
+  (despues, `subir-r2.sh` para que R2 vuelva a coincidir).
+- **Descargas por Cloudflare (2026-11-23)**: Worker `wotlk-web` (`web/deploy/worker`, `ORIGIN = https://juego.miwow.duckdns.org`,
+  sin `BASIC_AUTH`) -> entrar por **`https://wotlk-web.<cuenta>.workers.dev/play`**. Wow.js/wasm y bloques de los MPQ salen
+  de R2 (`wotlk-cliente`); lo demas (play, manifest, userdata, tunel `/tcp/`) lo reenvia al VPS. Motivo: del usuario al VPS
+  ~60 % de paquetes perdidos (0,1 MB/s); a Cloudflare 0 % (wasm medido a ~390 KB/s). Desplegar: `cd web\deploy\worker;
+  npx wrangler@4 deploy` (sesion de wrangler en el PC del usuario).
+- **R2 se sube DESDE EL VPS** (`deploy/subir-r2.sh`, rclone en `~/bin/rclone` del usuario `miwow`, remote `r2` en
+  `~/.config/rclone/rclone.conf` 600 copiado del PC): `bash subir-r2.sh` = `sync` de `cliente/` a `game/` (R2 queda igual que
+  el disco) + `web/`; `parche` / `web` / `simular`. `publicar-vps.ps1` lo llama solo (web en cada publicacion, `parche` con
+  `-Parche`). Si R2 se queda atras, el Worker ve otro tamano y pide el bloque al VPS (lento pero correcto).
 
 ## 5. Primera instalacion (una vez) — HECHA el 2026-11-21
 

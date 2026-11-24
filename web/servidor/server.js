@@ -38,6 +38,7 @@ const DEFAULTS = {
   maxWsPerIp: 6,
   wsIdleTimeoutSec: 900,        // cierra túneles sin tráfico (el world envía pings, no salta jugando)
   maxUserdataMB: 20,            // tope por jugador en /userdata
+  loadEstimateMB: 36,           // medido 2026-11-22: ~34 MB; descarga aproximada de la primera carga hasta el login (barra de progreso de /play)
   logRequests: false,
 };
 
@@ -185,8 +186,19 @@ const IMMUTABLE = 'public, max-age=31536000, immutable';     // bloques: la URL 
 const MIME = {
   '.js': 'text/javascript; charset=utf-8', '.wasm': 'application/wasm', '.html': 'text/html; charset=utf-8',
   '.txt': 'text/plain; charset=utf-8', '.json': 'application/json', '.webmanifest': 'application/manifest+json',
-  '.svg': 'image/svg+xml', '.png': 'image/png',
+  '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2',
 };
+const IMMUTABLE_ASSET = 'public, max-age=604800';            // fuentes y marca de /play
+
+// Progreso de descarga por sesión (barra de carga de /play): bytes de datos del juego servidos.
+// Solo ve lo que pasa por este servidor (en local/VPS; con R2 los bloques los sirve el Worker).
+const progress = new Map(); // sid -> { bytes, files, t }
+function countServed(sid, bytes) {
+  const e = progress.get(sid) || { bytes: 0, files: 0, t: 0 };
+  e.bytes += bytes; e.files++; e.t = Date.now();
+  progress.set(sid, e);
+}
+setInterval(() => { const old = Date.now() - 3600_000; for (const [k, e] of progress) if (e.t < old) progress.delete(k); }, 600_000).unref();
 
 function send(res, code, body = '', type = MIME['.txt'], extra = {}) {
   res.writeHead(code, { ...ISOLATION, 'Cache-Control': NO_STORE, 'Content-Type': type, ...extra });
@@ -239,6 +251,7 @@ const server = http.createServer(async (req, res) => {
     // Recursos públicos (el navegador los pide sin credenciales para "Instalar app")
     if (p === '/manifest.webmanifest') return sendStatic(req, res, path.join(__dirname, 'public', 'manifest.webmanifest'));
     if (p.startsWith('/icons/') && /^\/icons\/[\w.-]+$/.test(p)) return sendStatic(req, res, path.join(__dirname, 'public', p));
+    if (/^\/(fonts|brand)\/[\w.-]+$/.test(p)) return sendStatic(req, res, path.join(__dirname, 'public', p), IMMUTABLE_ASSET);
     if (p === '/healthz') return send(res, 200, 'ok');
 
     if (!basicAuthOk(req)) return send(res, 401, 'auth', MIME['.txt'], { 'WWW-Authenticate': 'Basic realm="WoW web (pruebas)"' });
@@ -261,6 +274,11 @@ const server = http.createServer(async (req, res) => {
     const sid = readSid(req);
     if (!sid) return send(res, 403, 'sin sesión: abre /play');
 
+    if (p === '/progress') {
+      const e = progress.get(sid) || { bytes: 0, files: 0 };
+      return send(res, 200, JSON.stringify({ bytes: e.bytes, files: e.files, estimate: CONFIG.loadEstimateMB * 1048576 }), MIME['.json']);
+    }
+
     if (p === '/game-manifest.txt') {
       scanGame(); ensureWtf(sid);
       const all = new Map([...gameFiles, ...userFiles(sid)]);
@@ -282,6 +300,7 @@ const server = http.createServer(async (req, res) => {
       if (!m) return sendRange(res, 200, f.abs, 0, f.size - 1, cache);
       const start = +m[1], end = Math.min(m[2] ? +m[2] : f.size - 1, f.size - 1);
       if (start >= f.size) return send(res, 416, '', MIME['.txt'], { 'Content-Range': `bytes */${f.size}` });
+      if (!user) countServed(sid, end - start + 1);
       return sendRange(res, 206, f.abs, start, end, { ...cache, 'Content-Range': `bytes ${start}-${end}/${f.size}` });
     }
 
@@ -302,6 +321,7 @@ const server = http.createServer(async (req, res) => {
         const cache = !user && size === f.size ? IMMUTABLE : NO_STORE;
         if (size !== f.size) log(`aviso: tamaño pedido ${size} != real ${f.size} en ${rel}`);
         const bs = kb * 1024, start = idx * bs, end = Math.min(start + bs, f.size) - 1;
+        if (!user) countServed(sid, Math.max(0, end - start + 1));
         return sendRange(res, 200, f.abs, start, end, { 'Cache-Control': cache });
       }
       if (/^bundle-[0-9a-f]+\.bin$/.test(leaf)) return send(res, 404, 'no bundle');
@@ -327,6 +347,13 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (p.startsWith('/account/')) { await readBody(req, 65536).catch(() => {}); return send(res, 404, ''); }
+    // /stats/freeze: "caja negra" del cliente (sesion anterior que acabo sin pagehide: cuelgue, pestana matada,
+    // contexto WebGL perdido). Se guarda en el log para diagnosticar; el resto de /stats se descarta.
+    if (p === '/stats/freeze') {
+      const body = await readBody(req, 65536).catch(() => null);
+      if (body) log('FREEZE', clientIp(req), body.toString('utf8').slice(0, 4000));
+      return send(res, 204);
+    }
     if (p.startsWith('/stats/') || p.startsWith('/polls/')) { await readBody(req, 65536).catch(() => {}); return send(res, 204); }
     if (p === '/addons/library.txt') return send(res, 404);
 

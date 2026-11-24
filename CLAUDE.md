@@ -180,6 +180,28 @@ en cada minijuego se le da modelo, hechizos y stats temporales.
 > - Su Lua tactil va incrustado (no sale de `FrameXML.toc`: convive con el nuestro) y solo actua con `webTouch`/mando;
 >   en tactil toca `VehicleMenuBar`, barras, `UIParent:SetScale`... -> pendiente adaptar `MiWow.lua` (modo partida) y
 >   las ventanas al modo tactil. Pendiente: primera prueba de nuestro parche en el navegador, Warden, texturas TouchUI.
+> - **Aspecto del HUD tactil (2026-11-22, decision del usuario: su logica intacta, marcos de vida nativos, solo texturas
+>   e iconos "modernos" dorados)**: `FrameXML/MiWowTouchSkin.lua` (solo con `webTouch`; captura `LasthavensEditApi` con
+>   una metatabla de `_G` porque su trozo 15 lo borra) + texturas de `tools/touchui/gen_touchui.py` en `Interface/TouchUI`
+>   (anillo, disco, joystick, pictogramas `s_`/`u_`/`m_`, pastillas, casillas). Probado por el usuario: anillo, saltar
+>   dorado. SIN PROBAR (parche regenerado): iconos del boton inteligente, menu (retrato con nuestro anillo, cajon y micro
+>   botones; retrato de Personaje oculto), boton de bolsas propio bajo el menu, experiencia abajo-centro corta, chat
+>   (ventana grande, canales/pestanas en pastilla, caja, botones redondos, textos en espanol), ventana de bolsas.
+>   Maqueta de referencia: artefacto "HUD tactil MiWoW". Sin commitear (despues de la prueba).
+> - **Cliente web por Cloudflare (2026-11-23/24, PROBADO por el usuario, COMMITEADO)**: motivo = del usuario al VPS 60 % de paquetes
+>   perdidos y 300 ms (su proveedor 190.129.x + salto internacional) -> ~0,1 MB/s; a Cloudflare 0 %. Worker `wotlk-web`
+>   desplegado (`ORIGIN` = el VPS, sin clave): **`https://wotlk-web.<cuenta>.workers.dev/play`**; R2 subido DESDE EL VPS
+>   (`web/deploy/vps-pruebas/subir-r2.sh`, lo llama `publicar-vps.ps1`). Cliente del VPS (Frostbound) COMPACTADO 14,1 -> 10,1 GB
+>   con `tools/mpqcompact.py` (archivos sustituidos por MPQ posteriores; ganadores identicos byte a byte; originales en la
+>   carpeta del Frostbound). Detalle y vuelta atras: `docs/despliegue-vps-pruebas.md` seccion 4. El tunel `/tcp/` pasa
+>   tambien por el Worker. Probado: descarga rapida por Cloudflare (PC y movil); en movil el arranque es lento por PROCESADO
+>   (~3 min con cache llena; barra arreglada: OPFS + avance por tiempo + aviso de no recargar). `play.html`: precarga activa
+>   con HTTP/2-3 y circulito de descarga arriba en el centro (`docs/cliente-web.md`, pagina /play).
+>   **Congelones en partida = ESPERAS DE DATOS** (confirmado por el usuario: el circulito gira mientras se congela; p. ej.
+>   elegir una raza no cargada): el cliente pide bloques de 64 KB de uno en uno (XHR sincrono); cada uno ~0,3-1 s por R2
+>   sin cache cerca. **Siguiente sesion**: (1) dominio propio en Cloudflare para cachear `/blocks` en el borde (la Cache API
+>   no funciona en `workers.dev`, segun su documentacion) y/o (2) investigar los bundles (`bundle-<crc>.bin`, hoy 404).
+>   Despues: `wowRenderScale` en movil (fluidez). Pendiente aparte: probar y commitear el HUD tactil (abajo).
 
 ## Estructura
 
@@ -211,7 +233,9 @@ EventWow/                     repo (la carpeta conserva el nombre antiguo; el se
   tools/
     Merge-Interface.ps1       consolida Interface de los MPQ extraidos respetando el orden de carga
     Build-Patch.ps1           copia client/src -> client/patches/patch-4.MPQ (+ DBC con Build-Dbc.ps1 + mapas con mapgen)
-                              y lo empaqueta (mpqpack.py) en client/patches/web/patch-4.MPQ para el cliente web
+                              y lo empaqueta (mpqpack.py) en client/patches/web/patch-4.MPQ para el cliente web.
+                              -Rapido (~16 s): solo client\src encima del parche anterior + empaquetar (cambios de
+                              Lua/texturas; si cambian DBC, mapas o se borran archivos de client\src: generacion completa)
     mpqpack.py                carpeta -> MPQ v0 (zlib, listfile; el tamano cambia en cada version)
     Build-Dbc.ps1             DBC del cliente = client/DBCs/DBC<locale> + filas MiWow de las tablas *_dbc de la BD world
     Diff-Config.ps1           audita worldserver.conf vs .dist (cambios hechos a mano)
