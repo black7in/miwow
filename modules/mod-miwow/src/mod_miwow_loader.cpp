@@ -18,6 +18,7 @@ void AddSC_miwow_guild();
 void AddSC_miwow_guild_protocol();
 
 // Minijuegos (games/). Se registran antes que las maquetas: el orden es el del panel.
+void AddSC_miwow_game_castle();
 void AddSC_miwow_game_parkour();
 void AddSC_miwow_game_race();
 void AddSC_miwow_game_test();
@@ -27,6 +28,7 @@ void Addmod_miwowScripts()
     AddSC_miwow_config();
     AddSC_miwow_lobby();
     AddSC_miwow_protocol();
+    AddSC_miwow_game_castle();
     AddSC_miwow_game_parkour();
     AddSC_miwow_game_race();
     AddSC_miwow_game_test();

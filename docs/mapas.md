@@ -225,3 +225,11 @@ servidor (`<DataDir>/maps/<id>_pista.json`: `[s, X, Y, Z, media anchura]` cada 2
   tuberias), Ruinas en el Vacio (columnas titanicas), La Cima; meta en una isla mayor. Cada seccion mezcla caminos,
   subidas de sillas, bajadas, zigzag y 2 callejones sin salida: 279 piezas + 56 en 10 callejones, z 56..152; 70
   islas WMO + 40 rocas de Nagrand + 150 rocas pequenas alrededor.
+
+## Defensa del castillo (camino abierto)
+
+`"type": "castle"` -> `tools/mapgen/castlegen.py`: como un circuito (mismo relieve, ambientes y decoracion) pero la
+linea central es un camino ABIERTO de la aparicion de las oleadas a la puerta. La seccion `castle` del plano lista
+edificios de un sitio de referencia del juego (coordenadas originales) que el servidor invoca como objetos;
+castlegen los traslada y gira hasta la puerta. Salida del servidor: `<DataDir>/maps/<id>_castillo.txt`. Formato y
+campos en el docstring de `castlegen.py`; estado en `docs/castillo-estado.md`.

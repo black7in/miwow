@@ -103,6 +103,12 @@
       "directory": "EventWowParkour",
       "areaId": 5004,
       "source": "Planos/parkour_ascenso.json"
+    },
+    {
+      "id": 755,
+      "directory": "EventWowCastillo",
+      "areaId": 5005,
+      "source": "Planos/defensa_castillo.json"
     }
   ]
 }

@@ -30,6 +30,8 @@ struct MiWowGameInfo
     // La partida empieza ya en Running (sin carga comun, eleccion ni cuenta atras: no hay OnStart), cada jugador
     // entra y sale cuando quiere (OnPlayerArrived / OnPlayerLeft) y se cierra cuando no queda nadie.
     bool OpenSession = false;
+    // Nivel minimo para buscar partida (0 = cualquiera). Lo comprueba la cola para cada miembro (no en modo dev).
+    uint8 MinLevel = 0;
 
     // Partida: mapa PROPIO de MiWow (MiWowFirstMapId-MiWowLastMapId, de mazmorra/banda con instance_template)
     // donde se crea una instancia por partida, punto de aparicion y factoria de la clase del minijuego (MiWowMatch.h).

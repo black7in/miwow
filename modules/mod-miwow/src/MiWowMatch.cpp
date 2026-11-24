@@ -10,6 +10,7 @@
 #include "Map.h"
 #include "MapMgr.h"
 #include "ObjectAccessor.h"
+#include "GameTime.h"
 #include "Player.h"
 #include <algorithm>
 
@@ -198,6 +199,7 @@ void MiWowMatch::HandlePlayerArrived(Player* player)
 
     SendState(player);
     SendHud(player);
+    SendChoice(player);
     if (uint32 const vehicleEntry = GetVehicleEntry())
         MiWowVehicle::Assign(player, vehicleEntry);
     if (BlocksPlayerSpells())
@@ -215,6 +217,7 @@ void MiWowMatch::HandlePlayerLeft(ObjectGuid guid)
     _players.erase(itr);
     _arrived.erase(guid);
     _joining.erase(guid);
+    _openShops.erase(guid);
     _results.erase(guid);
     _respawns.erase(guid);
     OnPlayerLeft(guid);
@@ -252,11 +255,23 @@ void MiWowMatch::SendState(Player* player) const
     MiWowMessage("MATCH_STATE").Add(state).Add(_game->Id).Add(seconds).Send(player);
 }
 
-// MATCH_HUD <texto>
+// MATCH_HUD <linea> [<linea>...] (una linea por campo; en _hud separadas por '\n')
 void MiWowMatch::SendHud(Player* player) const
 {
-    if (!_hud.empty())
-        MiWowMessage("MATCH_HUD").Add(_hud).Send(player);
+    if (_hud.empty())
+        return;
+
+    MiWowMessage message("MATCH_HUD");
+    std::string_view rest = _hud;
+    while (true)
+    {
+        std::size_t const end = rest.find('\n');
+        message.Add(rest.substr(0, end));
+        if (end == std::string_view::npos)
+            break;
+        rest.remove_prefix(end + 1);
+    }
+    message.Send(player);
 }
 
 void MiWowMatch::End(std::string_view summary)
@@ -388,6 +403,111 @@ void MiWowMatch::SetHud(std::string_view text)
         else
             SendHud(player);
     });
+}
+
+// MATCH_CHOICE <id> <titulo> <texto> <segundos> (<nombre> <detalle>)...
+void MiWowMatch::SendChoice(Player* player) const
+{
+    if (_choiceId.empty())
+        return;
+
+    uint32 seconds = 0;
+    if (_choiceEnd > 0ms)
+    {
+        Milliseconds const now = GameTime::GetGameTimeMS();
+        seconds = _choiceEnd > now ? static_cast<uint32>((_choiceEnd - now).count() + 999) / 1000 : 0;
+    }
+
+    MiWowMessage message("MATCH_CHOICE");
+    message.Add(_choiceId).Add(_choiceTitle).Add(_choiceText).Add(seconds);
+    for (MiWowMatchChoiceOption const& option : _choiceOptions)
+        message.Add(option.Name).Add(option.Info);
+    message.Send(player);
+}
+
+void MiWowMatch::ShowChoice(std::string id, std::string title, std::string text,
+    std::vector<MiWowMatchChoiceOption> options, Seconds timeout)
+{
+    _choiceId = std::move(id);
+    _choiceTitle = std::move(title);
+    _choiceText = std::move(text);
+    _choiceOptions = std::move(options);
+    _choiceEnd = timeout > 0s ? GameTime::GetGameTimeMS() + Milliseconds(timeout) : 0ms;
+    ForEachPlayer([this](Player* player) { SendChoice(player); });
+}
+
+void MiWowMatch::ClearChoice()
+{
+    if (_choiceId.empty())
+        return;
+
+    _choiceId.clear();
+    _choiceOptions.clear();
+    ForEachPlayer([](Player* player) { MiWowMessage("MATCH_CHOICE_END").Send(player); });
+}
+
+void MiWowMatch::HandleChoice(Player* player, std::string_view id, uint32 option)
+{
+    if (_choiceId.empty() || id != _choiceId || option == 0 || option > _choiceOptions.size())
+    {
+        // Ventana ya cerrada o vieja: que el cliente la quite
+        if (_choiceId.empty())
+            MiWowMessage("MATCH_CHOICE_END").Send(player);
+        return;
+    }
+
+    OnPlayerChoice(player, id, option - 1);
+}
+
+// MATCH_SHOP <titulo> <moneda> <cantidad> (<id> <categoria> <icono> <nombre> <detalle> <precio>)...
+void MiWowMatch::OpenShop(Player* player)
+{
+    MiWowShop shop;
+    if (!BuildShop(player, shop))
+        return;
+
+    _openShops.insert(player->GetGUID());
+    MiWowMessage message("MATCH_SHOP");
+    message.Add(shop.Title).Add(shop.Currency).Add(shop.Amount);
+    for (MiWowShopItem const& item : shop.Items)
+        message.Add(item.Id).Add(item.Category).Add(item.Icon).Add(item.Name).Add(item.Detail).Add(item.Price);
+    message.Send(player);
+}
+
+void MiWowMatch::RefreshShop(Player* player)
+{
+    if (_openShops.count(player->GetGUID()))
+        OpenShop(player);
+}
+
+void MiWowMatch::RefreshShops()
+{
+    if (!_openShops.empty())
+        ForEachPlayer([this](Player* player) { RefreshShop(player); });
+}
+
+void MiWowMatch::CloseShop(Player* player)
+{
+    if (_openShops.erase(player->GetGUID()))
+        MiWowMessage("MATCH_SHOP_CLOSE").Send(player);
+}
+
+void MiWowMatch::CloseShops()
+{
+    if (!_openShops.empty())
+        ForEachPlayer([this](Player* player) { CloseShop(player); });
+    _openShops.clear();
+}
+
+void MiWowMatch::HandleShopBuy(Player* player, uint32 id)
+{
+    if (!_openShops.count(player->GetGUID()))
+    {
+        MiWowMessage("MATCH_SHOP_CLOSE").Send(player);
+        return;
+    }
+
+    OnShopBuy(player, id);
 }
 
 InstanceMap* MiWowMatch::GetMap() const

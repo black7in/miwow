@@ -283,7 +283,7 @@ class TrackConverter:
 
         self.biome_names = list(plan['biomes'])
         self.biome_index = {b: i for i, b in enumerate(self.biome_names)}
-        self.track = Track(plan, self.biome_index)
+        self.track = self.make_track(plan)
 
         # Rejilla: fila i = norte -> sur, columna j = oeste -> este (local y = half - i*STEP, x = j*STEP - half)
         r = np.arange(self.size) * STEP
@@ -291,6 +291,10 @@ class TrackConverter:
         self._terrain()
         self._textures_setup()
         self._doodads()
+
+    def make_track(self, plan):
+        """Linea central (castlegen la cambia por un camino abierto)."""
+        return Track(plan, self.biome_index)
 
     # --- Coordenadas ---------------------------------------------------------------------------------------------
 

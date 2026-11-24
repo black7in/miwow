@@ -22,6 +22,7 @@ Cada area tiene su `CLAUDE.md` (se carga al trabajar en esa carpeta) y su estado
 | Servidor (modulo C++, eventos, SQL) | `modules/mod-miwow/CLAUDE.md` | `docs/protocolo.md`, `docs/core-changes.md` |
 | Carrera de motos | | `docs/carrera-estado.md` |
 | Parkour (PAUSADO) | | `docs/parkour-estado.md` |
+| Defensa del castillo | | `docs/castillo-estado.md` |
 | Temporadas de hermandad | | `docs/hermandad.md` |
 | Cliente (Lua, parche, DBC) | `client/CLAUDE.md` | |
 | Cliente web/movil, VPS, Cloudflare, HUD tactil | `web/CLAUDE.md` | `docs/cliente-web.md`, `docs/despliegue-vps-pruebas.md` |
@@ -71,6 +72,10 @@ EventWow/
   contrasena), lobby definitivo.
 
 ## Siguiente
+- **Proxima sesion**: tamano de las interfaces MiWow en movil (se ven mas grandes que la pantalla): panel, HUD de
+  partida, ventanas de eleccion y tienda. Ver `web/CLAUDE.md`.
+- Defensa del castillo: jugable y probada por el usuario; pendiente el minimapa (no sale) y ajustes de equilibrio.
+  Ver `docs/castillo-estado.md`.
 - Cliente web: congelones
   por espera de datos (dominio propio en Cloudflare / bundles) y `wowRenderScale` en movil. Ver `web/CLAUDE.md`.
 - Hermandad: ventajas NO pasivas (resurreccion en masa, invocar al grupo, calderos/festines, vuelos mas rapidos).

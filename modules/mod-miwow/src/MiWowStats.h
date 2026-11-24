@@ -38,6 +38,9 @@ enum class MiWowStat : uint8
     SpellPenetration,
     ManaRegen,        // mana cada 5 s
     HealthRegen,      // vida cada 5 s
+    DefenseRating,
+    BlockValue,       // valor de bloqueo del escudo
+    Resistance,       // las 5 resistencias magicas (fuego, naturaleza, escarcha, sombras, arcano)
 
     Count
 };

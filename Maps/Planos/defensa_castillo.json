@@ -1,0 +1,201 @@
+{
+  "_info": "Defensa del castillo: las oleadas salen de un portal al sur (junto a el espera el jefe final) y suben por un canon nevado corto (unico camino) hasta la torre del castillo, al norte (criatura con la vida del castillo, la pone el servidor). Coordenadas en yardas: x = este, y = norte, origen en el centro del mapa. Ver docs/castillo-estado.md.",
+  "type": "castle",
+  "seed": 11,
+  "adts": 1,
+  "shoulder": 3.0,
+  "biomeBlend": 40.0,
+  "snowLine": 1000000000.0,
+  "baseNoise": {
+    "amplitude": 3.0,
+    "scale": 150.0
+  },
+  "track": [
+    {
+      "p": [
+        0,
+        -150
+      ],
+      "z": 4,
+      "w": 30,
+      "biome": "nieve",
+      "left": "open",
+      "right": "open"
+    },
+    {
+      "p": [
+        45,
+        -90
+      ],
+      "z": 4,
+      "w": 26,
+      "biome": "nieve",
+      "left": "cut",
+      "right": "cut"
+    },
+    {
+      "p": [
+        -25,
+        -20
+      ],
+      "z": 4,
+      "w": 26,
+      "biome": "nieve",
+      "left": "cut",
+      "right": "cut"
+    },
+    {
+      "p": [
+        0,
+        40
+      ],
+      "z": 4,
+      "w": 30,
+      "biome": "nieve",
+      "left": "open",
+      "right": "open"
+    },
+    {
+      "p": [
+        0,
+        60
+      ],
+      "z": 4,
+      "w": 30,
+      "biome": "nieve",
+      "left": "open",
+      "right": "open"
+    }
+  ],
+  "features": [
+    {
+      "type": "mesa",
+      "poly": [
+        [
+          -400,
+          -400
+        ],
+        [
+          400,
+          -400
+        ],
+        [
+          400,
+          400
+        ],
+        [
+          -400,
+          400
+        ]
+      ],
+      "h": 28,
+      "edge": 20,
+      "warp": 0,
+      "topNoise": 4.0
+    },
+    {
+      "type": "rim",
+      "margin": 60,
+      "h": 40,
+      "warp": 20
+    },
+    {
+      "type": "flat",
+      "c": [
+        0,
+        -165
+      ],
+      "r": 45,
+      "h": 4
+    },
+    {
+      "type": "flat",
+      "c": [
+        0,
+        75
+      ],
+      "r": 85,
+      "h": 4
+    }
+  ],
+  "biomes": {
+    "nieve": {
+      "_zona": "Dun Morogh (texturas probadas en el circuito 752)",
+      "ground": [
+        "Tileset\\IronForge\\IronForgeSnow01solid.blp"
+      ],
+      "ground2": [
+        "Tileset\\IronForge\\IronForgeSnow05ScrapeBrown.blp",
+        0.3
+      ],
+      "road": "Tileset\\IronForge\\IronForgeRock06road2.blp",
+      "verge": "Tileset\\IronForge\\IronForgeSnow03ripple.blp",
+      "rock": "Tileset\\IronForge\\IronForgeRock08Brown.blp",
+      "scatter": {
+        "density": 2.0,
+        "lining": 2.0,
+        "models": [
+          {
+            "model": "WORLD\\KHAZMODAN\\IRONFORGE\\PASSIVEDOODADS\\TREES\\IRONFORGESNOWTREE01.M2",
+            "weight": 3
+          },
+          {
+            "model": "WORLD\\KHAZMODAN\\IRONFORGE\\PASSIVEDOODADS\\TREES\\WINTERTREE03.M2",
+            "weight": 2
+          },
+          {
+            "model": "WORLD\\KHAZMODAN\\IRONFORGE\\PASSIVEDOODADS\\TREES\\WINTERTREE01.M2",
+            "weight": 1
+          },
+          {
+            "model": "WORLD\\KHAZMODAN\\IRONFORGE\\PASSIVEDOODADS\\TREES\\WINTERSMALLTREE01.M2",
+            "weight": 2
+          },
+          {
+            "model": "WORLD\\AZEROTH\\ELWYNN\\PASSIVEDOODADS\\DETAIL\\ELWYNNROCK2\\ELWYNNROCK2.M2",
+            "weight": 1,
+            "maxSlope": 1.5
+          }
+        ]
+      }
+    }
+  },
+  "clear": [
+    [
+      0,
+      75,
+      60
+    ],
+    [
+      0,
+      -165,
+      30
+    ]
+  ],
+  "props": [],
+  "castle": {
+    "attack": 8.0,
+    "start": 22.0,
+    "guards": {
+      "out": 13.0,
+      "lateral": [
+        -9.0,
+        0.0,
+        9.0
+      ]
+    },
+    "portal": {
+      "back": 6.0
+    },
+    "boss": {
+      "back": 2.0,
+      "lateral": 9.0
+    },
+    "vendor": {
+      "out": 6.0,
+      "lateral": 15.0
+    },
+    "pathStep": 10.0,
+    "objects": []
+  }
+}

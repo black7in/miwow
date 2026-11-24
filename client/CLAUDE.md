@@ -6,7 +6,8 @@
   cada archivo). SOLO LECTURA, nunca editar. Para modificar: copiar a `src/` con la misma ruta y editar ahi.
 - Archivos propios en `src/Interface/FrameXML/` (anadidos al final de `FrameXML.toc`):
   `MiWowProtocol.lua` (protocolo, `docs/protocolo.md`), `MiWow.lua` (modos `"world"` = interfaz nativa intacta |
-  `"match"` = en partida: marcos ocultos, ventanas/acciones bloqueadas; modo dev en partida = nativa),
+  `"match"` = en partida: HUD del juego y la interfaz nativa SIN CAMBIOS (`MIWOW_MATCH_RESTRICT_UI = false`,
+  2026-11-24; con true vuelve la interfaz restringida de main: marcos ocultos, ventanas/acciones bloqueadas)),
   `MiWowPanel.lua` (panel de eventos 860x560 arrastrable; boton en el minimapa, `/miwow`, `/eventos`),
   `MiWowMatchFound.lua`, `MiWowMatch.lua`, `MiWowRace.lua`, `MiWowParkour.lua`, `MiWowGuild.lua` (`docs/hermandad.md`),
   `MiWowTouchSkin.lua` (HUD tactil del cliente web: ver `web/CLAUDE.md`). Glue y `GlobalStrings.lua` ORIGINALES.

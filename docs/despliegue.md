@@ -13,6 +13,11 @@ Checklist para montar un entorno (local o produccion). La configuracion se divid
 - AzerothCore con `mod-miwow` dentro de `azerothcore-wotlk/modules/` (junction a `MiWow/modules/mod-miwow`).
 - Tras anadir/quitar archivos del modulo: volver a correr CMake.
 
+Solo en desarrollo: `azerothcore-wotlk/modules/mod-npc-talent-template` (oficial de AzerothCore, clonado de
+github.com/azerothcore/mod-npc-talent-template; NPC 55009 "Pick a spec" para equipar/talentos/glifos al instante,
+`.npc add 55009`). No es nuestro ni se versiona (`modules/*` esta ignorado en el core); su SQL `base` lo aplica el
+updater al arrancar. **No instalarlo en produccion** (borrar la carpeta y volver a correr CMake).
+
 ## 2. Configuracion de infraestructura
 
 Partir de los `.conf.dist` limpios y tocar SOLO estas claves (o definirlas como variables de entorno `AC_<CLAVE>`,

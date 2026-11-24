@@ -37,6 +37,8 @@ $ExtraRanges = @{
     "areatable_dbc" = "BETWEEN 5000 AND 5099"     # zonas de los mapas propios (ver SQL *_miwow_map_areas)
     "light_dbc" = "BETWEEN 2600 AND 2699"          # cielo de los mapas propios (Light.dbc llega a 2538)
     "questsort_dbc" = "= 400"                      # categoria "Hermandad" del registro (QuestSort.dbc llega a 376)
+    "creaturemodeldata_dbc" = "BETWEEN 3500 AND 3599"       # modelos de criatura propios (el cliente llega a 3440)
+    "creaturedisplayinfo_dbc" = "BETWEEN 40000 AND 40099"   # aspectos de criatura propios (llega a 32754)
 }
 
 function Get-IdFilter([string]$table, [string]$id)

@@ -1,7 +1,7 @@
 # Protocolo cliente <-> servidor (addon messages)
 
 Implementacion: servidor `modules/mod-miwow/src/MiWowProtocol.*`, cliente
-`client/src/Interface/FrameXML/MiWowProtocol.lua`. Version actual: **13**
+`client/src/Interface/FrameXML/MiWowProtocol.lua`. Version actual: **14**
 (`MiWowProtocol::Version` / `MIWOW_PROTOCOL.VERSION`; cambiarla en ambos lados a la vez).
 
 ## Transporte
@@ -51,6 +51,9 @@ opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `Regi
 | `QUEUE` | id juego | "Buscar partida" (solo, o el lider por todo su grupo) | `QUEUE_STATUS` a todos los apuntados, o `ERROR` (ver "Grupos") |
 | `LEAVE` | - | "Cancelar" la cola (sale todo el grupo) | `QUEUE_STATUS NONE` a todos; los demas, `ERROR QUEUE_GROUP_CANCELLED <nombre>` |
 | `ABANDON` | - | "Abandonar" / "Salir" en partida | vuelta a donde estaba (entry point) y `MATCH_STATE NONE` |
+| `SHOP_BUY` | id del articulo | clic en un articulo de la tienda de la partida (solo con ella abierta) | lo decide el juego (`OnShopBuy`: precio, distancia al vendedor...) y `MATCH_SHOP` actualizado. v14 |
+| `SHOP_CLOSE` | - | cerrar la tienda (X, Esc) | nada (el servidor deja de mandarle actualizaciones). v14 |
+| `CHOOSE` | id de la ventana, opcion (desde 1) | clic en una opcion de la ventana de eleccion | lo decide el juego (`OnPlayerChoice`); si la ventana ya no existe, `MATCH_CHOICE_END`. v14 |
 | `ACCEPT` | id propuesta | "Aceptar" la partida encontrada | `MATCH_FOUND_STATUS` a todos; si es el ultimo, `MATCH_FOUND_END ACCEPTED` + partida |
 | `DECLINE` | id propuesta | "Rechazar" (tambien `LEAVE`, logout o cambio de grupo con propuesta pendiente) | `MATCH_FOUND_END` a todos (ver "Partida encontrada") |
 | `PARKOUR_RESTART` | - | "Reiniciar" en el parkour | vuelta a la salida, cronometro a cero: `PARKOUR_EVENT RESTART` + `PARKOUR`. v12 |
@@ -70,7 +73,11 @@ opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `Regi
 | `MATCH_FOUND_STATUS` | id, aceptados, total | alguien ha aceptado |
 | `MATCH_FOUND_END` | id, `ACCEPTED`/`REQUEUED`/`REMOVED` | fin de la confirmacion: a la partida / de vuelta a la cola / fuera de la cola |
 | `MATCH_STATE` | `NONE` / estado, id juego, segundos | partida del jugador (al conectar, en cada cambio y al salir). Estados: `LOADING` (en camino, sigue en modo mundo), `WAITING` (dentro, esperando al resto), `COUNTDOWN`, `RUNNING`, `ENDED` (resultado; luego vuelta a donde estaba). segundos = lo que queda del estado, 0 = sin tiempo |
-| `MATCH_HUD` | texto | objetivo que muestra el HUD (vacio = nada) |
+| `MATCH_HUD` | linea, linea... | objetivo que muestra el HUD, una linea por campo (vacio = nada). Cada linea: trozos separados por ` - `; un trozo `Etiqueta: valor` sale con la etiqueta en dorado (`MiWowMatch::SetHud` separa las lineas con `\n`) |
+| `MATCH_CHOICE` | id, titulo, texto, segundos (0 = sin tiempo), n x (nombre, detalle) | ventana de eleccion de la partida (`MiWowMatch::ShowChoice`; p. ej. la dificultad del castillo). Tambien al llegar y al reconectar mientras siga abierta. v14 |
+| `MATCH_SHOP` | titulo, moneda, cantidad, n x (id, categoria, icono, nombre, detalle, precio) | tienda de la partida (`MiWowMatch::OpenShop` con el contenido de `BuildShop`): al abrirla y cuando cambia algo mientras esta abierta. Pestanas = categorias en orden. v14 |
+| `MATCH_SHOP_CLOSE` | - | cerrar la tienda (lejos del vendedor, fin de partida, articulo fuera de la tienda abierta). v14 |
+| `MATCH_CHOICE_END` | - | cerrar la ventana de eleccion (`ClearChoice`). v14 |
 | `MATCH_END` | `WIN`/`LOSE`/`NONE`, texto | resultado del jugador y resumen |
 | `MATCH_RESPAWN` | segundos | has muerto: reapareces en N s (0 = ya has reaparecido). Morir nunca saca de la partida |
 | `RACE_INFO` | vueltas | empieza una carrera (`MiWowGameRace`, juegos `carrera` / `carrera_estelar`): al llegar a la instancia. v9 |
@@ -123,6 +130,7 @@ Cola en grupo (`MiWowMatchMgr`): `QUEUE` del lider apunta al grupo entero como u
   quepa (`QUEUE_GROUP_TOO_BIG <max>`), todos conectados al protocolo (`QUEUE_GROUP_OFFLINE <nombre>`), sin partida y en condiciones de
   entrar (`QUEUE_GROUP_BUSY <nombre>`; para uno mismo: `QUEUE_DEAD`, `QUEUE_IN_COMBAT`, `QUEUE_IN_FLIGHT`,
   `QUEUE_IN_INSTANCE`, `QUEUE_IN_BG_QUEUE`, ver `MiWowLobby::CanJoinFrom`; se vuelve a comprobar al teleportar).
+  Nivel minimo del juego (`MiWowGameInfo::MinLevel`): `QUEUE_LEVEL <nivel>` (uno mismo) / `QUEUE_GROUP_LEVEL <nombre>`.
 - Sale entera de la cola si: cualquiera cancela (`QUEUE_GROUP_CANCELLED <nombre>` a los demas), se desconecta
   (`QUEUE_GROUP_LOGOUT <nombre>`) o el grupo cambia (entra/sale alguien, se disuelve: `QUEUE_GROUP_CHANGED`).
 - Emparejamiento: por orden de llegada, entradas enteras que quepan en `MaxPlayers` (puede saltarse una entrada

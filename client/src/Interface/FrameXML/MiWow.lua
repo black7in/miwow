@@ -5,11 +5,16 @@
 --
 -- Modo "world" (fuera de los eventos): la interfaz nativa queda INTACTA. El panel de eventos (MiWowPanel.lua) es
 -- una ventana que se abre y cierra con el boton del minimapa, /miwow o Esc.
--- Modo "match" (MATCH_STATE del servidor, MiWowMatch.lua): mundo + HUD de la partida; de la interfaz nativa solo
--- se ven los marcos de MIWOW_MATCH_VISIBLE_FRAMES y el chat; ventanas, bolsas y barras de accion nativas
--- bloqueadas (cada juego da lo suyo: p. ej. la barra de la moto). Al salir todo vuelve a su sitio (los marcos se reparentan, no se destruyen).
+-- Modo "match" (MATCH_STATE del servidor, MiWowMatch.lua): mundo + HUD de la partida. En la rama tradicional se
+-- juega con el personaje propio: la interfaz nativa NO cambia (MIWOW_MATCH_RESTRICT_UI = false, decision del usuario
+-- 2026-11-24). Con true (diseno de main): de la interfaz nativa solo se ven los marcos de MIWOW_MATCH_VISIBLE_FRAMES y
+-- el chat; ventanas, bolsas y barras de accion nativas bloqueadas. Al salir todo vuelve a su sitio (los marcos se
+-- reparentan, no se destruyen).
 -- Modo dev (.gm on o .dev on): en partida, "/miwow dev" o el boton de arriba quitan las restricciones (solo cliente,
 -- no toca ningun flag).
+
+-- Interfaz de partida restringida (ver arriba). false = la interfaz nativa no cambia en los eventos.
+MIWOW_MATCH_RESTRICT_UI = false;
 
 -- Marcos ocultos en partida (los hijos van con su padre: MainMenuBar incluye bolsas, micro menu,
 -- barra de XP/reputacion, barras de forma/mascota/posesion)
@@ -148,7 +153,7 @@ end
 
 -- Ventanas y acciones nativas bloqueadas: solo en partida (salvo modo dev con la interfaz nativa)
 function MiWow_IsRestricted()
-	return MiWow_UI.mode == "match" and not MiWow_IsUnrestricted();
+	return MIWOW_MATCH_RESTRICT_UI and MiWow_UI.mode == "match" and not MiWow_IsUnrestricted();
 end
 
 -- Teclas 1-6 en vehiculo: ActionButtonDown/Up(id) pulsan VehicleMenuBarActionButton<id> si la barra se ve
@@ -271,7 +276,7 @@ local function MiWow_ApplyMode()
 
 	MiWow_ApplyPetBar(restricted);
 
-	if ( match and MiWow_UI.dev ) then
+	if ( MIWOW_MATCH_RESTRICT_UI and match and MiWow_UI.dev ) then
 		MiWowDevButton:SetText(MiWow_UI.native and MIWOW_STR_DEV_NATIVE_OFF or MIWOW_STR_DEV_NATIVE_ON);
 		MiWowDevButton:Show();
 	else

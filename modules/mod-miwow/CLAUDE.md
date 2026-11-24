@@ -41,8 +41,9 @@ Loader `Addmod_miwowScripts` (`src/mod_miwow_loader.cpp`). Log `module.miwow`. C
   XP ni reputacion), `MiWowGroups` (grupos nativos, bandas permitidas), `MiWowDevMode` (avisa `DEV_MODE`).
 - Protocolo cliente<->servidor por addon messages (prefijo `MIWOW`): `docs/protocolo.md`.
 - Juegos: `test`, `test_group`, `test_vehicle`, `test_map` (750), `carrera` (752), `carrera_estelar` (753), `parkour`
-  (754, PAUSADO). Mapa 751 (asedio) se queda sin juego (decision del usuario: para el futuro).
-  - Carrera: `docs/carrera-estado.md`. Parkour: `docs/parkour-estado.md`.
+  (754, PAUSADO), `castillo` (755, defensa por oleadas, nivel 80). Mapa 751 (asedio) se queda sin juego (decision del
+  usuario: para el futuro). `MiWowGameInfo::MinLevel` = nivel minimo (cola: `QUEUE_LEVEL` / `QUEUE_GROUP_LEVEL`).
+  - Carrera: `docs/carrera-estado.md`. Parkour: `docs/parkour-estado.md`. Castillo: `docs/castillo-estado.md`.
 - **Temporadas de hermandad** (`src/guild/`): `docs/hermandad.md`.
 - Hechizos propios: `tools/spellgen` (`data/spells/*.toml` -> SQL), ver `docs/hechizos.md`.
 - Mapas propios: `docs/mapas.md`. mmaps: desde `data\`, `..\mmaps_generator.exe --config ..\mmaps-config.yaml <id> < nul`.

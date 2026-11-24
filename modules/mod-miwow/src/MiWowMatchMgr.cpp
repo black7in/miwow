@@ -23,6 +23,8 @@
 #include <algorithm>
 
 //   Cliente -> servidor: QUEUE <id juego> | LEAVE | ABANDON | ACCEPT <id propuesta> | DECLINE <id propuesta>
+//                        CHOOSE <id ventana> <opcion desde 1> (ventana de eleccion de la partida, MATCH_CHOICE)
+//                        SHOP_BUY <id articulo> | SHOP_CLOSE (tienda de la partida, MATCH_SHOP)
 //   Servidor -> cliente: QUEUE_STATUS QUEUED <id juego> <segundos en cola> <jugadores en la entrada> | QUEUE_STATUS NONE
 //                        MATCH_FOUND <id> <id juego> <segundos para aceptar> <total> <aceptados> <tu: 0/1>
 //                        MATCH_FOUND_STATUS <id> <aceptados> <total>
@@ -32,6 +34,7 @@
 //                        ERROR QUEUE_UNKNOWN_GAME | QUEUE_GAME_UNAVAILABLE | QUEUE_IN_MATCH
 //                              | QUEUE_DEAD | QUEUE_IN_COMBAT | QUEUE_IN_FLIGHT | QUEUE_IN_INSTANCE | QUEUE_IN_BG_QUEUE
 //                                (los propios; si es otro miembro del grupo: QUEUE_GROUP_BUSY <nombre>)
+//                              | QUEUE_LEVEL <nivel minimo> | QUEUE_GROUP_LEVEL <nombre>
 //                              | QUEUE_NOT_LEADER | QUEUE_SOLO_ONLY <max> | QUEUE_GROUP_TOO_BIG <max>
 //                              | QUEUE_GROUP_OFFLINE <nombre> | QUEUE_GROUP_BUSY <nombre>
 //                              | QUEUE_GROUP_CANCELLED <nombre> | QUEUE_GROUP_LOGOUT <nombre> | QUEUE_GROUP_CHANGED <nombre>
@@ -162,8 +165,14 @@ bool MiWowMatchMgr::Enqueue(Player* player, MiWowGameInfo const& game)
             return self ? fail("QUEUE_IN_MATCH") : fail("QUEUE_GROUP_BUSY", member->GetName());
 
         if (!MiWowDevMode::IsActive(member))
+        {
             if (char const* error = MiWowLobby::CanJoinFrom(member))
                 return self ? fail(error) : fail("QUEUE_GROUP_BUSY", member->GetName());
+
+            if (game.MinLevel && member->GetLevel() < game.MinLevel)
+                return self ? fail("QUEUE_LEVEL", std::to_string(game.MinLevel))
+                    : fail("QUEUE_GROUP_LEVEL", member->GetName());
+        }
 
         QueueSlot const* memberSlot = GetQueueSlot(member);
         if (memberSlot && memberSlot->ProposalId)
@@ -920,6 +929,8 @@ void MiWowMatchMgr::OnPlayerConnected(Player* player)
     {
         match->SendState(player);
         match->SendHud(player);
+        match->SendChoice(player);
+        match->HandleShopClosed(player->GetGUID());     // tras /reload el cliente ya no la tiene abierta
     }
     else
         SendNoMatch(player);
@@ -1020,6 +1031,37 @@ namespace
     }
 }
 
+namespace
+{
+    // CHOOSE <id ventana> <opcion desde 1>
+    void HandleChoose(Player* player, MiWowProtocol::Args const& args)
+    {
+        MiWowMatch* match = sMiWowMatchMgr.GetMatch(player);
+        if (!match || args.size() < 2)
+            return;
+
+        Optional<uint32> option = Acore::StringTo<uint32>(args[1]);
+        if (option)
+            match->HandleChoice(player, args[0], *option);
+    }
+
+    // SHOP_BUY <id articulo>
+    void HandleShopBuy(Player* player, MiWowProtocol::Args const& args)
+    {
+        MiWowMatch* match = sMiWowMatchMgr.GetMatch(player);
+        Optional<uint32> id = args.empty() ? std::nullopt : Acore::StringTo<uint32>(args[0]);
+        if (match && id)
+            match->HandleShopBuy(player, *id);
+    }
+
+    // SHOP_CLOSE
+    void HandleShopClose(Player* player, MiWowProtocol::Args const& /*args*/)
+    {
+        if (MiWowMatch* match = sMiWowMatchMgr.GetMatch(player))
+            match->HandleShopClosed(player->GetGUID());
+    }
+}
+
 class MiWow_MatchPlayerScript : public PlayerScript
 {
 public:
@@ -1089,6 +1131,9 @@ void AddSC_miwow_matches()
     MiWowProtocol::RegisterHandler("ABANDON", HandleAbandon);
     MiWowProtocol::RegisterHandler("ACCEPT", HandleAccept);
     MiWowProtocol::RegisterHandler("DECLINE", HandleDecline);
+    MiWowProtocol::RegisterHandler("CHOOSE", HandleChoose);
+    MiWowProtocol::RegisterHandler("SHOP_BUY", HandleShopBuy);
+    MiWowProtocol::RegisterHandler("SHOP_CLOSE", HandleShopClose);
     MiWowProtocol::RegisterConnectListener([](Player* player) { sMiWowMatchMgr.OnPlayerConnected(player); });
 
     new MiWow_MatchPlayerScript();

@@ -18,7 +18,7 @@ namespace
         "str", "agi", "sta", "int", "spi",
         "health", "mana", "armor", "ap", "rap", "sp",
         "crit", "haste", "hit", "expertise", "dodge", "parry", "block", "resilience", "armorpen",
-        "spellpen", "mp5", "hp5"
+        "spellpen", "mp5", "hp5", "defense", "blockvalue", "resist"
     };
 
     struct StatsSlot : public DataMap::Base
@@ -113,6 +113,17 @@ namespace
             case MiWowStat::HealthRegen:
                 player->ApplyHealthRegenBonus(value, apply);
                 break;
+            case MiWowStat::DefenseRating:
+                ApplyRatings(player, { CR_DEFENSE_SKILL }, value, apply);
+                break;
+            case MiWowStat::BlockValue:
+                player->HandleBaseModFlatValue(SHIELD_BLOCK_VALUE, float(value), apply);
+                break;
+            case MiWowStat::Resistance:
+                for (UnitMods mod : { UNIT_MOD_RESISTANCE_FIRE, UNIT_MOD_RESISTANCE_NATURE, UNIT_MOD_RESISTANCE_FROST,
+                    UNIT_MOD_RESISTANCE_SHADOW, UNIT_MOD_RESISTANCE_ARCANE })
+                    player->HandleStatFlatModifier(mod, BASE_VALUE, float(value), apply);
+                break;
             default:
                 break;
         }
@@ -159,6 +170,8 @@ std::optional<MiWowStat> MiWowStats::FromItemMod(uint32 itemMod)
         case ITEM_MOD_SPELL_POWER:             return MiWowStat::SpellPower;
         case ITEM_MOD_HEALTH_REGEN:            return MiWowStat::HealthRegen;
         case ITEM_MOD_SPELL_PENETRATION:       return MiWowStat::SpellPenetration;
+        case ITEM_MOD_DEFENSE_SKILL_RATING:    return MiWowStat::DefenseRating;
+        case ITEM_MOD_BLOCK_VALUE:             return MiWowStat::BlockValue;
         default:                               return std::nullopt;
     }
 }

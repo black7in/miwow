@@ -8,7 +8,7 @@
 
 MIWOW_PROTOCOL = {
 	PREFIX = "MIWOW",
-	VERSION = 13,
+	VERSION = 14,
 	-- 255 (limite del core) - "MIWOW\t" - flag, con margen
 	MAX_CHUNK = 240,
 	DEBUG = true,
@@ -26,6 +26,8 @@ MIWOW_ERROR_TEXTS = {
 	QUEUE_IN_FLIGHT = "No puedes apuntarte a un evento mientras vuelas.",
 	QUEUE_IN_INSTANCE = "No puedes apuntarte a un evento dentro de una mazmorra, banda o campo de batalla.",
 	QUEUE_IN_BG_QUEUE = "No puedes apuntarte a un evento mientras estás en cola de campo de batalla.",
+	QUEUE_LEVEL = "Necesitas nivel %s para este minijuego.",
+	QUEUE_GROUP_LEVEL = "%s no tiene el nivel necesario para este minijuego.",
 	QUEUE_GAME_UNAVAILABLE = "Este minijuego todavía no está disponible.",
 	QUEUE_IN_MATCH = "Ya estás en una partida.",
 	QUEUE_NOT_LEADER = "Solo el líder del grupo puede buscar partida.",
