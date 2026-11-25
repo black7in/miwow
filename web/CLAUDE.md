@@ -40,8 +40,8 @@ Cliente 3.3.5a en wasm de Last Havens (permiso verbal, SIN fuentes) + nuestro ba
 - 2026-11-24 probado (`play.html`): sin "Descargando" falso en cargas siguientes (`wowLoadedOnce`,
   Resource Timing del wasm, `phaseLoad`, `#dl` oculto en la pantalla de carga) + receptor `wowPresentChannel` para que
   se vea la pantalla de carga del mundo (trazas `present: inicio/fin` con `?carga=1`; si no llegan, el C++ no lo usa ahi).
-- Pendiente: mmaps v19 -> regenerar con el generador actual; arreglo clang de `MiWowGuildSeason.cpp` sin commitear
-  (copiado a mano al VPS); pagina `/[lang]/play` de Astro; Warden.
+- Pendiente: mmaps v19 -> regenerar con el generador actual;
+  pagina `/[lang]/play` de Astro; Warden.
 
 ## Voz (`docs/voz.md`)
 `voice.js` (hub, dentro de server.js: enlace con el worldserver en 127.0.0.1:8091, `/voice-ws`, proxy `/livekit/*`,

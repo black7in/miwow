@@ -233,6 +233,10 @@ Primera cuenta GM (`BLACK`, nivel 3, todos los reinos) creada directamente en `m
   core actual; en esas teselas no hay navegacion de PNJ). Regenerarlos con `mmaps_generator` del core actual (pendiente).
 - Arreglo de compilacion en clang 14: `MiWowGuildSeason.cpp` capturaba un structured binding en una lambda (lo permite
   C++20/MSVC, clang < 16 no). Corregido en el repo; en el VPS se copio el archivo a mano hasta el siguiente commit.
+- 2026-11-25: desplegado `7b808a4` (auto-aprendizaje, defensa del castillo, voz desactivada): compila en clang 14
+  sin errores; `mod_miwow.conf` sustituido por el `.dist` nuevo (copia `mod_miwow.conf.bak-20261125`); subidos los
+  archivos del mapa 755 (`maps`, `vmaps`, `mmaps`, `755_castillo.txt`). Avisos `Missing property MiWow.Voice.*` al
+  arrancar: normales mientras no haya voz en el VPS.
 
 ## 9. Pendiente
 
