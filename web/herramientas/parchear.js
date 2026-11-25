@@ -56,6 +56,11 @@ const PARCHES = [
   desactivar('FAQ de Last Havens en la ayuda (10)', 'local CATEGORIES = { "The Realm", "Playing", "Getting Help" }'),
   desactivar('programa de creadores (16)', 'if LasthavensCreatorFrame then return end'),
   desactivar('encuestas (17)', 'if LasthavensPollFrame then return end'),
+  // 30: dictado por voz (boton de micro tactil: voz -> texto del chat con el reconocimiento del navegador). Decision del
+  //     usuario 2026-11-24: fuera. Sin el tramo el boton WebVoiceChatToggle sigue oculto (se crea con Hide) y su HUD
+  //     no le reserva sitio (mira IsShown). La voz de MiWow es otra cosa (docs/voz.md).
+  desactivar('dictado por voz (30_WebVoiceChatToggle)',
+    'if GetCVar("webTouch") ~= "1" and not WebPadLayout() or not WebVoiceChatToggle then return end'),
   // 31: entrar solo al canal "world" al conectar (el filtro de entradas/salidas y el limite de 256 bytes se quedan).
   { nombre: 'unirse al canal world (31)',
     de: 'if GetChannelName(CHANNEL) == 0 then',

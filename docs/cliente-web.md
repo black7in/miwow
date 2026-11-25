@@ -228,7 +228,7 @@ node web\herramientas\parchear.js     # cliente\Wow.original.wasm -> cliente\Wow
 **Regla (decision del usuario 2026-11-21): el cliente web es IGUAL que el de PC.** Nada de Last Havens a la vista y
 Glue ORIGINAL de Blizzard en los dos; lo propio de MiWow (un login personalizado futuro incluido) va en NUESTRO
 `patch-4.MPQ`, que cargan ambos (el wasm carga `Interface\GlueXML\GlueXML.toc` y `FrameXML.toc` de los MPQ). Asi un cambio
-nuestro sale igual en PC, web y movil. Solo se conserva lo que es del cliente web en si (tactil, mando, voz, pantalla completa).
+nuestro sale igual en PC, web y movil. Solo se conserva lo que es del cliente web en si (tactil, mando, pantalla completa).
 
 Tecnica para desactivar un tramo entero: su primera sentencia (completa, de una linea) se cambia por `do return end`
 (mismo largo, con espacios): el wasm lo sigue ejecutando pero sale enseguida, y el resto solo tiene que compilar.
@@ -244,9 +244,10 @@ Tecnica para desactivar un tramo entero: su primera sentencia (completa, de una 
 | `09`, `10`, `16`, `17` desactivados | "Go in now" del buscador de mazmorras, su FAQ en la ayuda, programa de creadores, encuestas |
 | `31` (parte) | unirse solo al canal "world" al conectar |
 | cabecera de teclas | `BINDING_HEADER_LASTHAVENS` = "Web" (cabecera de "Interactuar con lo mas cercano") |
+| `30` desactivado | dictado por voz (boton de micro tactil, voz a texto del chat). Decision del usuario 2026-11-24 |
 | `29` traducido | aviso "version nueva" en espanol y sin la marca (el aviso se queda: es del cliente web) |
 
-Se quedan (cliente web, no Last Havens): HUD tactil y de mando (`06-08`, `11-15`, `18-28`), voz (`30`), compatibilidad (`02`,
+Se quedan (cliente web, no Last Havens): HUD tactil y de mando (`06-08`, `11-15`, `18-28`), compatibilidad (`02`,
 `p_7148482`), `/bugreport`, resolucion, boton de pantalla completa del menu, vista previa de mando de `?padpreview` (`07`,
 `p_7156686`: solo con ese parametro). Sus textos siguen en ingles (traducirlos: pendiente).
 Lo que queda con "Lasthavens" en el wasm esta dentro de los tramos desactivados o es nombre interno de marco.

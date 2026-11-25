@@ -205,7 +205,8 @@ local function MiWowTouch_PathHas(region, text)
 	return type(path) == "string" and string.find(string.lower(path), text, 1, true) ~= nil;
 end
 
--- Chat, frases rapidas y dictado: su arte es el de los botones del minimapa (centro desplazado 1 px)
+-- Chat y frases rapidas: su arte es el de los botones del minimapa (centro desplazado 1 px). Su dictado por voz
+-- (WebVoiceChatToggle) esta desactivado en web/herramientas/parchear.js: el boton no llega a mostrarse.
 local function MiWowTouch_SkinChatButtons(api)
 	if ( api.chatButton ) then
 		MiWowTouch_Overlay(api.chatButton, "s_talk", 26, 1, 1);
@@ -214,22 +215,6 @@ local function MiWowTouch_SkinChatButtons(api)
 	if ( WebQuickChatToggle ) then
 		MiWowTouch_Overlay(WebQuickChatToggle, "u_quick", 26, 1, 1);
 		MiWowTouch_HideArt(WebQuickChatToggle, function(r) return r == WebQuickChatToggle:GetHighlightTexture(); end);
-	end
-	local voice = WebVoiceChatToggle;
-	if ( voice ) then
-		local o = MiWowTouch_Overlay(voice, "u_mic", 26, 1, 1);
-		local waves;
-		MiWowTouch_HideArt(voice, function(r)
-			if ( MiWowTouch_PathHas(r, "voicechat-on") ) then
-				waves = r;
-			end
-			return r == voice:GetHighlightTexture();
-		end);
-		-- Escuchando (su textura de ondas se muestra): microfono en rojo
-		if ( waves ) then
-			hooksecurefunc(waves, "Show", function() o.glyph:SetVertexColor(1, 0.35, 0.35); end);
-			hooksecurefunc(waves, "Hide", function() o.glyph:SetVertexColor(1, 1, 1); end);
-		end
 	end
 end
 
@@ -911,6 +896,24 @@ end
 
 -- Su HUD se monta despues de FrameXML: se aplica en cuanto existe y luego se repasa cada segundo
 -- (algunos botones vuelven a poner el fondo del minimapa al cambiar de estado)
+-- Mantener pulsado un boton de su HUD = "clic derecho": enseña el tooltip y al soltar NO lanza el hechizo. A 0,45 s
+-- (su valor por defecto, CVar webTouchHold) saltaba sin querer en combate (usuario 2026-11-24) -> 0,70 s. Ese tiempo
+-- tambien abre su abanico y mueve cosas en modo edicion. Solo si sigue en su valor por defecto: si el jugador lo cambia
+-- en Opciones > Mobile ("Hold for a right click", 300-800 ms) se respeta (salvo que elija justo 450).
+local MIWOW_TOUCH_HOLD = 700;
+local function MiWowTouch_SetHold()
+	local current = tonumber(GetCVar("webTouchHold"));
+	if ( current and current ~= 450 ) then
+		return;
+	end
+	pcall(SetCVar, "webTouchHold", tostring(MIWOW_TOUCH_HOLD));
+	-- Si su HUD ya leyo la CVar (ReadSettings es local), su panel de opciones la vuelve a leer
+	-- (la CVar se guarda: en las siguientes sesiones su HUD ya la lee con 700 al cargar)
+	if ( LasthavensTouchOptions and type(LasthavensTouchOptions.onChange) == "function" ) then
+		pcall(LasthavensTouchOptions.onChange);
+	end
+end
+
 local MiWowTouch_Frame = CreateFrame("Frame");
 local MiWowTouch_Wait, MiWowTouch_Tick = 0, 0;
 MiWowTouch_Frame:RegisterEvent("PLAYER_LOGIN");
@@ -921,6 +924,7 @@ MiWowTouch_Frame:SetScript("OnEvent", function(self)
 		MiWowTouchSkin_State = "sin webTouch";
 		return;
 	end
+	MiWowTouch_SetHold();
 	MiWowTouchSkin_State = MiWowTouch_Api and "capturado" or "esperando";
 	self:SetScript("OnUpdate", function(frame, elapsed)
 		MiWowTouch_Tick = MiWowTouch_Tick + elapsed;
