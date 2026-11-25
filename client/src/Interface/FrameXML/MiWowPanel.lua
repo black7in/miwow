@@ -15,6 +15,9 @@ MIWOW_PANEL = {
 	WIDTH = 860,          -- tamano de la ventana (menos si la pantalla no da: SCREEN_MARGIN por lado)
 	HEIGHT = 560,
 	SCREEN_MARGIN = 40,
+	TOUCH_SCREEN_MARGIN = 12,   -- cliente web tactil: margen y tamano minimo (por debajo, se escala)
+	TOUCH_MIN_WIDTH = 640,
+	TOUCH_MIN_HEIGHT = 340,
 	MARGIN = 8,
 	GAP = 6,
 	TOP_BAR_HEIGHT = 36,
@@ -441,10 +444,16 @@ function MiWowPanel_Layout()
 end
 
 -- Tamano de la ventana: MIWOW_PANEL.WIDTH x HEIGHT, o menos si la pantalla no da
+-- En tactil (cliente web): margen pequeno y un minimo (lo que no quepa lo encoge la escala, MIWOW_TOUCH_FIT en MiWow.lua)
 function MiWowPanel_Resize()
-	local margin = MIWOW_PANEL.SCREEN_MARGIN * 2;
+	local touch = GetCVar("webTouch") == "1";
+	local margin = (touch and MIWOW_PANEL.TOUCH_SCREEN_MARGIN or MIWOW_PANEL.SCREEN_MARGIN) * 2;
 	local width = math.min(MIWOW_PANEL.WIDTH, UIParent:GetWidth() - margin);
 	local height = math.min(MIWOW_PANEL.HEIGHT, UIParent:GetHeight() - margin);
+	if ( touch ) then
+		width = math.max(MIWOW_PANEL.TOUCH_MIN_WIDTH, width);
+		height = math.max(MIWOW_PANEL.TOUCH_MIN_HEIGHT, height);
+	end
 	MiWowPanel:SetSize(math.floor(width), math.floor(height));
 end
 

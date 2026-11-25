@@ -355,8 +355,83 @@ SlashCmdList["MIWOW"] = function(msg)
 	MiWowPanel_Toggle();
 end
 
+-- Modo tactil (cliente web, CVar webTouch): su HUD (18_WebTouchSecure.lua) pone UIParent:SetScale(768 / alto) y en
+-- un movil apaisado queda ~844x390 de UI; nuestras ventanas (860x560, 720x560, 560x432...) no caben. Cada ventana se
+-- escala para caber en la pantalla menos un margen; los HUD ademas con un tope de ancho para no tapar su minimapa ni
+-- su retrato. Se revisa cada 0,5 s (su escala cambia al girar el movil o al cambiar la opcion de escala de la UI).
+-- En PC no hace nada (no existe la CVar).
+MIWOW_TOUCH_FIT = {
+	-- nombre = { margen horizontal, margen vertical (por lado, en unidades de UI), fraccion maxima del ancho,
+	--          fraccion maxima del alto }
+	MiWowPanel = { 12, 8 },
+	MiWowGuildFrame = { 12, 8 },
+	-- Ventanas de partida: no mas de ~media pantalla (el juego sigue detras)
+	MiWowMatchShop = { 12, 8, 0.5, 0.62 },
+	MiWowMatchChoiceFrame = { 12, 8, 0.45, 0.7 },
+	MiWowMatchFoundFrame = { 12, 8 },
+	MiWowMatchBigTextFrame = { 12, 8 },
+	MiWowMatchHud = { 12, 8, 0.5 },
+	MiWowRaceHud = { 12, 8, 0.25 },
+	MiWowRaceWrongWay = { 12, 8 },
+};
+
+function MiWow_IsTouch()
+	return GetCVar("webTouch") == "1";
+end
+
+local function MiWow_TouchFit(frame, cfg)
+	local w, h = frame:GetWidth(), frame:GetHeight();
+	local W, H = UIParent:GetWidth(), UIParent:GetHeight();
+	if ( not w or w <= 0 or not h or h <= 0 or not W or W <= 0 ) then
+		return;
+	end
+	local k = math.min(1, (W - cfg[1] * 2) / w, (H - cfg[2] * 2) / h);
+	if ( cfg[3] ) then
+		k = math.min(k, W * cfg[3] / w);
+	end
+	if ( cfg[4] ) then
+		k = math.min(k, H * cfg[4] / h);
+	end
+	k = math.max(0.3, k);
+	if ( math.abs(frame:GetScale() - k) > 0.01 ) then
+		frame:SetScale(k);
+	end
+end
+
+function MiWow_TouchFitAll()
+	if ( not MiWow_IsTouch() ) then
+		return;
+	end
+	for name, cfg in pairs(MIWOW_TOUCH_FIT) do
+		local frame = _G[name];
+		if ( frame and frame:IsShown() ) then
+			MiWow_TouchFit(frame, cfg);
+		end
+	end
+end
+
+local function MiWow_CreateTouchFit()
+	local watch = CreateFrame("Frame");
+	local since = 0;
+	watch:SetScript("OnUpdate", function(self, elapsed)
+		since = since + elapsed;
+		if ( since >= 0.5 ) then
+			since = 0;
+			MiWow_TouchFitAll();
+		end
+	end);
+	-- Al abrirse, ya ajustada (sin esperar al siguiente medio segundo)
+	for name in pairs(MIWOW_TOUCH_FIT) do
+		local frame = _G[name];
+		if ( frame ) then
+			frame:HookScript("OnShow", MiWow_TouchFitAll);
+		end
+	end
+end
+
 MiWow_CreateDevButton();
 MiWow_CreatePetBarHolder();
+MiWow_CreateTouchFit();
 MiWow_WrapBlockedFunctions();
 
 -- Cliente web: el wasm anade al menu (Esc) el boton "Full Screen" (GameMenuButtonFullscreen, solo si el navegador

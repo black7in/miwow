@@ -54,5 +54,10 @@ Solo actua con `webTouch`; captura `LasthavensEditApi` con una metatabla de `_G`
   columna bajo el boton Menu junto al minimapa; su engranaje `hud.setup` (abria el libro) oculto; vista previa del chat
   (`hud.preview`) centrada abajo y 26 px mas arriba; experiencia = `MiWowTouchXpBar` abajo-centro con texto
   (actual / siguiente, %, lo que falta, descanso) y su linea de 3 px con alfa 0.
+- 2026-11-24: ventanas MiWow que caben en movil. Su HUD pone `UIParent:SetScale(768 / alto)` (~844x390 de
+  UI apaisado); `MIWOW_TOUCH_FIT` (`MiWow.lua`) escala panel, hermandad, tienda, eleccion, partida encontrada, texto
+  grande y HUD de partida/carrera (estos con tope de ancho) para caber con margen; tienda (50 % ancho / 62 % alto) y
+  eleccion (45 % / 70 %) con tope (el usuario: la tienda aun era muy grande solo con caber); al abrirse y cada 0,5 s, solo con
+  `webTouch`. El panel en tactil: margen 12 y minimo 640x340 (por debajo, escala).
 - Pendiente: adaptar `MiWow.lua` (modo partida) y las ventanas al modo tactil (su Lua toca `VehicleMenuBar`, barras,
   `UIParent:SetScale`...).
