@@ -4,6 +4,7 @@
 #include "Define.h"
 #include "Duration.h"
 #include "Position.h"
+#include <string>
 
 // Valores de mod_miwow.conf, cacheados al cargar/recargar la configuracion.
 struct MiWowConfig
@@ -31,6 +32,15 @@ struct MiWowConfig
         bool RidingArtisan = false;
         bool ColdWeatherFlying = false;
     } AutoLearn;
+
+    // Voz de grupo (MiWowVoice). El enlace se abre al arrancar: cambiar Host/Port/Secret pide reiniciar.
+    struct VoiceConfig
+    {
+        bool Enabled = false;
+        std::string LinkHost = "127.0.0.1";
+        uint16 LinkPort = 8091;
+        std::string LinkSecret;
+    } Voice;
 
     void Load();
 

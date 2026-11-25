@@ -9,7 +9,8 @@
   `"match"` = en partida: HUD del juego y la interfaz nativa SIN CAMBIOS (`MIWOW_MATCH_RESTRICT_UI = false`,
   2026-11-24; con true vuelve la interfaz restringida de main: marcos ocultos, ventanas/acciones bloqueadas)),
   `MiWowPanel.lua` (panel de eventos 860x560 arrastrable; boton en el minimapa, `/miwow`, `/eventos`),
-  `MiWowMatchFound.lua`, `MiWowLevelUp.lua` (franja estilo retail arriba: "¡Has alcanzado el nivel X!" con el
+  `MiWowMatchFound.lua`, `MiWowVoice.lua` (botones de voz junto al minimapa y quien habla en los marcos: `docs/voz.md`),
+  `MiWowLevelUp.lua` (franja estilo retail arriba: "¡Has alcanzado el nivel X!" con el
   `PLAYER_LEVEL_UP` nativo y "Nueva habilidad" con `SPELLS_LEARNED`), `MiWowMatch.lua`, `MiWowRace.lua`, `MiWowParkour.lua`, `MiWowGuild.lua` (`docs/hermandad.md`),
   `MiWowTouchSkin.lua` (HUD tactil del cliente web: ver `web/CLAUDE.md`). Glue y `GlobalStrings.lua` ORIGINALES.
 - Los originales usan **CRLF**: normalizar tras editar uno copiado (`sed -i 's/\r$//; s/$/\r/' archivo`).

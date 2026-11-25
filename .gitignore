@@ -50,3 +50,6 @@ __pycache__/
 token*.txt
 # Plantilla del vhost de Apache del VPS de pruebas (no tiene datos secretos)
 !/web/deploy/vps-pruebas/juego.conf
+
+# LiveKit para probar la voz en local (binario descargado, ver docs/voz.md)
+/tools/livekit/

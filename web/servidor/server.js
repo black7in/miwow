@@ -62,6 +62,7 @@ function loadConfig() {
 }
 const CONFIG = loadConfig();
 const log = (...a) => console.log(new Date().toISOString().replace('T', ' ').slice(0, 19), ...a);
+let voice = null; // voz (voice.js): se crea al arrancar si config.voice.enabled
 
 // ======================= Manifest =======================
 // Usamos las mayúsculas de SU manifest cuando el archivo coincide (el VFS podría distinguirlas).
@@ -274,6 +275,8 @@ const server = http.createServer(async (req, res) => {
     const sid = readSid(req);
     if (!sid) return send(res, 403, 'sin sesión: abre /play');
 
+    if (voice && voice.handleHttp(req, res, p, sid, sendStatic)) return;
+
     if (p === '/progress') {
       const e = progress.get(sid) || { bytes: 0, files: 0 };
       return send(res, 200, JSON.stringify({ bytes: e.bytes, files: e.files, estimate: CONFIG.loadEstimateMB * 1048576 }), MIME['.json']);
@@ -371,6 +374,7 @@ const server = http.createServer(async (req, res) => {
 const wss = new WebSocketServer({ noServer: true, maxPayload: 1 << 20, perMessageDeflate: false });
 const wsPerIp = new Map();
 server.on('upgrade', (req, sock, head) => {
+  if (voice && voice.handleUpgrade(req, sock, head)) return;
   const url = new URL(req.url, 'http://x');
   const ip = clientIp(req);
   const m = /^\/tcp\/(\d+\.\d+\.\d+\.\d+)\/(\d+)$/.exec(url.pathname);
@@ -391,11 +395,13 @@ server.on('upgrade', (req, sock, head) => {
     const tcp = net.connect(port, host);
     tcp.setNoDelay(true);
     let up = 0, down = 0, closed = false;
+    const sid = readSid(req), sniffState = {};
     let idle;
     const touch = () => { clearTimeout(idle); idle = setTimeout(() => close('inactivo'), CONFIG.wsIdleTimeoutSec * 1000); };
     touch();
     tcp.on('data', d => {
       down += d.length; touch();
+      if (voice) voice.sniff(sniffState, sid, d);
       if (ws.readyState !== 1) return;
       ws.send(d);
       // Contrapresión: si el navegador va lento, pausamos el TCP
@@ -418,9 +424,10 @@ server.on('upgrade', (req, sock, head) => {
 // ======================= Arranque =======================
 fs.mkdirSync(CONFIG.userDir, { recursive: true });
 scanGame(true);
+voice = require('./voice')(CONFIG, { log, readSid });
 server.listen(CONFIG.port, CONFIG.host, () => {
   log(`Listo: http://${CONFIG.host === '0.0.0.0' ? 'localhost' : CONFIG.host}:${CONFIG.port}/play`);
   log(`proxy TCP: ${Object.entries(CONFIG.tcpRoutes).map(([p, h]) => `${p}->${h}`).join(', ')}  basicAuth=${CONFIG.basicAuth ? 'sí' : 'no'}  trustProxy=${CONFIG.trustProxy}`);
 });
-const stop = () => { log('apagando...'); server.close(); for (const c of wss.clients) c.terminate(); setTimeout(() => process.exit(0), 2000).unref(); };
+const stop = () => { log('apagando...'); server.close(); if (voice) voice.close(); for (const c of wss.clients) c.terminate(); setTimeout(() => process.exit(0), 2000).unref(); };
 process.on('SIGINT', stop); process.on('SIGTERM', stop);

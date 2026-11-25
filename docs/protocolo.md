@@ -59,6 +59,7 @@ opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `Regi
 | `PARKOUR_RESTART` | - | "Reiniciar" en el parkour | vuelta a la salida, cronometro a cero: `PARKOUR_EVENT RESTART` + `PARKOUR`. v12 |
 | `GUILD_INFO` | - | abrir la ventana de hermandad, o `GUILD_DIRTY` con ella abierta (como mucho 1/s) | los 8 `GUILD_*` de "Hermandad", o `ERROR GUILD_DISABLED`. v13 |
 | `GUILD_BUY` | objeto | comprar en la tienda de la hermandad (como mucho 2/s). El servidor comprueba hermandad, intendente a menos de 10 m, objeto de la temporada, rango, oro y hueco | el objeto (nativo, como un vendedor) o el error (chat / error nativo de compra) + `GUILD_DIRTY`. v13 |
+| `VOICE_MIC` / `VOICE_SPEAKER` | 0/1 | botones de voz (`MiWowVoice.lua`, `/voz`) | el modulo lo pasa al navegador por el hub (`docs/voz.md`); luego `VOICE_STATE`. Sin voz: `VOICE_STATE` otra vez |
 | `GUILD_BOARD_REOPEN` | - | al cerrar la ventana de misiones abierta desde el tablon (el core cierra el gossip al aceptar/entregar; como mucho 2/s) | si sigue a menos de 10 m de un tablon: `GUILD_BOARD_OPEN` + la info + el gossip, como al hacer clic. v13 |
 
 ### Servidor -> cliente
@@ -88,6 +89,9 @@ opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `Regi
 | `PARKOUR` | seccion 1..n, caidas, ms, estado (0 en la salida, 1 corriendo, 2 en la meta), ms mejor (0 = ninguno) | marcador personal: al cambiar algo y cada 10 s; el cliente hace avanzar el reloj si estado = 1. v12 |
 | `PARKOUR_EVENT` | `CHECKPOINT` seccion / `FALL` / `FINISH` ms record 0/1 / `PLAYER_FINISH` nombre ms / `RESTART` | avisos: punto de control, caida (vuelta al ultimo punto de control), has llegado a la cima, otro jugador de la sesion ha llegado, reinicio. v12 |
 | `PARKOUR_RANK` | n, luego n x (nombre, ms) | mejores tiempos de la sesion (hasta 10; se pierden al cerrarse la sesion). v12 |
+| `VOICE_TOKEN` | nonce (32 hex) | al conectar (con la voz activa): server.js lo ve pasar por el tunel del cliente web y liga esa sesion del navegador al personaje (`docs/voz.md`); el Lua lo ignora |
+| `VOICE_STATE` | voz 0/1, en sala 0/1, mic 0/1, altavoz 0/1, error | estado de la voz del navegador de este jugador (voz = cliente web con voz; sala = grupo que no es banda). Error: `mic_denied`/`mic_error`/`connect`/`load` o vacio |
+| `VOICE_SPEAK` | nombre, 0/1 | el propio jugador o uno de su grupo (en su misma sala) empieza/deja de hablar |
 | `SPELLS_LEARNED` | n, n x hechizo | lo que acaba de aprender el auto-aprendizaje (`MiWowAutoLearn.cpp`): al subir de nivel (justo despues del `PLAYER_LEVEL_UP` nativo), al aprender un talento y tras el login (se guarda hasta el `HELLO`). El cliente (`MiWowLevelUp.lua`) lo muestra como "Nueva habilidad" estilo retail, un aviso detras de otro (solo el ultimo rango de cada hechizo, hasta 6 y luego "Y N más"). Opcode nuevo sin cambio de version: un cliente antiguo lo ignora |
 | `DEV_MODE` | 0/1 | modo dev (`.gm on` o `.dev on`; se comprueba cada 250 ms). Al conectar y en cada cambio. En modo dev el cliente permite ocultar el panel (solo cliente) |
 

@@ -24,10 +24,10 @@ Remoto "mkdir -p $Ruta/servidor/public/icons $Ruta/servidor/deploy $Ruta/cliente
 
 if (-not $SoloParche) {
   $s = "$web\servidor"
-  Subir @("$s\server.js", "$s\play.html", "$s\package.json", "$s\package-lock.json", "$s\game-index.txt") "$Ruta/servidor/"
+  Subir @("$s\server.js", "$s\voice.js", "$s\play.html", "$s\package.json", "$s\package-lock.json", "$s\game-index.txt") "$Ruta/servidor/"
   Subir @("$s\public\manifest.webmanifest") "$Ruta/servidor/public/"
   Subir (Get-ChildItem "$s\public\icons" -File | ForEach-Object FullName) "$Ruta/servidor/public/icons/"
-  foreach ($d in 'brand', 'fonts') {   # logo y tipografias de play.html
+  foreach ($d in 'brand', 'fonts', 'voice') {   # logo y tipografias de play.html; voz (docs/voz.md)
     Remoto "mkdir -p $Ruta/servidor/public/$d"
     Subir (Get-ChildItem "$s\public\$d" -File | ForEach-Object FullName) "$Ruta/servidor/public/$d/"
   }

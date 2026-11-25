@@ -1,0 +1,17 @@
+# /opt/miwow-livekit/livekit.yaml  (VPS de pruebas, ver docs/voz.md)
+# LiveKit = servidor de audio (SFU) de la voz de grupo. Solo reenvia audio: no lo descodifica.
+# La senalizacion (7880) entra SOLO por server.js (/livekit/*): el firewall no debe abrir el 7880 hacia fuera.
+# Hacia fuera: UDP 7882 (audio) y TCP 7881 (audio si la red del jugador bloquea UDP).
+port: 7880
+rtc:
+  tcp_port: 7881
+  udp_port: 7882            # un solo puerto UDP para todo el audio
+  use_external_ip: true     # anuncia la IP publica del VPS a los navegadores
+keys:
+  # Igual que voice.apiKey / voice.apiSecret en config.json de server.js. Secreto largo y aleatorio.
+  CAMBIA-API-KEY: CAMBIA-API-SECRET-LARGO
+room:
+  empty_timeout: 60         # sala vacia se cierra al minuto
+  max_participants: 10      # grupo = 5; margen por reconexiones
+logging:
+  level: info

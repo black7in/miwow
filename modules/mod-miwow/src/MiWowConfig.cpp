@@ -31,6 +31,11 @@ void MiWowConfig::Load()
     AutoLearn.RidingArtisan = sConfigMgr->GetOption<bool>("MiWow.AutoLearn.Riding.Artisan", false);
     AutoLearn.ColdWeatherFlying = sConfigMgr->GetOption<bool>("MiWow.AutoLearn.Riding.ColdWeather", false);
 
+    Voice.Enabled = sConfigMgr->GetOption<bool>("MiWow.Voice.Enable", false);
+    Voice.LinkHost = sConfigMgr->GetOption<std::string>("MiWow.Voice.LinkHost", "127.0.0.1");
+    Voice.LinkPort = uint16(sConfigMgr->GetOption<uint32>("MiWow.Voice.LinkPort", 8091));
+    Voice.LinkSecret = sConfigMgr->GetOption<std::string>("MiWow.Voice.LinkSecret", "");
+
     LOG_INFO("module.miwow", "MiWow: {}", Enabled ? "activado" : "desactivado");
 }
 

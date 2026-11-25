@@ -43,6 +43,12 @@ Cliente 3.3.5a en wasm de Last Havens (permiso verbal, SIN fuentes) + nuestro ba
 - Pendiente: mmaps v19 -> regenerar con el generador actual; arreglo clang de `MiWowGuildSeason.cpp` sin commitear
   (copiado a mano al VPS); pagina `/[lang]/play` de Astro; Warden.
 
+## Voz (`docs/voz.md`)
+`voice.js` (hub, dentro de server.js: enlace con el worldserver en 127.0.0.1:8091, `/voice-ws`, proxy `/livekit/*`,
+liga sesion <-> personaje viendo `VOICE_TOKEN` en el tunel) + `public/voice/voice.js` (navegador, `livekit-client`
+2.23.0 de `node_modules`). LiveKit aparte (`tools/livekit` en local; `deploy/vps-pruebas/livekit.yaml` +
+`miwow-livekit.service` en el VPS, SIN instalar). El dictado por voz de Last Havens (boton de micro tactil) esta desactivado en `parchear.js` (tramo 30).
+
 ## HUD tactil (`client/src/Interface/FrameXML/MiWowTouchSkin.lua`)
 Decision del usuario (2026-11-22): su logica intacta, marcos de vida nativos, solo texturas e iconos "modernos" dorados.
 Solo actua con `webTouch`; captura `LasthavensEditApi` con una metatabla de `_G` (su trozo 15 lo borra). Texturas de
@@ -59,5 +65,8 @@ Solo actua con `webTouch`; captura `LasthavensEditApi` con una metatabla de `_G`
   grande y HUD de partida/carrera (estos con tope de ancho) para caber con margen; tienda (50 % ancho / 62 % alto) y
   eleccion (45 % / 70 %) con tope (el usuario: la tienda aun era muy grande solo con caber); al abrirse y cada 0,5 s, solo con
   `webTouch`. El panel en tactil: margen 12 y minimo 640x340 (por debajo, escala).
+- 2026-11-24 (SIN PROBAR): "mantener pulsado" (tooltip en vez de lanzar) de 0,45 a 0,70 s (`MIWOW_TOUCH_HOLD`, CVar
+  `webTouchHold`, solo si sigue en su valor por defecto). Tooltips que se quedan pegados: pendiente (posible vigilante
+  que los esconda a los ~3 s).
 - Pendiente: adaptar `MiWow.lua` (modo partida) y las ventanas al modo tactil (su Lua toca `VehicleMenuBar`, barras,
   `UIParent:SetScale`...).

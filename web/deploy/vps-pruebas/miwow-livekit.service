@@ -1,0 +1,23 @@
+# /etc/systemd/system/miwow-livekit.service  (VPS de pruebas, ver docs/voz.md)
+#   Binario: /opt/miwow-livekit/livekit-server (release oficial de github.com/livekit/livekit, version fija)
+#   sudo systemctl daemon-reload && sudo systemctl enable --now miwow-livekit
+#   journalctl -u miwow-livekit -f
+[Unit]
+Description=MiWoW voz (LiveKit SFU)
+After=network.target
+
+[Service]
+Type=simple
+User=miwow
+WorkingDirectory=/opt/miwow-livekit
+ExecStart=/opt/miwow-livekit/livekit-server --config /opt/miwow-livekit/livekit.yaml
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

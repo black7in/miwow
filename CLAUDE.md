@@ -28,6 +28,7 @@ Cada area tiene su `CLAUDE.md` (se carga al trabajar en esa carpeta) y su estado
 | Cliente web/movil, VPS, Cloudflare, HUD tactil | `web/CLAUDE.md` | `docs/cliente-web.md`, `docs/despliegue-vps-pruebas.md` |
 | Mapas propios (WC3, circuitos) | | `docs/mapas.md` |
 | Hechizos propios (`tools/spellgen`) | | `docs/hechizos.md` |
+| Voz de grupo/cerca (WebRTC, LiveKit) | | `docs/voz.md` |
 | Infraestructura por entorno | | `docs/despliegue.md` |
 
 Al terminar un trabajo, actualizar el `CLAUDE.md` o el doc de SU area (no este) salvo que cambie algo general.

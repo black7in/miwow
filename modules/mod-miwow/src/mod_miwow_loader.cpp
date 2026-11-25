@@ -13,6 +13,7 @@ void AddSC_miwow_spell_lock();
 void AddSC_miwow_stats();
 void AddSC_miwow_rewards();
 void AddSC_miwow_auto_learn();
+void AddSC_miwow_voice();
 
 // Temporadas de hermandad (guild/)
 void AddSC_miwow_guild();
@@ -42,6 +43,7 @@ void Addmod_miwowScripts()
     AddSC_miwow_stats();
     AddSC_miwow_rewards();
     AddSC_miwow_auto_learn();
+    AddSC_miwow_voice();
     AddSC_miwow_guild();
     AddSC_miwow_guild_protocol();
 }

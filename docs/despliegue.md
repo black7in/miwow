@@ -42,6 +42,13 @@ p.ej. `AC_LOGIN_DATABASE_INFO`):
 | `RealmServerPort` | puerto de login (3724) | | |
 | `BindIP` | IP de escucha | | |
 
+### worldserver.conf: voz (solo si hay voz en ese entorno, `docs/voz.md`)
+| Clave | Para que |
+|---|---|
+| `MiWow.Voice.Enable` | 1 = enlazar con el hub de voz (server.js) |
+| `MiWow.Voice.LinkHost` / `MiWow.Voice.LinkPort` | donde escucha el hub (`voice.linkPort` de server.js; 127.0.0.1:8091) |
+| `MiWow.Voice.LinkSecret` | clave del enlace, la misma que `voice.linkSecret` de server.js |
+
 ### acore_auth.realmlist
 | Columna | Para que |
 |---|---|
