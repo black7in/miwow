@@ -16,6 +16,22 @@ struct MiWowConfig
     Seconds MatchLoadTimeout = 30s;  // jugadores que no llegan a la instancia en este tiempo quedan fuera
     Seconds MatchReturnDelay = 8s;   // resultado en pantalla antes de volver a donde estaba
 
+    // Auto-aprendizaje (MiWowAutoLearn)
+    struct AutoLearnConfig
+    {
+        bool Enabled = true;
+        bool DevMode = true;          // tambien en modo dev (.gm on / .dev on)
+        bool ClassSpells = true;      // lo del entrenador de clase
+        bool QuestSpells = true;      // lo de las misiones de clase (y totems del chaman)
+        bool TalentRanks = true;      // rangos de entrenador de los talentos que se tienen
+        bool Proficiencies = false;   // habilidades de armas
+        bool RidingApprentice = false;
+        bool RidingJourneyman = false;
+        bool RidingExpert = false;
+        bool RidingArtisan = false;
+        bool ColdWeatherFlying = false;
+    } AutoLearn;
+
     void Load();
 
     static MiWowConfig& Instance();

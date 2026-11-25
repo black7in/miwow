@@ -38,7 +38,9 @@ Loader `Addmod_miwowScripts` (`src/mod_miwow_loader.cpp`). Log `module.miwow`. C
 - `MiWowVehicle` (invocar, montar, mantener montado, `Hold/Mount/DismissVehicle`), `MiWowSpellLock`
   (`OnSpellCheckCast`: sin hechizos propios ni monturas; objetos y desencadenados si), `MiWowStats` (stats temporales,
   `.miwow stat`; se quitan en `RemovePlayer` y `RestoreBaseState`), `MiWowRewards` (en mapas de evento: sin logros,
-  XP ni reputacion), `MiWowGroups` (grupos nativos, bandas permitidas), `MiWowDevMode` (avisa `DEV_MODE`).
+  XP ni reputacion), `MiWowAutoLearn` (login/nivel/talento: entrenadores de clase como `.learn my class`, misiones de
+  clase con RewardSpell, armas y equitacion opcionales; `MiWow.AutoLearn.*`; sustituye a un script Eluna; al aprender un talento solo mira el entrenador; lo aprendido va
+  al cliente con `SPELLS_LEARNED`), `MiWowGroups` (grupos nativos, bandas permitidas), `MiWowDevMode` (avisa `DEV_MODE`).
 - Protocolo cliente<->servidor por addon messages (prefijo `MIWOW`): `docs/protocolo.md`.
 - Juegos: `test`, `test_group`, `test_vehicle`, `test_map` (750), `carrera` (752), `carrera_estelar` (753), `parkour`
   (754, PAUSADO), `castillo` (755, defensa por oleadas, nivel 80). Mapa 751 (asedio) se queda sin juego (decision del

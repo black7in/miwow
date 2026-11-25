@@ -55,6 +55,79 @@ MiWow.Match.LoadTimeout = 30
 MiWow.Match.ReturnDelay = 8
 
 ###################################################################################################
+# AUTO-APRENDIZAJE (src/MiWowAutoLearn.cpp)
+# Al conectarse, subir de nivel o aprender un talento se aprende gratis lo que toca por nivel.
+# Solo anade hechizos (y los totems del chaman); nunca quita nada. No actua dentro de un evento.
+###################################################################################################
+
+#
+#    MiWow.AutoLearn.Enable
+#        Description: Activa el auto-aprendizaje.
+#        Default:     1
+#
+
+MiWow.AutoLearn.Enable = 1
+
+#
+#    MiWow.AutoLearn.DevMode
+#        Description: Tambien en modo dev (.gm on / .dev on).
+#        Default:     1
+#
+
+MiWow.AutoLearn.DevMode = 1
+
+#
+#    MiWow.AutoLearn.ClassSpells
+#        Description: Hechizos del entrenador de clase (tablas trainer/trainer_spell del core: nivel,
+#                     hechizo previo y raza/faccion los comprueba el core).
+#        Default:     1
+#
+
+MiWow.AutoLearn.ClassSpells = 1
+
+#
+#    MiWow.AutoLearn.QuestSpells
+#        Description: Hechizos de las misiones de clase (formas de druida, posturas de guerrero,
+#                     mascota del cazador, demonios del brujo...) al nivel minimo de la mision, y los
+#                     totems del chaman. Requiere ClassSpells.
+#        Default:     1
+#
+
+MiWow.AutoLearn.QuestSpells = 1
+
+#
+#    MiWow.AutoLearn.TalentRanks
+#        Description: Rangos de entrenador de los talentos que se tienen (Golpe mortal 2, 3...).
+#        Default:     1
+#
+
+MiWow.AutoLearn.TalentRanks = 1
+
+#
+#    MiWow.AutoLearn.Proficiencies
+#        Description: Habilidades de armas de la clase (las de los maestros de armas).
+#        Default:     0
+#
+
+MiWow.AutoLearn.Proficiencies = 0
+
+#
+#    MiWow.AutoLearn.Riding.Apprentice   (nivel 20)
+#    MiWow.AutoLearn.Riding.Journeyman   (nivel 40)
+#    MiWow.AutoLearn.Riding.Expert       (nivel 60)
+#    MiWow.AutoLearn.Riding.Artisan      (nivel 70)
+#    MiWow.AutoLearn.Riding.ColdWeather  (nivel 77, vuelo en clima frio)
+#        Description: Equitacion gratis al llegar al nivel. Cada rango pide el anterior.
+#        Default:     0
+#
+
+MiWow.AutoLearn.Riding.Apprentice = 0
+MiWow.AutoLearn.Riding.Journeyman = 0
+MiWow.AutoLearn.Riding.Expert = 0
+MiWow.AutoLearn.Riding.Artisan = 0
+MiWow.AutoLearn.Riding.ColdWeather = 0
+
+###################################################################################################
 # TEMPORADAS DE HERMANDAD (src/guild, definiciones en las tablas miwow_guild_* de la BD world)
 ###################################################################################################
 

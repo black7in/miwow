@@ -88,6 +88,7 @@ opcode recibido antes de `HELLO` se ignora. Al hacer logout se avisa a los `Regi
 | `PARKOUR` | seccion 1..n, caidas, ms, estado (0 en la salida, 1 corriendo, 2 en la meta), ms mejor (0 = ninguno) | marcador personal: al cambiar algo y cada 10 s; el cliente hace avanzar el reloj si estado = 1. v12 |
 | `PARKOUR_EVENT` | `CHECKPOINT` seccion / `FALL` / `FINISH` ms record 0/1 / `PLAYER_FINISH` nombre ms / `RESTART` | avisos: punto de control, caida (vuelta al ultimo punto de control), has llegado a la cima, otro jugador de la sesion ha llegado, reinicio. v12 |
 | `PARKOUR_RANK` | n, luego n x (nombre, ms) | mejores tiempos de la sesion (hasta 10; se pierden al cerrarse la sesion). v12 |
+| `SPELLS_LEARNED` | n, n x hechizo | lo que acaba de aprender el auto-aprendizaje (`MiWowAutoLearn.cpp`): al subir de nivel (justo despues del `PLAYER_LEVEL_UP` nativo), al aprender un talento y tras el login (se guarda hasta el `HELLO`). El cliente (`MiWowLevelUp.lua`) lo muestra como "Nueva habilidad" estilo retail, un aviso detras de otro (solo el ultimo rango de cada hechizo, hasta 6 y luego "Y N más"). Opcode nuevo sin cambio de version: un cliente antiguo lo ignora |
 | `DEV_MODE` | 0/1 | modo dev (`.gm on` o `.dev on`; se comprueba cada 250 ms). Al conectar y en cada cambio. En modo dev el cliente permite ocultar el panel (solo cliente) |
 
 ## Hermandad (temporadas, v13)
